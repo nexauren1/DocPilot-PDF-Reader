@@ -115,12 +115,7 @@ fun DocPilotApp() {
                 documents = documents,
                 onOpenDocument = { selectedDocument = it },
             )
-            Destination.TOOLS -> ToolsScreen(
-                onToolClick = { tool ->
-                    // Tools are represented in the first foundation release.
-                    // Real processing modules will be wired here next.
-                },
-            )
+            Destination.TOOLS -> ToolsScreen()
             Destination.SETTINGS -> SettingsScreen()
         }
         }
