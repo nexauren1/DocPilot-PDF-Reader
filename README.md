@@ -9,7 +9,10 @@ DocPilot is an Android-first document hub focused on reading, organizing and pro
 - PDF import through the Android document picker
 - Persistent local document library
 - Search across imported documents
-- First-page PDF rendering with Android PdfRenderer
+- Multi-page PDF reader with on-demand Android PdfRenderer rendering
+- Horizontal page thumbnails with direct page selection
+- Previous/next page navigation and live page counter
+- Pinch-to-zoom and pan with a one-tap zoom reset
 - Local PDF processing powered by PdfBox-Android 2.0.27.0
 - Functional **merge**, **split**, **reorder** and **compress** workflows
 - Tools workspace with output-file creation through the Android document picker
