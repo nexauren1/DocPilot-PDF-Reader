@@ -2,12 +2,11 @@ package com.nexauren.docpilot.pdf
 
 import android.content.ContentResolver
 import android.net.Uri
-import com.tom_roush.pdfbox.cos.COSName
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDResources
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
-import com.tom_roush.pdfbox.pdmodel.graphics.image.PDXObject
+import com.tom_roush.pdfbox.pdmodel.graphics.PDXObject
 import kotlin.math.max
 import kotlin.math.roundToInt
 
