@@ -1,9 +1,12 @@
 package com.nexauren.docpilot.ui.screens
 
+import android.app.Activity
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -31,6 +34,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -47,6 +51,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,6 +62,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.nexauren.docpilot.pdf.DocumentTools
 import com.nexauren.docpilot.pdf.PdfProcessor
 import com.nexauren.docpilot.pdf.formatBytes
 import com.nexauren.docpilot.pdf.parsePageOrder
@@ -71,51 +83,256 @@ private enum class PdfTool(val title: String, val subtitle: String, val icon: Im
     REORDER("Organizar", "Reordenar páginas", Icons.Outlined.Edit),
 }
 
-private data class ToolCard(val title: String, val subtitle: String, val icon: ImageVector, val tool: PdfTool?)
+private enum class SecurityTool(val title: String, val subtitle: String, val icon: ImageVector) {
+    PROTECT("Proteger", "Senha e permissões", Icons.Outlined.Lock),
+    SIGN("Assinatura visual", "Adicionar assinatura ao PDF", Icons.Outlined.Create),
+}
+
+private data class ToolCard(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val pdfTool: PdfTool? = null,
+    val securityTool: SecurityTool? = null,
+    val action: Action = Action.NONE,
+)
+
+private enum class Action { NONE, SCAN, IMAGE_TO_PDF, OCR }
 
 private val toolCards = listOf(
-    ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, PdfTool.MERGE),
-    ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, PdfTool.SPLIT),
-    ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, PdfTool.COMPRESS),
-    ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, PdfTool.REORDER),
-    ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, null),
-    ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, null),
-    ToolCard("Assinar", "Assinatura digital", Icons.Outlined.Create, null),
-    ToolCard("Proteger", "Senha e segurança", Icons.Outlined.Lock, null),
-    ToolCard("Extrair texto", "OCR e conteúdo", Icons.Outlined.Description, null),
-    ToolCard("Duplicar páginas", "Copiar conteúdo", Icons.Outlined.ContentCopy, null),
+    ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, pdfTool = PdfTool.MERGE),
+    ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, pdfTool = PdfTool.SPLIT),
+    ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, pdfTool = PdfTool.COMPRESS),
+    ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER),
+    ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, action = Action.SCAN),
+    ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF),
+    ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN),
+    ToolCard("Proteger", "Senha e permissões", Icons.Outlined.Lock, securityTool = SecurityTool.PROTECT),
+    ToolCard("Extrair texto", "OCR em imagens", Icons.Outlined.Description, action = Action.OCR),
+    ToolCard("Duplicar páginas", "Em desenvolvimento", Icons.Outlined.ContentCopy),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ToolsScreen() {
-    var selectedTool by remember { mutableStateOf<PdfTool?>(null) }
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
 
-    if (selectedTool != null) {
-        ToolWorkspace(tool = selectedTool!!, onBack = { selectedTool = null })
+    var selectedPdfTool by remember { mutableStateOf<PdfTool?>(null) }
+    var selectedSecurityTool by remember { mutableStateOf<SecurityTool?>(null) }
+    var ocrResult by remember { mutableStateOf<String?>(null) }
+    var processing by remember { mutableStateOf(false) }
+
+    var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var pendingOutputAction by remember { mutableStateOf<((Uri) -> Long)?>(null) }
+
+    val outputPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/pdf"),
+    ) { uri ->
+        val action = pendingOutputAction
+        pendingOutputAction = null
+        if (uri != null && action != null) {
+            processing = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
+                processing = false
+                snackbar.showSnackbar(
+                    result.fold(
+                        { "PDF criado • " + formatBytes(it) },
+                        { "Erro: " + (it.message ?: "processamento falhou") },
+                    ),
+                )
+            }
+        }
+    }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        pendingImageUris = uris
+        if (uris.isNotEmpty()) {
+            pendingOutputAction = { output -> DocumentTools.imagesToPdf(context.contentResolver, uris, output) }
+            outputPicker.launch("docpilot-images.pdf")
+        }
+    }
+
+    val ocrPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            processing = true
+            runCatching {
+                val image = InputImage.fromFilePath(context, uri)
+                val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                recognizer.process(image)
+                    .addOnSuccessListener { result ->
+                        ocrResult = result.text.ifBlank { "Nenhum texto foi identificado nesta imagem." }
+                    }
+                    .addOnFailureListener { error ->
+                        scope.launch { snackbar.showSnackbar("OCR falhou: " + (error.message ?: "erro desconhecido")) }
+                    }
+                    .addOnCompleteListener {
+                        recognizer.close()
+                        processing = false
+                    }
+            }.onFailure {
+                processing = false
+                scope.launch { snackbar.showSnackbar("Não foi possível abrir a imagem.") }
+            }
+        }
+    }
+
+    val scannerOptions = remember {
+        GmsDocumentScannerOptions.Builder()
+            .setGalleryImportAllowed(true)
+            .setPageLimit(30)
+            .setResultFormats(
+                GmsDocumentScannerOptions.RESULT_FORMAT_PDF,
+                GmsDocumentScannerOptions.RESULT_FORMAT_JPEG,
+            )
+            .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+            .build()
+    }
+    val scanner = remember { GmsDocumentScanning.getClient(scannerOptions) }
+    val scannerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val scanResult = GmsDocumentScanningResult.fromActivityResultIntent(result.data)
+            val pdfUri = scanResult?.getPdf()?.getUri()
+            if (pdfUri != null) {
+                pendingScannerUri = pdfUri
+                pendingOutputAction = { output -> DocumentTools.scanResultPdf(context.contentResolver, pdfUri, output) }
+                outputPicker.launch("docpilot-scan.pdf")
+            }
+            scanResult?.getPages()?.firstOrNull()?.let { page ->
+                val imageUri = page.getImageUri()
+                if (imageUri != null) {
+                    processing = true
+                    runCatching {
+                        val image = InputImage.fromFilePath(context, imageUri)
+                        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                        recognizer.process(image)
+                            .addOnSuccessListener { text ->
+                                if (text.text.isNotBlank()) {
+                                    ocrResult = text.text
+                                }
+                            }
+                            .addOnCompleteListener {
+                                recognizer.close()
+                                processing = false
+                            }
+                    }.onFailure {
+                        processing = false
+                    }
+                }
+            }
+        }
+    }
+
+    fun launchScanner() {
+        val currentActivity = activity ?: run {
+            scope.launch { snackbar.showSnackbar("Scanner indisponível neste contexto.") }
+            return
+        }
+        scanner.getStartScanIntent(currentActivity)
+            .addOnSuccessListener { sender ->
+                scannerLauncher.launch(IntentSenderRequest.Builder(sender).build())
+            }
+            .addOnFailureListener { error ->
+                scope.launch { snackbar.showSnackbar("Não foi possível iniciar o scanner: " + (error.message ?: "erro")) }
+            }
+    }
+
+    if (selectedPdfTool != null) {
+        ToolWorkspace(tool = selectedPdfTool!!, onBack = { selectedPdfTool = null })
         return
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Ferramentas") }) }) { padding ->
+    if (selectedSecurityTool != null) {
+        SecurityWorkspace(
+            tool = selectedSecurityTool!!,
+            onBack = { selectedSecurityTool = null },
+        )
+        return
+    }
+
+    if (ocrResult != null) {
+        AlertDialog(
+            onDismissRequest = { ocrResult = null },
+            title = { Text("Texto reconhecido") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(420.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text(ocrResult.orEmpty())
+                }
+            },
+            confirmButton = {
+                Button(onClick = { ocrResult = null }) {
+                    Text("Fechar")
+                }
+            },
+        )
+    }
+
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Ferramentas") }) },
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { padding ->
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(16.dp, padding.calculateTopPadding() + 4.dp, 16.dp, padding.calculateBottomPadding() + 20.dp),
+            contentPadding = PaddingValues(
+                16.dp,
+                padding.calculateTopPadding() + 4.dp,
+                16.dp,
+                padding.calculateBottomPadding() + 20.dp,
+            ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             items(toolCards) { card ->
+                val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
                 Card(
-                    onClick = { card.tool?.let { selectedTool = it } },
-                    enabled = card.tool != null,
+                    onClick = {
+                        when {
+                            card.pdfTool != null -> selectedPdfTool = card.pdfTool
+                            card.securityTool != null -> selectedSecurityTool = card.securityTool
+                            card.action == Action.SCAN -> launchScanner()
+                            card.action == Action.IMAGE_TO_PDF -> imagePicker.launch(arrayOf("image/*"))
+                            card.action == Action.OCR -> ocrPicker.launch(arrayOf("image/*"))
+                        }
+                    },
+                    enabled = enabled,
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(card.icon, contentDescription = null, tint = if (card.tool != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            card.icon,
+                            contentDescription = null,
+                            tint = if (enabled) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
                         Text(card.title, style = MaterialTheme.typography.titleSmall)
-                        Text(card.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (card.tool == null) Text("Em breve", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            card.subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -125,118 +342,130 @@ fun ToolsScreen() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ToolWorkspace(tool: PdfTool, onBack: () -> Unit) {
+private fun SecurityWorkspace(
+    tool: SecurityTool,
+    onBack: () -> Unit,
+) {
     val context = LocalContext.current
     val resolver = context.contentResolver
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
-    var selectedUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
-    var startPage by remember { mutableStateOf("1") }
-    var endPage by remember { mutableStateOf("1") }
-    var orderText by remember { mutableStateOf("1,2,3") }
+    var inputUri by remember { mutableStateOf<Uri?>(null) }
+    var value by remember { mutableStateOf("") }
     var processing by remember { mutableStateOf(false) }
-    var pendingSave by remember { mutableStateOf<((Uri) -> Long)?>(null) }
+    var pendingAction by remember { mutableStateOf<((Uri) -> Long)?>(null) }
 
-    val multiPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> selectedUris = uris }
-    val singlePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) selectedUris = listOf(uri) }
-    val outputPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
-        val action = pendingSave
-        pendingSave = null
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        inputUri = uri
+    }
+    val output = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        val action = pendingAction
+        pendingAction = null
         if (uri != null && action != null) {
             processing = true
             scope.launch {
                 val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
                 processing = false
-                snackbar.showSnackbar(result.fold({ "PDF criado • " + formatBytes(it) }, { "Erro: " + (it.message ?: "processamento falhou") }))
+                snackbar.showSnackbar(
+                    result.fold(
+                        { "PDF criado • " + formatBytes(it) },
+                        { "Erro: " + (it.message ?: "processamento falhou") },
+                    ),
+                )
             }
         }
-    }
-
-    fun createOutput(name: String, action: (Uri) -> Long) {
-        pendingSave = action
-        outputPicker.launch(name)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(tool.title) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar") } },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
+                    }
+                },
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Spacer(Modifier.height(6.dp))
             Text(
-                text = when (tool) {
-                    PdfTool.MERGE -> "Selecione dois ou mais PDFs para criar um único documento.",
-                    PdfTool.SPLIT -> "Selecione um PDF e indique o intervalo de páginas.",
-                    PdfTool.COMPRESS -> "Imagens grandes serão reduzidas e recomprimidas localmente.",
-                    PdfTool.REORDER -> "Indique a nova ordem, por exemplo: 3,1,2,4.",
+                text = if (tool == SecurityTool.PROTECT) {
+                    "Crie uma cópia do PDF protegida por palavra-passe."
+                } else {
+                    "Adicione uma assinatura visual ao rodapé de cada página. Isto não é uma assinatura digital com certificado."
                 },
                 style = MaterialTheme.typography.bodyMedium,
             )
 
-            if (tool == PdfTool.MERGE) {
-                OutlinedButton(onClick = { multiPicker.launch(arrayOf("application/pdf")) }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Outlined.Folder, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Selecionar PDFs")
-                }
-            } else {
-                OutlinedButton(onClick = { singlePicker.launch(arrayOf("application/pdf")) }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Outlined.Folder, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Selecionar PDF")
-                }
+            OutlinedButton(
+                onClick = { picker.launch(arrayOf("application/pdf")) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Outlined.Folder, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Selecionar PDF")
             }
 
-            if (selectedUris.isNotEmpty()) {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Ficheiros selecionados", style = MaterialTheme.typography.titleSmall)
-                        selectedUris.forEachIndexed { index, uri -> Text((index + 1).toString() + ". " + (uri.lastPathSegment ?: "PDF"), maxLines = 1) }
-                    }
-                }
+            inputUri?.let {
+                Text(
+                    "PDF selecionado: " + (it.lastPathSegment ?: "documento.pdf"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
-            when (tool) {
-                PdfTool.SPLIT -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(startPage, { startPage = it.filter(Char::isDigit) }, label = { Text("De") }, singleLine = true, modifier = Modifier.weight(1f))
-                    OutlinedTextField(endPage, { endPage = it.filter(Char::isDigit) }, label = { Text("Até") }, singleLine = true, modifier = Modifier.weight(1f))
-                }
-                PdfTool.REORDER -> OutlinedTextField(orderText, { orderText = it }, label = { Text("Nova ordem") }, supportingText = { Text("Ex.: 3,1,2,4") }, modifier = Modifier.fillMaxWidth())
-                else -> Unit
-            }
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = {
+                    Text(if (tool == SecurityTool.PROTECT) "Palavra-passe" else "Texto da assinatura")
+                },
+            )
 
             Button(
+                enabled = inputUri != null && value.isNotBlank() && !processing,
                 onClick = {
-                    when (tool) {
-                        PdfTool.MERGE -> if (selectedUris.size < 2) scope.launch { snackbar.showSnackbar("Selecione pelo menos dois PDFs.") } else createOutput("docpilot-merged.pdf") { uri -> PdfProcessor.merge(resolver, selectedUris, uri) }
-                        PdfTool.SPLIT -> {
-                            val start = startPage.toIntOrNull()
-                            val end = endPage.toIntOrNull()
-                            if (selectedUris.size != 1 || start == null || end == null) scope.launch { snackbar.showSnackbar("Selecione um PDF e um intervalo válido.") }
-                            else createOutput("docpilot-split.pdf") { uri -> PdfProcessor.extractPages(resolver, selectedUris.single(), uri, start, end) }
+                    val source = inputUri ?: return@Button
+                    if (tool == SecurityTool.PROTECT) {
+                        pendingAction = { outputUri ->
+                            DocumentTools.protectPdf(resolver, source, outputUri, value)
                         }
-                        PdfTool.COMPRESS -> if (selectedUris.size != 1) scope.launch { snackbar.showSnackbar("Selecione um PDF.") } else createOutput("docpilot-compressed.pdf") { uri -> PdfProcessor.compress(resolver, selectedUris.single(), uri) }
-                        PdfTool.REORDER -> {
-                            val orderResult = runCatching { parsePageOrder(orderText) }
-                            if (orderResult.isFailure) scope.launch { snackbar.showSnackbar(orderResult.exceptionOrNull()?.message ?: "Ordem inválida.") }
-                            else if (selectedUris.size != 1) scope.launch { snackbar.showSnackbar("Selecione um PDF.") }
-                            else createOutput("docpilot-reordered.pdf") { uri -> PdfProcessor.reorder(resolver, selectedUris.single(), uri, orderResult.getOrThrow()) }
+                        output.launch("docpilot-protected.pdf")
+                    } else {
+                        pendingAction = { outputUri ->
+                            DocumentTools.addVisualSignature(resolver, source, outputUri, value)
                         }
+                        output.launch("docpilot-signed.pdf")
                     }
                 },
-                enabled = !processing,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
             ) {
-                if (processing) { CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.height(20.dp).width(20.dp)); Spacer(Modifier.width(10.dp)); Text("A processar…") }
-                else Text("Criar PDF")
+                if (processing) {
+                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("A processar…")
+                } else {
+                    Text(if (tool == SecurityTool.PROTECT) "Proteger PDF" else "Aplicar assinatura")
+                }
             }
 
-            Text("O processamento é local no dispositivo. Os PDFs não são enviados para um servidor.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(18.dp))
+            Text(
+                "O processamento acontece localmente no dispositivo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
