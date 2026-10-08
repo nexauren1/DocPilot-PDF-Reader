@@ -21,6 +21,10 @@ DocPilot is an Android-first document hub focused on reading, organizing and pro
 - JVM unit tests for document and PDF-tool logic
 - GitHub Actions pipeline for tests and debug/release APK builds
 
+## CI validation
+
+This branch runs the full Android unit-test, debug-APK and release-APK pipeline before the next promotion.
+
 ## PDF processing
 
 The first functional processing layer runs on-device:
