@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.nexauren.docpilot"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.nexauren.docpilot"
