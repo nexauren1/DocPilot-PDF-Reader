@@ -1,0 +1,471 @@
+package com.nexauren.docpilot.ui.screens
+
+import android.app.Activity
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.CallSplit
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Create
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.nexauren.docpilot.pdf.DocumentTools
+import com.nexauren.docpilot.pdf.PdfProcessor
+import com.nexauren.docpilot.pdf.formatBytes
+import com.nexauren.docpilot.pdf.parsePageOrder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private enum class PdfTool(val title: String, val subtitle: String, val icon: ImageVector) {
+    MERGE("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description),
+    SPLIT("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit),
+    COMPRESS("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive),
+    REORDER("Organizar", "Reordenar páginas", Icons.Outlined.Edit),
+}
+
+private enum class SecurityTool(val title: String, val subtitle: String, val icon: ImageVector) {
+    PROTECT("Proteger", "Senha e permissões", Icons.Outlined.Lock),
+    SIGN("Assinatura visual", "Adicionar assinatura ao PDF", Icons.Outlined.Create),
+}
+
+private data class ToolCard(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val pdfTool: PdfTool? = null,
+    val securityTool: SecurityTool? = null,
+    val action: Action = Action.NONE,
+)
+
+private enum class Action { NONE, SCAN, IMAGE_TO_PDF, OCR }
+
+private val toolCards = listOf(
+    ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, pdfTool = PdfTool.MERGE),
+    ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, pdfTool = PdfTool.SPLIT),
+    ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, pdfTool = PdfTool.COMPRESS),
+    ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER),
+    ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, action = Action.SCAN),
+    ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF),
+    ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN),
+    ToolCard("Proteger", "Senha e permissões", Icons.Outlined.Lock, securityTool = SecurityTool.PROTECT),
+    ToolCard("Extrair texto", "OCR em imagens", Icons.Outlined.Description, action = Action.OCR),
+    ToolCard("Duplicar páginas", "Em desenvolvimento", Icons.Outlined.ContentCopy),
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ToolsScreen() {
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+
+    var selectedPdfTool by remember { mutableStateOf<PdfTool?>(null) }
+    var selectedSecurityTool by remember { mutableStateOf<SecurityTool?>(null) }
+    var ocrResult by remember { mutableStateOf<String?>(null) }
+    var processing by remember { mutableStateOf(false) }
+
+    var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var pendingOutputAction by remember { mutableStateOf<((Uri) -> Long)?>(null) }
+
+    val outputPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/pdf"),
+    ) { uri ->
+        val action = pendingOutputAction
+        pendingOutputAction = null
+        if (uri != null && action != null) {
+            processing = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
+                processing = false
+                snackbar.showSnackbar(
+                    result.fold(
+                        { "PDF criado • " + formatBytes(it) },
+                        { "Erro: " + (it.message ?: "processamento falhou") },
+                    ),
+                )
+            }
+        }
+    }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        pendingImageUris = uris
+        if (uris.isNotEmpty()) {
+            pendingOutputAction = { output -> DocumentTools.imagesToPdf(context.contentResolver, uris, output) }
+            outputPicker.launch("docpilot-images.pdf")
+        }
+    }
+
+    val ocrPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            processing = true
+            runCatching {
+                val image = InputImage.fromFilePath(context, uri)
+                val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                recognizer.process(image)
+                    .addOnSuccessListener { result ->
+                        ocrResult = result.text.ifBlank { "Nenhum texto foi identificado nesta imagem." }
+                    }
+                    .addOnFailureListener { error ->
+                        scope.launch { snackbar.showSnackbar("OCR falhou: " + (error.message ?: "erro desconhecido")) }
+                    }
+                    .addOnCompleteListener {
+                        recognizer.close()
+                        processing = false
+                    }
+            }.onFailure {
+                processing = false
+                scope.launch { snackbar.showSnackbar("Não foi possível abrir a imagem.") }
+            }
+        }
+    }
+
+    val scannerOptions = remember {
+        GmsDocumentScannerOptions.Builder()
+            .setGalleryImportAllowed(true)
+            .setPageLimit(30)
+            .setResultFormats(
+                GmsDocumentScannerOptions.RESULT_FORMAT_PDF,
+                GmsDocumentScannerOptions.RESULT_FORMAT_JPEG,
+            )
+            .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+            .build()
+    }
+    val scanner = remember { GmsDocumentScanning.getClient(scannerOptions) }
+    val scannerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val scanResult = GmsDocumentScanningResult.fromActivityResultIntent(result.data)
+            val pdfUri = scanResult?.getPdf()?.getUri()
+            if (pdfUri != null) {
+                pendingScannerUri = pdfUri
+                pendingOutputAction = { output -> DocumentTools.scanResultPdf(context.contentResolver, pdfUri, output) }
+                outputPicker.launch("docpilot-scan.pdf")
+            }
+            scanResult?.getPages()?.firstOrNull()?.let { page ->
+                val imageUri = page.getImageUri()
+                if (imageUri != null) {
+                    processing = true
+                    runCatching {
+                        val image = InputImage.fromFilePath(context, imageUri)
+                        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                        recognizer.process(image)
+                            .addOnSuccessListener { text ->
+                                if (text.text.isNotBlank()) {
+                                    ocrResult = text.text
+                                }
+                            }
+                            .addOnCompleteListener {
+                                recognizer.close()
+                                processing = false
+                            }
+                    }.onFailure {
+                        processing = false
+                    }
+                }
+            }
+        }
+    }
+
+    fun launchScanner() {
+        val currentActivity = activity ?: run {
+            scope.launch { snackbar.showSnackbar("Scanner indisponível neste contexto.") }
+            return
+        }
+        scanner.getStartScanIntent(currentActivity)
+            .addOnSuccessListener { sender ->
+                scannerLauncher.launch(IntentSenderRequest.Builder(sender).build())
+            }
+            .addOnFailureListener { error ->
+                scope.launch { snackbar.showSnackbar("Não foi possível iniciar o scanner: " + (error.message ?: "erro")) }
+            }
+    }
+
+    if (selectedPdfTool != null) {
+        ToolWorkspace(tool = selectedPdfTool!!, onBack = { selectedPdfTool = null })
+        return
+    }
+
+    if (selectedSecurityTool != null) {
+        SecurityWorkspace(
+            tool = selectedSecurityTool!!,
+            onBack = { selectedSecurityTool = null },
+        )
+        return
+    }
+
+    if (ocrResult != null) {
+        AlertDialog(
+            onDismissRequest = { ocrResult = null },
+            title = { Text("Texto reconhecido") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(420.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text(ocrResult.orEmpty())
+                }
+            },
+            confirmButton = {
+                Button(onClick = { ocrResult = null }) {
+                    Text("Fechar")
+                }
+            },
+        )
+    }
+
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Ferramentas") }) },
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { padding ->
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            contentPadding = PaddingValues(
+                16.dp,
+                padding.calculateTopPadding() + 4.dp,
+                16.dp,
+                padding.calculateBottomPadding() + 20.dp,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            items(toolCards) { card ->
+                val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
+                Card(
+                    onClick = {
+                        when {
+                            card.pdfTool != null -> selectedPdfTool = card.pdfTool
+                            card.securityTool != null -> selectedSecurityTool = card.securityTool
+                            card.action == Action.SCAN -> launchScanner()
+                            card.action == Action.IMAGE_TO_PDF -> imagePicker.launch(arrayOf("image/*"))
+                            card.action == Action.OCR -> ocrPicker.launch(arrayOf("image/*"))
+                        }
+                    },
+                    enabled = enabled,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                ) {
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            card.icon,
+                            contentDescription = null,
+                            tint = if (enabled) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                        Text(card.title, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            card.subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SecurityWorkspace(
+    tool: SecurityTool,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current
+    val resolver = context.contentResolver
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+    var inputUri by remember { mutableStateOf<Uri?>(null) }
+    var value by remember { mutableStateOf("") }
+    var processing by remember { mutableStateOf(false) }
+    var pendingAction by remember { mutableStateOf<((Uri) -> Long)?>(null) }
+
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        inputUri = uri
+    }
+    val output = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        val action = pendingAction
+        pendingAction = null
+        if (uri != null && action != null) {
+            processing = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
+                processing = false
+                snackbar.showSnackbar(
+                    result.fold(
+                        { "PDF criado • " + formatBytes(it) },
+                        { "Erro: " + (it.message ?: "processamento falhou") },
+                    ),
+                )
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(tool.title) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
+                    }
+                },
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = if (tool == SecurityTool.PROTECT) {
+                    "Crie uma cópia do PDF protegida por palavra-passe."
+                } else {
+                    "Adicione uma assinatura visual ao rodapé de cada página. Isto não é uma assinatura digital com certificado."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            OutlinedButton(
+                onClick = { picker.launch(arrayOf("application/pdf")) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Outlined.Folder, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Selecionar PDF")
+            }
+
+            inputUri?.let {
+                Text(
+                    "PDF selecionado: " + (it.lastPathSegment ?: "documento.pdf"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = {
+                    Text(if (tool == SecurityTool.PROTECT) "Palavra-passe" else "Texto da assinatura")
+                },
+            )
+
+            Button(
+                enabled = inputUri != null && value.isNotBlank() && !processing,
+                onClick = {
+                    val source = inputUri ?: return@Button
+                    if (tool == SecurityTool.PROTECT) {
+                        pendingAction = { outputUri ->
+                            DocumentTools.protectPdf(resolver, source, outputUri, value)
+                        }
+                        output.launch("docpilot-protected.pdf")
+                    } else {
+                        pendingAction = { outputUri ->
+                            DocumentTools.addVisualSignature(resolver, source, outputUri, value)
+                        }
+                        output.launch("docpilot-signed.pdf")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+            ) {
+                if (processing) {
+                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("A processar…")
+                } else {
+                    Text(if (tool == SecurityTool.PROTECT) "Proteger PDF" else "Aplicar assinatura")
+                }
+            }
+
+            Text(
+                "O processamento acontece localmente no dispositivo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
