@@ -38,15 +38,15 @@ private data class Tool(
 )
 
 private val tools = listOf(
-    Tool("Juntar PDFs", "Combinar documentos", Icons.Outlined.Merge),
+    Tool("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description),
     Tool("Dividir PDF", "Separar páginas", Icons.Outlined.CallSplit),
     Tool("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive),
     Tool("Proteger", "Senha e segurança", Icons.Outlined.Lock),
-    Tool("Organizar", "Reordenar páginas", Icons.Outlined.EditDocument),
+    Tool("Organizar", "Reordenar páginas", Icons.Outlined.Edit),
     Tool("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt),
     Tool("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary),
-    Tool("Assinar", "Assinatura digital", Icons.Outlined.Draw),
-    Tool("Extrair texto", "OCR e conteúdo", Icons.Outlined.ReceiptLong),
+    Tool("Assinar", "Assinatura digital", Icons.Outlined.Create),
+    Tool("Extrair texto", "OCR e conteúdo", Icons.Outlined.Description),
     Tool("Duplicar páginas", "Copiar conteúdo", Icons.Outlined.ContentCopy),
 )
 
