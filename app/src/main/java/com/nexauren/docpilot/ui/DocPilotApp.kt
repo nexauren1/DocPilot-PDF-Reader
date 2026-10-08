@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -44,11 +43,6 @@ private enum class Destination(val label: String, val icon: androidx.compose.ui.
     SETTINGS("Definições", Icons.Outlined.Settings),
 }
 
-private val DocumentSaver = listSaver<DocumentItem, String>(
-    save = { listOf(it.name, it.uri) },
-    restore = { DocumentItem(it[0], it[1]) },
-)
-
 @Composable
 fun DocPilotApp() {
     val context = LocalContext.current
@@ -56,9 +50,7 @@ fun DocPilotApp() {
     var documents by remember {
         mutableStateOf(loadDocuments(context))
     }
-    var selectedDocument by rememberSaveable(stateSaver = DocumentSaver) {
-        mutableStateOf<DocumentItem?>(null)
-    }
+    var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val picker = rememberLauncherForActivityResult(
@@ -106,7 +98,12 @@ fun DocPilotApp() {
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
-    ) { _ ->
+    ) { paddingValues ->
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+        ) {
         when (destination) {
             Destination.HOME -> HomeScreen(
                 documents = documents,
@@ -125,6 +122,7 @@ fun DocPilotApp() {
                 },
             )
             Destination.SETTINGS -> SettingsScreen()
+        }
         }
     }
 }
