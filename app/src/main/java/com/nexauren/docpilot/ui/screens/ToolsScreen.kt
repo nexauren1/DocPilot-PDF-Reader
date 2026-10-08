@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -466,6 +467,279 @@ private fun SecurityWorkspace(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ToolWorkspace(
+    tool: PdfTool,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current
+    val resolver = context.contentResolver
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+    var selectedUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var startPage by remember { mutableStateOf("1") }
+    var endPage by remember { mutableStateOf("1") }
+    var orderText by remember { mutableStateOf("1,2,3") }
+    var processing by remember { mutableStateOf(false) }
+    var pendingSave by remember { mutableStateOf<((Uri) -> Long)?>(null) }
+
+    val multiPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        selectedUris = uris
+    }
+
+    val singlePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) selectedUris = listOf(uri)
+    }
+
+    val outputPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        val action = pendingSave
+        pendingSave = null
+        if (uri != null && action != null) {
+            processing = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
+                processing = false
+                snackbar.showSnackbar(
+                    result.fold(
+                        { "PDF criado • " + formatBytes(it) },
+                        { "Erro: " + (it.message ?: "processamento falhou") },
+                    )
+                )
+            }
+        }
+    }
+
+    fun createOutput(name: String, action: (Uri) -> Long) {
+        pendingSave = action
+        outputPicker.launch(name)
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(tool.title) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
+                    }
+                },
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = when (tool) {
+                    PdfTool.MERGE -> "Selecione dois ou mais PDFs para criar um único documento."
+                    PdfTool.SPLIT -> "Selecione um PDF e indique o intervalo de páginas."
+                    PdfTool.COMPRESS -> "Imagens grandes serão reduzidas e recomprimidas localmente."
+                    PdfTool.REORDER -> "Indique a nova ordem, por exemplo: 3,1,2,4."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            if (tool == PdfTool.MERGE) {
+                OutlinedButton(
+                    onClick = { multiPicker.launch(arrayOf("application/pdf")) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Folder, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Selecionar PDFs")
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { singlePicker.launch(arrayOf("application/pdf")) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Folder, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Selecionar PDF")
+                }
+            }
+
+            if (selectedUris.isNotEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text("Ficheiros selecionados", style = MaterialTheme.typography.titleSmall)
+                        selectedUris.forEachIndexed { index, uri ->
+                            Text(
+                                (index + 1).toString() + ". " +
+                                    (uri.lastPathSegment ?: "PDF"),
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+            }
+
+            when (tool) {
+                PdfTool.SPLIT -> {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = startPage,
+                            onValueChange = { startPage = it.filter(Char::isDigit) },
+                            label = { Text("De") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        OutlinedTextField(
+                            value = endPage,
+                            onValueChange = { endPage = it.filter(Char::isDigit) },
+                            label = { Text("Até") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+
+                PdfTool.REORDER -> {
+                    OutlinedTextField(
+                        value = orderText,
+                        onValueChange = { orderText = it },
+                        label = { Text("Nova ordem") },
+                        supportingText = { Text("Ex.: 3,1,2,4") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                else -> Unit
+            }
+
+            Button(
+                onClick = {
+                    when (tool) {
+                        PdfTool.MERGE -> {
+                            if (selectedUris.size < 2) {
+                                scope.launch {
+                                    snackbar.showSnackbar("Selecione pelo menos dois PDFs.")
+                                }
+                            } else {
+                                createOutput("docpilot-merged.pdf") { uri ->
+                                    PdfProcessor.merge(resolver, selectedUris, uri)
+                                }
+                            }
+                        }
+
+                        PdfTool.SPLIT -> {
+                            val start = startPage.toIntOrNull()
+                            val end = endPage.toIntOrNull()
+
+                            if (selectedUris.size != 1 || start == null || end == null) {
+                                scope.launch {
+                                    snackbar.showSnackbar(
+                                        "Selecione um PDF e um intervalo válido."
+                                    )
+                                }
+                            } else {
+                                createOutput("docpilot-split.pdf") { uri ->
+                                    PdfProcessor.extractPages(
+                                        resolver,
+                                        selectedUris.single(),
+                                        uri,
+                                        start,
+                                        end,
+                                    )
+                                }
+                            }
+                        }
+
+                        PdfTool.COMPRESS -> {
+                            if (selectedUris.size != 1) {
+                                scope.launch {
+                                    snackbar.showSnackbar("Selecione um PDF.")
+                                }
+                            } else {
+                                createOutput("docpilot-compressed.pdf") { uri ->
+                                    PdfProcessor.compress(
+                                        resolver,
+                                        selectedUris.single(),
+                                        uri,
+                                    )
+                                }
+                            }
+                        }
+
+                        PdfTool.REORDER -> {
+                            val orderResult = runCatching {
+                                parsePageOrder(orderText)
+                            }
+
+                            if (orderResult.isFailure) {
+                                scope.launch {
+                                    snackbar.showSnackbar(
+                                        orderResult.exceptionOrNull()?.message
+                                            ?: "Ordem inválida."
+                                    )
+                                }
+                            } else if (selectedUris.size != 1) {
+                                scope.launch {
+                                    snackbar.showSnackbar("Selecione um PDF.")
+                                }
+                            } else {
+                                createOutput("docpilot-reordered.pdf") { uri ->
+                                    PdfProcessor.reorder(
+                                        resolver,
+                                        selectedUris.single(),
+                                        uri,
+                                        orderResult.getOrThrow(),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                enabled = !processing,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+            ) {
+                if (processing) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text("A processar…")
+                } else {
+                    Text("Criar PDF")
+                }
+            }
+
+            Text(
+                "O processamento é local no dispositivo. Os PDFs não são enviados para um servidor.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(18.dp))
         }
     }
 }
