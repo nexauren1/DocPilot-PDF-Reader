@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
@@ -22,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,7 +46,7 @@ private enum class Destination(val label: String, val icon: androidx.compose.ui.
 @Composable
 fun DocPilotApp() {
     val context = LocalContext.current
-    var destination by rememberSaveable { mutableStateOf(Destination.HOME) }
+    var destination by remember { mutableStateOf(Destination.HOME) }
     var documents by remember {
         mutableStateOf(loadDocuments(context))
     }
