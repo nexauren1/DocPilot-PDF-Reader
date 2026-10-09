@@ -73,7 +73,7 @@ fun SettingsScreen() {
             ) {
                 ListItem(
                     headlineContent = { Text("Sobre o DocPilot") },
-                    supportingContent = { Text("DocPilot • versão 0.1.1") },
+                    supportingContent = { Text("DocPilot • versão 0.1.2") },
                     leadingContent = { Icon(Icons.Outlined.Info, contentDescription = null) },
                 )
             }
