@@ -159,6 +159,66 @@ fun HomeScreen(
                 }
             }
 
+            if (documents.isNotEmpty()) {
+                item {
+                    val latestDocument = documents.first()
+                    Card(
+                        modifier = Modifier.fillMaxWidth().clickable { onOpenDocument(latestDocument) },
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 62.dp, height = 76.dp)
+                                    .background(
+                                        Brush.linearGradient(listOf(Color(0xFFE5EDFF), Color(0xFFEDE7FF))),
+                                        RoundedCornerShape(14.dp),
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Outlined.PictureAsPdf,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4B55D5),
+                                    modifier = Modifier.size(32.dp),
+                                )
+                            }
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                Text(
+                                    "ABERTO RECENTEMENTE",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    latestDocument.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    maxLines = 2,
+                                )
+                                Text(
+                                    "Toca para abrir o documento",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    "Abrir documento  →",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             item {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Acesso rápido", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
