@@ -1,0 +1,75 @@
+name: DocPilot Installable Preview Release
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'release: DocPilot installable preview') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
+
+      - name: Install Android SDK 36 and build tools
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.6.0"
+
+      - name: Run unit tests
+        run: gradle test --stacktrace
+
+      - name: Build release APK
+        run: gradle assembleRelease --stacktrace
+
+      - name: Verify APK signature
+        run: "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+
+      - name: Prepare release asset
+        run: cp app/build/outputs/apk/release/app-release.apk DocPilot-0.1.1-preview.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.1-preview.1
+          target_commitish: ${{ github.sha }}
+          name: DocPilot 0.1.1 — Installable Preview
+          prerelease: true
+          make_latest: false
+          fail_on_unmatched_files: true
+          body: |
+            ## DocPilot 0.1.1 — Installable Android Preview
+
+            This release contains an APK built by GitHub Actions after unit tests and an APK signature verification step.
+
+            **Signing notice:** this preview uses the default Android debug signing identity so that the APK can be installed for device testing. It is not the permanent production signing key and must not be used for a store launch. A persistent production keystore must be configured before publishing a stable release.
+
+            ### Included
+            - Multi-page PDF reader, page thumbnails and zoom
+            - Merge, split, reorder and compress PDF tools
+            - Scanner and image OCR
+            - Images to PDF
+            - Password protection and visual text signature
+          files: DocPilot-0.1.1-preview.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
