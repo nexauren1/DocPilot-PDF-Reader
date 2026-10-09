@@ -1,4 +1,4 @@
-# DocPilot PDF Reader
+# DocPilot
 
 DocPilot is an Android-first document hub focused on reading, organizing and processing PDFs.
 
