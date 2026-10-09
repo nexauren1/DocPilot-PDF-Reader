@@ -2,61 +2,57 @@
 
 DocPilot is an Android-first document hub focused on reading, organizing and processing PDFs.
 
-## Current foundation
+## Current features
 
 - Jetpack Compose + Material 3 interface
-- Home dashboard with quick actions
+- Home dashboard and document library with local persistence and search
 - PDF import through the Android document picker
-- Persistent local document library
-- Search across imported documents
 - Multi-page PDF reader with on-demand Android PdfRenderer rendering
-- Horizontal page thumbnails with direct page selection
-- Previous/next page navigation and live page counter
-- Pinch-to-zoom and pan with a one-tap zoom reset
+- Horizontal page thumbnails, direct page selection and previous/next navigation
+- Pinch-to-zoom and pan with one-tap zoom reset
 - Local PDF processing powered by PdfBox-Android 2.0.27.0
-- Functional **merge**, **split**, **reorder** and **compress** workflows
-- Tools workspace with output-file creation through the Android document picker
-- Settings screen
-- Starter brand icon and theme
-- JVM unit tests for document and PDF-tool logic
-- GitHub Actions pipeline for tests and debug/release APK builds
+- **Merge PDFs**, **split page ranges**, **reorder pages** and **image compression**
+- Scanner flow using Google ML Kit Document Scanner
+- OCR for images using ML Kit Text Recognition
+- Convert selected images into PDF
+- Password-protect a PDF
+- Add a visual text signature to PDF pages
+- Settings screen, starter app icon and Material 3 theme
+- JVM unit tests and GitHub Actions test/build pipeline
 
-## CI validation
+## PDF processing and privacy
 
-This branch runs the full Android unit-test, debug-APK and release-APK pipeline before the next promotion.
+Processing happens on-device. The app uses the Android system document picker for input and output files; selected PDFs and images are not uploaded to a DocPilot server.
 
-## PDF processing
+Current tools include:
 
-The first functional processing layer runs on-device:
-
-- **Juntar PDFs:** imports pages from two or more source PDFs into one output.
-- **Dividir PDF:** extracts an inclusive page range into a new output.
-- **Organizar:** creates a new PDF using a user-defined page order such as `3,1,2,4`.
-- **Comprimir:** downscales oversized raster images and recompresses them before saving.
-
-The UI creates the destination file with the Android system document picker. Source PDFs remain local to the device.
-
-## Architecture
-
-The project starts intentionally small and modular:
-
-- `model/` contains document domain models.
-- `pdf/` contains the local PDF processing engine.
-- `ui/` contains theme, navigation shell, reusable components and screens.
-- More tools can be added without coupling UI code directly to PDF processing internals.
+- **Merge PDFs:** combines pages from two or more source PDFs.
+- **Split PDF:** extracts an inclusive page interval.
+- **Organize:** creates a new PDF using a custom page order such as `3,1,2,4`.
+- **Compress:** downscales oversized raster images and recompresses them.
+- **Images to PDF:** creates a PDF from selected image files.
+- **Protect:** creates a password-protected PDF.
+- **Visual signature:** adds user-provided text to each page. This is not a certificate-based cryptographic digital signature.
+- **Scanner/OCR:** uses ML Kit for scanning and text recognition.
 
 ## Build
 
-The CI workflow uses JDK 17 and Gradle 9.6.0. The application targets Android API 36 with minimum Android API 24.
+- JDK 17
+- Gradle 9.6.0
+- Android compile SDK 36
+- Minimum Android API 24
+- Application ID: `com.nexauren.docpilot`
 
-The release APK from CI is currently **unsigned**. Production signing will be configured later with protected credentials.
+The GitHub Actions pipeline runs unit tests, builds debug and release APKs, and verifies the signature.
+
+## Signing status
+
+The installable preview release uses the default Android debug signing identity so it can be installed for testing. **This is not the permanent production signing key**. Before a store launch, configure a persistent production keystore through protected GitHub Actions secrets; future versions must keep the same signing key to support in-place updates.
 
 ## Roadmap
 
-1. Multi-page PDF reader with zoom, page navigation and thumbnails.
-2. Stronger compression controls and size estimation.
-3. Scanner/OCR workflow.
-4. Image and document converters.
-5. Favorites, folders, sorting and richer file management.
-6. PDF protection and signing.
-7. Release signing, automated versioning and store-ready build pipeline.
+1. Persisted signing configuration and store-ready signed release.
+2. Better compression settings and size reporting.
+3. Richer document organization, favorites, folders and history.
+4. Scanner/OCR workflows refinements.
+5. Additional accessibility, device testing and release checks.
