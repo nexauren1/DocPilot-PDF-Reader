@@ -13,8 +13,8 @@ android {
         applicationId = "com.nexauren.docpilot"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -28,6 +28,9 @@ android {
             versionNameSuffix = "-debug"
         }
         release {
+            // Installable preview build: uses the default Android debug signing identity.
+            // Replace this with a protected production keystore before a store launch.
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
             isShrinkResources = false
             proguardFiles(
