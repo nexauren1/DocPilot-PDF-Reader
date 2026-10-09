@@ -47,9 +47,7 @@ private enum class Destination(val label: String, val icon: androidx.compose.ui.
 fun DocPilotApp() {
     val context = LocalContext.current
     var destination by remember { mutableStateOf(Destination.HOME) }
-    var documents by remember {
-        mutableStateOf(loadDocuments(context))
-    }
+    var documents by remember { mutableStateOf(loadDocuments(context)) }
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -89,9 +87,7 @@ fun DocPilotApp() {
                     NavigationBarItem(
                         selected = destination == item,
                         onClick = { destination = item },
-                        icon = {
-                            Icon(item.icon, contentDescription = item.label)
-                        },
+                        icon = { Icon(item.icon, contentDescription = item.label) },
                         label = { androidx.compose.material3.Text(item.label) },
                     )
                 }
@@ -100,24 +96,23 @@ fun DocPilotApp() {
         containerColor = MaterialTheme.colorScheme.background,
     ) { paddingValues ->
         androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
+            modifier = Modifier.fillMaxSize().padding(paddingValues),
         ) {
-        when (destination) {
-            Destination.HOME -> HomeScreen(
-                documents = documents,
-                onImportPdf = { picker.launch(arrayOf("application/pdf")) },
-                onOpenDocument = { selectedDocument = it },
-                onViewLibrary = { destination = Destination.LIBRARY },
-            )
-            Destination.LIBRARY -> LibraryScreen(
-                documents = documents,
-                onOpenDocument = { selectedDocument = it },
-            )
-            Destination.TOOLS -> ToolsScreen()
-            Destination.SETTINGS -> SettingsScreen()
-        }
+            when (destination) {
+                Destination.HOME -> HomeScreen(
+                    documents = documents,
+                    onImportPdf = { picker.launch(arrayOf("application/pdf")) },
+                    onOpenDocument = { selectedDocument = it },
+                    onViewLibrary = { destination = Destination.LIBRARY },
+                    onViewTools = { destination = Destination.TOOLS },
+                )
+                Destination.LIBRARY -> LibraryScreen(
+                    documents = documents,
+                    onOpenDocument = { selectedDocument = it },
+                )
+                Destination.TOOLS -> ToolsScreen()
+                Destination.SETTINGS -> SettingsScreen()
+            }
         }
     }
 }
