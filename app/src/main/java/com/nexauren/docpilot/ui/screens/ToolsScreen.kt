@@ -149,6 +149,23 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     var pdfInfoResult by remember { mutableStateOf<String?>(null) }
     var processing by remember { mutableStateOf(false) }
 
+    var toolQuery by remember { mutableStateOf("") }
+    var toolCategory by remember { mutableStateOf("Todas") }
+    val visibleTools = remember(toolQuery, toolCategory) {
+        toolCards.filter { card ->
+            val queryMatches = card.title.contains(toolQuery, ignoreCase = true) ||
+                card.subtitle.contains(toolQuery, ignoreCase = true)
+            val categoryMatches = when (toolCategory) {
+                "PDF" -> card.pdfTool != null || card.action == Action.PDF_INFO
+                "Segurança" -> card.securityTool != null
+                "Digitalização" -> card.action == Action.SCAN || card.action == Action.OCR
+                "Conversão" -> card.action == Action.IMAGE_TO_PDF
+                else -> true
+            }
+            queryMatches && categoryMatches
+        }
+    }
+
     var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var pendingOutputAction by remember { mutableStateOf<((Uri) -> Long)?>(null) }
@@ -332,23 +349,6 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                 }
             },
         )
-    }
-
-    var toolQuery by remember { mutableStateOf("") }
-    var toolCategory by remember { mutableStateOf("Todas") }
-    val visibleTools = remember(toolQuery, toolCategory) {
-        toolCards.filter { card ->
-            val queryMatches = card.title.contains(toolQuery, ignoreCase = true) ||
-                card.subtitle.contains(toolQuery, ignoreCase = true)
-            val categoryMatches = when (toolCategory) {
-                "PDF" -> card.pdfTool != null || card.action == Action.PDF_INFO
-                "Segurança" -> card.securityTool != null
-                "Digitalização" -> card.action == Action.SCAN || card.action == Action.OCR
-                "Conversão" -> card.action == Action.IMAGE_TO_PDF
-                else -> true
-            }
-            queryMatches && categoryMatches
-        }
     }
 
     Scaffold(
