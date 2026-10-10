@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -115,7 +116,7 @@ private val toolCards = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ToolsScreen(onOutputSaved: (String) -> Unit) {
+fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
@@ -287,7 +288,16 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Ferramentas") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Ferramentas") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenMenu) {
+                        Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         LazyVerticalGrid(
