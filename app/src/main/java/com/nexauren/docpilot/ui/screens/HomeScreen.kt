@@ -1,5 +1,8 @@
 package com.nexauren.docpilot.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Lock
@@ -37,6 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -68,6 +73,11 @@ fun HomeScreen(
     onOpenMenu: () -> Unit,
 ) {
     var showAccessDialog by remember { mutableStateOf(false) }
+    var homeSearchVisible by remember { mutableStateOf(false) }
+    var homeSearchQuery by remember { mutableStateOf("") }
+    val homeSearchResults = remember(documents, homeSearchQuery) {
+        documents.filter { it.name.contains(homeSearchQuery.trim(), ignoreCase = true) }
+    }
 
     if (showAccessDialog) {
         AlertDialog(
@@ -121,7 +131,10 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onViewLibrary) {
+                    IconButton(onClick = {
+                        homeSearchVisible = !homeSearchVisible
+                        if (!homeSearchVisible) homeSearchQuery = ""
+                    }) {
                         Icon(Icons.Outlined.Search, contentDescription = "Pesquisar documentos")
                     }
                 },
@@ -133,7 +146,66 @@ fun HomeScreen(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item {
+            if (homeSearchVisible) {
+                item {
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        OutlinedTextField(
+                            value = homeSearchQuery,
+                            onValueChange = { homeSearchQuery = it },
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                            trailingIcon = {
+                                if (homeSearchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { homeSearchQuery = "" }) {
+                                        Icon(Icons.Outlined.Close, contentDescription = "Limpar pesquisa")
+                                    }
+                                }
+                            },
+                            placeholder = { Text("Pesquisar os teus documentos") },
+                        )
+                    }
+                }
+            }
+
+            if (homeSearchVisible && homeSearchQuery.isNotBlank()) {
+                if (homeSearchResults.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(22.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Text("Nenhum documento encontrado", style = MaterialTheme.typography.titleMedium)
+                                Text("Tenta outro nome ou parte do nome do ficheiro.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                } else {
+                    item {
+                        Text(
+                            "${homeSearchResults.size} resultado(s)",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    items(homeSearchResults, key = { it.uri }) { document ->
+                        DocumentCard(document = document) { onOpenDocument(document) }
+                    }
+                }
+            } else {
+                item {
                 Column {
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -386,6 +458,7 @@ fun HomeScreen(
             }
 
             item { Spacer(Modifier.height(12.dp)) }
+            }
         }
     }
 }
