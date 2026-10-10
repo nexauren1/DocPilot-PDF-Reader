@@ -251,7 +251,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit) {
     }
 
     if (selectedPdfTool != null) {
-        ToolWorkspace(tool = selectedPdfTool!!, onBack = { selectedPdfTool = null })
+        ToolWorkspace(tool = selectedPdfTool!!, onBack = { selectedPdfTool = null }, onOutputSaved = onOutputSaved)
         return
     }
 
@@ -259,6 +259,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit) {
         SecurityWorkspace(
             tool = selectedSecurityTool!!,
             onBack = { selectedSecurityTool = null },
+            onOutputSaved = onOutputSaved,
         )
         return
     }
@@ -348,6 +349,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit) {
 private fun SecurityWorkspace(
     tool: SecurityTool,
     onBack: () -> Unit,
+    onOutputSaved: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val resolver = context.contentResolver
@@ -369,6 +371,7 @@ private fun SecurityWorkspace(
             scope.launch {
                 val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
                 processing = false
+                result.onSuccess { onOutputSaved(uri.toString()) }
                 snackbar.showSnackbar(
                     result.fold(
                         { "PDF criado • " + formatBytes(it) },
@@ -478,6 +481,7 @@ private fun SecurityWorkspace(
 private fun ToolWorkspace(
     tool: PdfTool,
     onBack: () -> Unit,
+    onOutputSaved: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val resolver = context.contentResolver
@@ -512,6 +516,7 @@ private fun ToolWorkspace(
             scope.launch {
                 val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
                 processing = false
+                result.onSuccess { onOutputSaved(uri.toString()) }
                 snackbar.showSnackbar(
                     result.fold(
                         { "PDF criado • " + formatBytes(it) },
