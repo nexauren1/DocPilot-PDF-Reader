@@ -115,7 +115,7 @@ private val toolCards = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ToolsScreen() {
+fun ToolsScreen(onOutputSaved: (String) -> Unit) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
@@ -140,6 +140,8 @@ fun ToolsScreen() {
             scope.launch {
                 val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
                 processing = false
+                // Add the finished PDF to the app library only after processing succeeds.
+                result.onSuccess { onOutputSaved(uri.toString()) }
                 snackbar.showSnackbar(
                     result.fold(
                         { "PDF criado • " + formatBytes(it) },
