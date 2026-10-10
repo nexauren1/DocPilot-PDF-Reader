@@ -5,19 +5,24 @@ DocPilot is an Android-first document hub focused on reading, organizing and pro
 ## Current features
 
 - Jetpack Compose + Material 3 interface
-- Home dashboard and document library with local persistence, reliable recent-item order, search clearing and Recentes / Nome A–Z sorting
+- Home dashboard, global slide-out navigation menu and animated section transitions
+- Document library with local persistence, reliable recent-item order, search clearing and Recentes / Nome A–Z sorting
 - Opening a selected PDF launches the reader immediately
 - PDFs created by the processing tools are added to the library after a successful save
 - Optional device-wide PDF discovery after a clear storage-access explanation and Android permission grant
 - PDF opening through the Android document picker remains available as a privacy-friendly fallback
 - Multi-page PDF reader with on-demand Android PdfRenderer rendering
-- Text search in text-based PDFs, page jump, page bookmarks, saved reading position and a live reading progress indicator, pinch-to-zoom and a reflow reading mode for selectable text
+- Inline text search in text-based PDFs with matching-page navigation, a reader action menu with sharing/page jump/zoom reset, page bookmarks, saved position and a live reading progress indicator, pinch-to-zoom and reflow reading mode
 - Horizontal page thumbnails, direct page selection and previous/next navigation
 - Pinch-to-zoom and pan with one-tap zoom reset
 - Local PDF processing powered by PdfBox-Android 2.0.27.0
 - **Merge PDFs**, **split page ranges**, **reorder pages** and **image compression**
 - Scanner flow using Google ML Kit Document Scanner
 - OCR for images using ML Kit Text Recognition
+- Export selectable text from text-based PDFs to `.txt`
+- Inspect PDF filename, page count and size
+- Searchable tool catalogue with category filters, distinctive gradients and animated cards
+- Animated processing overlay for long-running local operations
 - Convert selected images into PDF
 - Password-protect a PDF
 - Add a visual text signature to PDF pages

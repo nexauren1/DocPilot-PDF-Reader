@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
@@ -64,6 +65,7 @@ fun HomeScreen(
     onOpenDocument: (DocumentItem) -> Unit,
     onViewLibrary: () -> Unit,
     onViewTools: () -> Unit,
+    onOpenMenu: () -> Unit,
 ) {
     var showAccessDialog by remember { mutableStateOf(false) }
 
@@ -89,6 +91,11 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onOpenMenu) {
+                        Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
+                    }
+                },
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
