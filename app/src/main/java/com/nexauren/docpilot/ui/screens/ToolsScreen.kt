@@ -28,7 +28,6 @@ import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CallSplit
 import androidx.compose.material.icons.outlined.CameraAlt
-import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
@@ -119,7 +118,6 @@ private val toolCards = listOf(
     ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN),
     ToolCard("Proteger", "Senha e permissões", Icons.Outlined.Lock, securityTool = SecurityTool.PROTECT),
     ToolCard("Extrair texto", "OCR em imagens", Icons.Outlined.Description, action = Action.OCR),
-    ToolCard("Duplicar páginas", "Em desenvolvimento", Icons.Outlined.ContentCopy),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
