@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
@@ -241,6 +242,46 @@ fun HomeScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     QuickActionCard("Scanner", "Digitaliza documentos", Icons.Outlined.CameraAlt, Color(0xFFE1F5EF), Color(0xFF16856B), Modifier.weight(1f), onViewTools)
                     QuickActionCard("Ferramentas", "PDF e conversão", Icons.Outlined.AutoAwesome, Color(0xFFFFF0DA), Color(0xFFB66B08), Modifier.weight(1f), onViewTools)
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    RoundedCornerShape(14.dp),
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Outlined.Lock,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Privacidade por defeito", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "Os teus PDFs são trabalhados localmente. Não precisas de criar uma conta DocPilot.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
             }
 
