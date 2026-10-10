@@ -7,20 +7,36 @@ import android.os.Build
 import android.provider.Settings
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.nexauren.docpilot.storage.DocumentAccess
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
@@ -28,9 +44,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.nexauren.docpilot.model.DocumentItem
 import com.nexauren.docpilot.ui.screens.HomeScreen
 import com.nexauren.docpilot.ui.screens.LibraryScreen
@@ -57,6 +76,8 @@ fun DocPilotApp() {
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
     var hasDocumentAccess by remember { mutableStateOf(DocumentAccess.hasAccess(context)) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
     fun refreshDeviceDocuments() {
         hasDocumentAccess = DocumentAccess.hasAccess(context)
@@ -112,11 +133,12 @@ fun DocPilotApp() {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION,
                 )
             }
-            val document = DocumentItem(
-                name = queryDisplayName(context, uri.toString()),
-                uri = uri.toString(),
+            openDocument(
+                DocumentItem(
+                    name = queryDisplayName(context, uri.toString()),
+                    uri = uri.toString(),
+                ),
             )
-            openDocument(document)
         }
     }
 
@@ -128,62 +150,114 @@ fun DocPilotApp() {
         return
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            NavigationBar {
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Column(
+                    modifier = androidx.compose.ui.Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 20.dp),
+                ) {
+                    Text(
+                        "DocPilot",
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
+                    )
+                    Spacer(androidx.compose.ui.Modifier.height(4.dp))
+                    Text(
+                        "Leitor e gestor de PDFs",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
+                    )
+                }
+                HorizontalDivider()
                 Destination.entries.forEach { item ->
-                    NavigationBarItem(
+                    NavigationDrawerItem(
+                        icon = { Icon(item.icon, contentDescription = null) },
+                        label = { Text(item.label) },
                         selected = destination == item,
-                        onClick = { destination = item },
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { androidx.compose.material3.Text(item.label) },
+                        onClick = {
+                            destination = item
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = androidx.compose.ui.Modifier.padding(horizontal = 12.dp),
                     )
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { paddingValues ->
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
-        ) {
-            when (destination) {
-                Destination.HOME -> HomeScreen(
-                    documents = documents,
-                    onImportPdf = { picker.launch(arrayOf("application/pdf")) },
-                    hasDocumentAccess = hasDocumentAccess,
-                    onRequestDocumentAccess = { requestDocumentAccess() },
-                    onRefreshDeviceDocuments = { refreshDeviceDocuments() },
-                    onOpenDocument = { openDocument(it) },
-                    onViewLibrary = { destination = Destination.LIBRARY },
-                    onViewTools = { destination = Destination.TOOLS },
-                )
-                Destination.LIBRARY -> LibraryScreen(
-                    documents = documents,
-                    onOpenDocument = { openDocument(it) },
-                )
-                Destination.TOOLS -> ToolsScreen(
-                    onOutputSaved = { uriString ->
-                        val outputUri = android.net.Uri.parse(uriString)
-                        runCatching {
-                            context.contentResolver.takePersistableUriPermission(
-                                outputUri,
-                                Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                            )
-                        }
-                        val document = DocumentItem(
-                            name = queryDisplayName(context, uriString),
-                            uri = uriString,
+    ) {
+        Scaffold(
+            modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            bottomBar = {
+                NavigationBar {
+                    Destination.entries.forEach { item ->
+                        NavigationBarItem(
+                            selected = destination == item,
+                            onClick = { destination = item },
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) },
                         )
-                        documents = listOf(document) + documents.filterNot { it.uri == document.uri }
-                        saveDocuments(context, documents)
-                    },
-                )
-                Destination.SETTINGS -> SettingsScreen(
-                    hasDocumentAccess = hasDocumentAccess,
-                    onRequestDocumentAccess = { requestDocumentAccess() },
-                )
+                    }
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.background,
+        ) { paddingValues ->
+            AnimatedContent(
+                targetState = destination,
+                modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(paddingValues),
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(180)) togetherWith
+                        fadeOut(animationSpec = tween(120))
+                },
+                label = "DocPilot destination transition",
+            ) { targetDestination ->
+                when (targetDestination) {
+                    Destination.HOME -> HomeScreen(
+                        documents = documents,
+                        onImportPdf = { picker.launch(arrayOf("application/pdf")) },
+                        hasDocumentAccess = hasDocumentAccess,
+                        onRequestDocumentAccess = { requestDocumentAccess() },
+                        onRefreshDeviceDocuments = { refreshDeviceDocuments() },
+                        onOpenDocument = { openDocument(it) },
+                        onViewLibrary = { destination = Destination.LIBRARY },
+                        onViewTools = { destination = Destination.TOOLS },
+                        onOpenMenu = { scope.launch { drawerState.open() } },
+                    )
+
+                    Destination.LIBRARY -> LibraryScreen(
+                        documents = documents,
+                        onOpenDocument = { openDocument(it) },
+                        onOpenMenu = { scope.launch { drawerState.open() } },
+                    )
+
+                    Destination.TOOLS -> ToolsScreen(
+                        onOutputSaved = { uriString ->
+                            val outputUri = android.net.Uri.parse(uriString)
+                            runCatching {
+                                context.contentResolver.takePersistableUriPermission(
+                                    outputUri,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                                )
+                            }
+                            val document = DocumentItem(
+                                name = queryDisplayName(context, uriString),
+                                uri = uriString,
+                            )
+                            documents = listOf(document) + documents.filterNot { it.uri == document.uri }
+                            saveDocuments(context, documents)
+                        },
+                        onOpenMenu = { scope.launch { drawerState.open() } },
+                    )
+
+                    Destination.SETTINGS -> SettingsScreen(
+                        hasDocumentAccess = hasDocumentAccess,
+                        onRequestDocumentAccess = { requestDocumentAccess() },
+                        onOpenMenu = { scope.launch { drawerState.open() } },
+                    )
+                }
             }
         }
     }
