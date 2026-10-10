@@ -5,13 +5,13 @@ DocPilot is an Android-first document hub focused on reading, organizing and pro
 ## Current features
 
 - Jetpack Compose + Material 3 interface
-- Home dashboard and document library with local persistence, reliable recent-item order and search
+- Home dashboard and document library with local persistence, reliable recent-item order, search clearing and Recentes / Nome A–Z sorting
 - Opening a selected PDF launches the reader immediately
 - PDFs created by the processing tools are added to the library after a successful save
 - Optional device-wide PDF discovery after a clear storage-access explanation and Android permission grant
 - PDF opening through the Android document picker remains available as a privacy-friendly fallback
 - Multi-page PDF reader with on-demand Android PdfRenderer rendering
-- Text search in text-based PDFs, page jump, page bookmarks, saved reading position, pinch-to-zoom and a reflow reading mode for selectable text
+- Text search in text-based PDFs, page jump, page bookmarks, saved reading position and a live reading progress indicator, pinch-to-zoom and a reflow reading mode for selectable text
 - Horizontal page thumbnails, direct page selection and previous/next navigation
 - Pinch-to-zoom and pan with one-tap zoom reset
 - Local PDF processing powered by PdfBox-Android 2.0.27.0
