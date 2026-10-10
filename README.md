@@ -5,15 +5,20 @@ DocPilot is an Android-first document hub focused on reading, organizing and pro
 ## Current features
 
 - Jetpack Compose + Material 3 interface
-- Home dashboard and document library with local persistence, reliable recent-item order and search
+- Modern blue-violet Material 3 design system, redesigned dashboard and library
+- Folder-first PDF discovery via the Android system folder picker, including recursive subfolder scanning
+- Persistent URI permissions for the folder the user selected, without blanket storage permission
+- Searchable local library with reliable recent-item order
 - Opening a selected PDF launches the reader immediately
 - PDFs created by the processing tools are added to the library after a successful save
-- PDF import through the Android document picker
+- Individual PDF opening remains available as a fallback
 - Multi-page PDF reader with on-demand Android PdfRenderer rendering
-- Horizontal page thumbnails, direct page selection and previous/next navigation
-- Pinch-to-zoom and pan with one-tap zoom reset
+- Horizontal page thumbnails, direct page selection, page-jump dialog and previous/next navigation
+- Full-text PDF search with page result excerpts
+- Per-document bookmarks persisted across sessions
+- Pinch-to-zoom, pan, bitmap cache, one-tap zoom reset and PDF sharing
 - Local PDF processing powered by PdfBox-Android 2.0.27.0
-- **Merge PDFs**, **split page ranges**, **reorder pages** and **image compression**
+- **Merge PDFs**, **split page ranges**, **reorder pages**, **rotate pages**, **add watermarks**, **add page numbers** and **image compression**
 - Scanner flow using Google ML Kit Document Scanner
 - OCR for images using ML Kit Text Recognition
 - Convert selected images into PDF
@@ -51,10 +56,10 @@ The GitHub Actions pipeline runs unit tests, builds debug and release APKs, and 
 
 The installable preview release uses the default Android debug signing identity so it can be installed for testing. **This is not the permanent production signing key**. Before a store launch, configure a persistent production keystore through protected GitHub Actions secrets; future versions must keep the same signing key to support in-place updates.
 
-## Roadmap
+## Next improvements
 
-1. Persisted signing configuration and store-ready signed release.
-2. Better compression settings and size reporting.
-3. Richer document organization, favorites, folders and history.
-4. Scanner/OCR workflows refinements.
-5. Additional accessibility, device testing and release checks.
+1. Add PDF highlights and freehand annotations.
+2. Improve compression profiles and report before/after file size.
+3. Add favorites, reading history and saved page position.
+4. Add image export and richer OCR results.
+5. Finish accessibility review, physical-device testing and permanent production signing.
