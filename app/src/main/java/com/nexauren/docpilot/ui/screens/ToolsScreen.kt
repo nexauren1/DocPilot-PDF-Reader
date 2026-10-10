@@ -35,6 +35,9 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.RotateRight
+import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material.icons.outlined.FormatListNumbered
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -82,6 +85,9 @@ private enum class PdfTool(val title: String, val subtitle: String, val icon: Im
     SPLIT("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit),
     COMPRESS("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive),
     REORDER("Organizar", "Reordenar páginas", Icons.Outlined.Edit),
+    ROTATE("Rodar páginas", "Girar páginas do PDF", Icons.Outlined.RotateRight),
+    WATERMARK("Marca de água", "Adicionar texto às páginas", Icons.Outlined.TextFields),
+    PAGE_NUMBERS("Numerar páginas", "Adicionar números de página", Icons.Outlined.FormatListNumbered),
 }
 
 private enum class SecurityTool(val title: String, val subtitle: String, val icon: ImageVector) {
@@ -104,7 +110,10 @@ private val toolCards = listOf(
     ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, pdfTool = PdfTool.MERGE),
     ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, pdfTool = PdfTool.SPLIT),
     ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, pdfTool = PdfTool.COMPRESS),
-    ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER),
+    ToolCard("Organizar páginas", "Escolher nova ordem", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER),
+    ToolCard("Rodar páginas", "Girar 90°, 180° ou 270°", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE),
+    ToolCard("Marca de água", "Texto em todas as páginas", Icons.Outlined.TextFields, pdfTool = PdfTool.WATERMARK),
+    ToolCard("Numerar páginas", "Adicionar paginação", Icons.Outlined.FormatListNumbered, pdfTool = PdfTool.PAGE_NUMBERS),
     ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, action = Action.SCAN),
     ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF),
     ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN),
@@ -491,6 +500,8 @@ private fun ToolWorkspace(
     var startPage by remember { mutableStateOf("1") }
     var endPage by remember { mutableStateOf("1") }
     var orderText by remember { mutableStateOf("1,2,3") }
+    var rotationDegrees by remember { mutableStateOf("90") }
+    var watermarkText by remember { mutableStateOf("CONFIDENCIAL") }
     var processing by remember { mutableStateOf(false) }
     var pendingSave by remember { mutableStateOf<((Uri) -> Long)?>(null) }
 
@@ -561,6 +572,9 @@ private fun ToolWorkspace(
                     PdfTool.SPLIT -> "Selecione um PDF e indique o intervalo de páginas."
                     PdfTool.COMPRESS -> "Imagens grandes serão reduzidas e recomprimidas localmente."
                     PdfTool.REORDER -> "Indique a nova ordem, por exemplo: 3,1,2,4."
+                    PdfTool.ROTATE -> "Gira todas as páginas do documento sem converter as páginas em imagens."
+                    PdfTool.WATERMARK -> "Adiciona um rótulo de texto discreto a cada página."
+                    PdfTool.PAGE_NUMBERS -> "Adiciona a numeração atual e o total de páginas no rodapé."
                 },
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -633,6 +647,28 @@ private fun ToolWorkspace(
                         onValueChange = { orderText = it },
                         label = { Text("Nova ordem") },
                         supportingText = { Text("Ex.: 3,1,2,4") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                PdfTool.ROTATE -> {
+                    OutlinedTextField(
+                        value = rotationDegrees,
+                        onValueChange = { rotationDegrees = it.filter(Char::isDigit).take(3) },
+                        label = { Text("Rotação em graus") },
+                        supportingText = { Text("Valores válidos: 90, 180 ou 270") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                PdfTool.WATERMARK -> {
+                    OutlinedTextField(
+                        value = watermarkText,
+                        onValueChange = { watermarkText = it.take(64) },
+                        label = { Text("Texto da marca de água") },
+                        supportingText = { Text("Máximo de 64 caracteres") },
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -718,6 +754,41 @@ private fun ToolWorkspace(
                                         uri,
                                         orderResult.getOrThrow(),
                                     )
+                                }
+                            }
+                        }
+
+                        PdfTool.ROTATE -> {
+                            val degrees = rotationDegrees.toIntOrNull()
+                            if (selectedUris.size != 1) {
+                                scope.launch { snackbar.showSnackbar("Selecione um PDF.") }
+                            } else if (degrees !in setOf(90, 180, 270)) {
+                                scope.launch { snackbar.showSnackbar("Escolhe 90, 180 ou 270 graus.") }
+                            } else {
+                                createOutput("docpilot-rotated.pdf") { uri ->
+                                    PdfProcessor.rotatePages(resolver, selectedUris.single(), uri, degrees!!)
+                                }
+                            }
+                        }
+
+                        PdfTool.WATERMARK -> {
+                            if (selectedUris.size != 1) {
+                                scope.launch { snackbar.showSnackbar("Selecione um PDF.") }
+                            } else if (watermarkText.isBlank()) {
+                                scope.launch { snackbar.showSnackbar("Escreve o texto da marca de água.") }
+                            } else {
+                                createOutput("docpilot-watermarked.pdf") { uri ->
+                                    PdfProcessor.addWatermark(resolver, selectedUris.single(), uri, watermarkText)
+                                }
+                            }
+                        }
+
+                        PdfTool.PAGE_NUMBERS -> {
+                            if (selectedUris.size != 1) {
+                                scope.launch { snackbar.showSnackbar("Selecione um PDF.") }
+                            } else {
+                                createOutput("docpilot-numbered.pdf") { uri ->
+                                    PdfProcessor.addPageNumbers(resolver, selectedUris.single(), uri)
                                 }
                             }
                         }
