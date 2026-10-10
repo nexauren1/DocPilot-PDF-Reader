@@ -2,6 +2,8 @@ package com.nexauren.docpilot.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,6 +20,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -27,15 +33,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.FormatListNumbered
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.ZoomOutMap
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -68,6 +84,20 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     var pageCount by remember(document.uri) { mutableStateOf(0) }
     var error by remember(document.uri) { mutableStateOf<String?>(null) }
     var resetZoomToken by remember(document.uri) { mutableStateOf(0) }
+    var searchDialog by remember(document.uri) { mutableStateOf(false) }
+    var searchQuery by remember(document.uri) { mutableStateOf("") }
+    var searchResults by remember(document.uri) { mutableStateOf<List<Int>>(emptyList()) }
+    var searchResultIndex by remember(document.uri) { mutableStateOf(0) }
+    var searching by remember(document.uri) { mutableStateOf(false) }
+    var searchMessage by remember(document.uri) { mutableStateOf<String?>(null) }
+    var jumpDialog by remember(document.uri) { mutableStateOf(false) }
+    var jumpPageText by remember(document.uri) { mutableStateOf("") }
+    var isBookmarked by remember(document.uri) { mutableStateOf(false) }
+    var readingMode by remember(document.uri) { mutableStateOf(false) }
+    var readingText by remember(document.uri) { mutableStateOf("") }
+    var readingModeLoading by remember(document.uri) { mutableStateOf(false) }
+    val bookmarkKey = remember(document.uri) { "bookmark_page_${document.uri.hashCode()}" }
+    val positionKey = remember(document.uri) { "reader_page_${document.uri.hashCode()}" }
 
     val currentPage by remember {
         derivedStateOf {
@@ -78,10 +108,28 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     LaunchedEffect(document.uri) {
         pageCount = 0
         error = null
+        isBookmarked = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
+            .getInt(bookmarkKey, -1) > 0
         runCatching {
             pageCount = withContext(Dispatchers.IO) { openPdfPageCount(context, document.uri) }
         }.onFailure {
             error = "Não foi possível abrir este PDF."
+        }
+    }
+
+    LaunchedEffect(pageCount, document.uri) {
+        if (pageCount > 0) {
+            val preferences = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
+            val initialPage = preferences.getInt(positionKey, 1).coerceIn(1, pageCount)
+            pageListState.scrollToItem(initialPage - 1)
+        }
+    }
+
+    LaunchedEffect(currentPage, pageCount, document.uri) {
+        if (pageCount > 0) {
+            val preferences = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
+            preferences.edit().putInt(positionKey, currentPage).apply()
+            isBookmarked = preferences.getInt(bookmarkKey, -1) == currentPage
         }
     }
 
@@ -106,6 +154,64 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        if (readingMode) {
+                            readingMode = false
+                        } else if (readingText.isNotBlank()) {
+                            readingMode = true
+                        } else {
+                            readingModeLoading = true
+                            scope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    runCatching { extractPdfText(context, document.uri) }
+                                }
+                                readingModeLoading = false
+                                result.onSuccess { extracted ->
+                                    readingText = extracted
+                                    readingMode = extracted.isNotBlank()
+                                    if (extracted.isBlank()) {
+                                        searchMessage = "Este PDF não contém texto extraível. Para documentos digitalizados, usa OCR."
+                                        searchDialog = true
+                                    }
+                                }.onFailure {
+                                    searchMessage = "Não foi possível extrair o texto deste PDF."
+                                    searchDialog = true
+                                }
+                            }
+                        }
+                    }) {
+                        if (readingModeLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                Icons.Outlined.MenuBook,
+                                contentDescription = if (readingMode) "Voltar à página PDF" else "Modo de leitura",
+                                tint = if (readingMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    IconButton(onClick = { searchDialog = true }) {
+                        Icon(Icons.Outlined.Search, contentDescription = "Pesquisar no PDF")
+                    }
+                    IconButton(onClick = { jumpPageText = currentPage.toString(); jumpDialog = true }) {
+                        Icon(Icons.Outlined.FormatListNumbered, contentDescription = "Ir para página")
+                    }
+                    IconButton(onClick = {
+                        val prefs = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
+                        if (isBookmarked) {
+                            prefs.edit().remove(bookmarkKey).apply()
+                            isBookmarked = false
+                        } else {
+                            prefs.edit().putInt(bookmarkKey, currentPage).apply()
+                            isBookmarked = true
+                        }
+                    }) {
+                        Icon(
+                            if (isBookmarked) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = if (isBookmarked) "Remover marcador" else "Guardar marcador",
+                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     IconButton(onClick = { resetZoomToken++ }) {
                         Icon(Icons.Outlined.ZoomOutMap, contentDescription = "Repor zoom")
                     }
@@ -136,10 +242,12 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         Icon(Icons.Outlined.ChevronLeft, contentDescription = "Página anterior")
                     }
 
-                    Text(
-                        text = "Página ${currentPage} de ${pageCount}",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
+                    TextButton(onClick = {
+                        jumpPageText = currentPage.toString()
+                        jumpDialog = true
+                    }) {
+                        Text("Página ${currentPage} de ${pageCount}")
+                    }
 
                     IconButton(
                         enabled = currentPage < pageCount,
@@ -179,40 +287,165 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .background(Color(0xFFEDEDF3)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
-                    ThumbnailStrip(
-                        context = context,
-                        uri = document.uri,
-                        pageCount = pageCount,
-                        currentPage = currentPage,
-                        onSelectPage = { page ->
-                            scope.launch {
-                                pageListState.animateScrollToItem(page - 1)
-                            }
-                        },
+                    LinearProgressIndicator(
+                        progress = (currentPage.toFloat() / pageCount.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
-
-                    LazyColumn(
-                        state = pageListState,
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                    ) {
-                        items(
-                            items = (0 until pageCount).toList(),
-                            key = { it },
-                        ) { pageIndex ->
-                            PdfPage(
-                                uri = document.uri,
-                                pageIndex = pageIndex,
-                                resetZoomToken = resetZoomToken,
+                    if (readingMode) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 20.dp, vertical = 18.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text(
+                                "MODO DE LEITURA",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
                             )
+                            Text(
+                                document.name,
+                                style = MaterialTheme.typography.headlineSmall,
+                            )
+                            SelectionContainer {
+                                Text(
+                                    readingText,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.25f,
+                                    ),
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                        }
+                    } else {
+                        ThumbnailStrip(
+                            context = context,
+                            uri = document.uri,
+                            pageCount = pageCount,
+                            currentPage = currentPage,
+                            onSelectPage = { page ->
+                                scope.launch { pageListState.animateScrollToItem(page - 1) }
+                            },
+                        )
+
+                        LazyColumn(
+                            state = pageListState,
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            items(
+                                items = (0 until pageCount).toList(),
+                                key = { it },
+                            ) { pageIndex ->
+                                PdfPage(
+                                    uri = document.uri,
+                                    pageIndex = pageIndex,
+                                    resetZoomToken = resetZoomToken,
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    if (jumpDialog) {
+        AlertDialog(
+            onDismissRequest = { jumpDialog = false },
+            title = { Text("Ir para página") },
+            text = {
+                OutlinedTextField(
+                    value = jumpPageText,
+                    onValueChange = { jumpPageText = it.filter(Char::isDigit) },
+                    label = { Text("Número da página") },
+                    supportingText = { Text("Este PDF tem ${pageCount} páginas.") },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val target = jumpPageText.toIntOrNull()
+                    if (target != null && target in 1..pageCount) {
+                        scope.launch { pageListState.animateScrollToItem(target - 1) }
+                        jumpDialog = false
+                    }
+                }) { Text("Ir") }
+            },
+            dismissButton = {
+                TextButton(onClick = { jumpDialog = false }) { Text("Cancelar") }
+            },
+        )
+    }
+
+    if (searchDialog) {
+        AlertDialog(
+            onDismissRequest = { searchDialog = false },
+            title = { Text("Pesquisar neste PDF") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it; searchMessage = null },
+                        label = { Text("Palavra ou frase") },
+                        singleLine = true,
+                    )
+                    if (searching) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Text("A procurar texto…")
+                        }
+                    }
+                    searchMessage?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    if (searchResults.isNotEmpty()) {
+                        Text("Resultado ${searchResultIndex + 1} de ${searchResults.size}")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = searchQuery.isNotBlank() && !searching,
+                    onClick = {
+                        searching = true
+                        scope.launch {
+                            val result = withContext(Dispatchers.IO) {
+                                runCatching { searchPdfPages(context, document.uri, searchQuery.trim()) }
+                            }
+                            searching = false
+                            result.onSuccess { pages ->
+                                searchResults = pages
+                                searchResultIndex = 0
+                                searchMessage = if (pages.isEmpty()) {
+                                    "Não foram encontradas correspondências. PDFs digitalizados podem precisar de OCR."
+                                } else {
+                                    "${pages.size} página(s) com correspondências."
+                                }
+                                if (pages.isNotEmpty()) {
+                                    pageListState.animateScrollToItem(pages.first() - 1)
+                                }
+                            }.onFailure {
+                                searchMessage = "Não foi possível pesquisar este PDF."
+                            }
+                        }
+                    },
+                ) { Text("Pesquisar") }
+            },
+            dismissButton = {
+                Row {
+                    if (searchResults.isNotEmpty()) {
+                        TextButton(onClick = {
+                            searchResultIndex = (searchResultIndex + 1) % searchResults.size
+                            scope.launch { pageListState.animateScrollToItem(searchResults[searchResultIndex] - 1) }
+                        }) { Text("Seguinte") }
+                    }
+                    TextButton(onClick = { searchDialog = false }) { Text("Fechar") }
+                }
+            },
+        )
     }
 }
 
@@ -403,6 +636,40 @@ private fun renderPdfPage(
                 )
                 return bitmap
             }
+        }
+    }
+}
+private fun searchPdfPages(
+    context: android.content.Context,
+    uriString: String,
+    query: String,
+): List<Int> {
+    require(query.isNotBlank()) { "Escreve o texto que queres procurar." }
+    val matches = mutableListOf<Int>()
+    context.contentResolver.openInputStream(android.net.Uri.parse(uriString)).use { input ->
+        requireNotNull(input) { "Não foi possível ler este PDF." }
+        PDDocument.load(input).use { document ->
+            val stripper = PDFTextStripper()
+            for (page in 1..document.numberOfPages) {
+                stripper.startPage = page
+                stripper.endPage = page
+                if (stripper.getText(document).contains(query, ignoreCase = true)) {
+                    matches += page
+                }
+            }
+        }
+    }
+    return matches
+}
+
+private fun extractPdfText(
+    context: android.content.Context,
+    uriString: String,
+): String {
+    context.contentResolver.openInputStream(android.net.Uri.parse(uriString)).use { input ->
+        requireNotNull(input) { "Não foi possível ler este PDF." }
+        PDDocument.load(input).use { document ->
+            return PDFTextStripper().getText(document).trim()
         }
     }
 }
