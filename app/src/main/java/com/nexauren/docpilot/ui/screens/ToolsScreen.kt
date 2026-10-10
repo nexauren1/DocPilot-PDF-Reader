@@ -618,6 +618,41 @@ private fun SecurityWorkspace(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Spacer(Modifier.height(6.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, accentFor(tool).copy(alpha = 0.24f)),
+                colors = CardDefaults.cardColors(containerColor = accentFor(tool).copy(alpha = 0.08f)),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Box(
+                        modifier = Modifier.size(58.dp).background(
+                            Brush.linearGradient(listOf(accentFor(tool), accentFor(tool).copy(alpha = 0.72f))),
+                            RoundedCornerShape(18.dp),
+                        ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            if (tool == SecurityTool.PROTECT) Icons.Outlined.Lock else Icons.Outlined.Create,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(tool.title, style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            if (tool == SecurityTool.PROTECT) "Proteção aplicada a uma cópia do documento." else "Texto visível no documento, sem certificado digital.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
             Text(
                 text = if (tool == SecurityTool.PROTECT) {
                     "Crie uma cópia do PDF protegida por palavra-passe."
