@@ -52,6 +52,12 @@ fun DocPilotApp() {
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    fun openDocument(document: DocumentItem) {
+        documents = listOf(document) + documents.filterNot { it.uri == document.uri }
+        saveDocuments(context, documents)
+        selectedDocument = document
+    }
+
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -66,9 +72,7 @@ fun DocPilotApp() {
                 name = queryDisplayName(context, uri.toString()),
                 uri = uri.toString(),
             )
-            documents = listOf(document) + documents.filterNot { it.uri == document.uri }
-            saveDocuments(context, documents)
-            selectedDocument = document
+            openDocument(document)
         }
     }
 
@@ -104,13 +108,13 @@ fun DocPilotApp() {
                 Destination.HOME -> HomeScreen(
                     documents = documents,
                     onImportPdf = { picker.launch(arrayOf("application/pdf")) },
-                    onOpenDocument = { selectedDocument = it },
+                    onOpenDocument = { openDocument(it) },
                     onViewLibrary = { destination = Destination.LIBRARY },
                     onViewTools = { destination = Destination.TOOLS },
                 )
                 Destination.LIBRARY -> LibraryScreen(
                     documents = documents,
-                    onOpenDocument = { selectedDocument = it },
+                    onOpenDocument = { openDocument(it) },
                 )
                 Destination.TOOLS -> ToolsScreen(
                     onOutputSaved = { uriString ->
