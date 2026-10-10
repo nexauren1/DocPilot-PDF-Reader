@@ -10,6 +10,11 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.nexauren.docpilot.storage.DocumentAccess
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -197,7 +202,12 @@ fun DocPilotApp() {
         androidx.compose.foundation.layout.Box(
             modifier = Modifier.fillMaxSize().padding(paddingValues),
         ) {
-            when (destination) {
+            AnimatedContent(
+                targetState = destination,
+                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                label = "DocPilot section transition",
+            ) { currentDestination ->
+                when (currentDestination) {
                 Destination.HOME -> HomeScreen(
                     documents = documents,
                     onImportPdf = { picker.launch(arrayOf("application/pdf")) },
@@ -237,6 +247,7 @@ fun DocPilotApp() {
                     onRequestDocumentAccess = { requestDocumentAccess() },
                     onOpenMenu = { scope.launch { drawerState.open() } },
                 )
+                }
             }
         }
     }
