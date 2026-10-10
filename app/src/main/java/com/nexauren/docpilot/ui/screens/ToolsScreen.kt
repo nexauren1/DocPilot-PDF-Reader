@@ -44,6 +44,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.RotateRight
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Close
@@ -97,6 +98,7 @@ private enum class PdfTool(val title: String, val subtitle: String, val icon: Im
     SPLIT("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit),
     COMPRESS("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive),
     REORDER("Organizar", "Reordenar páginas", Icons.Outlined.Edit),
+    ROTATE("Rodar páginas", "Rodar páginas 90°", Icons.Outlined.RotateRight),
 }
 
 private enum class SecurityTool(val title: String, val subtitle: String, val icon: ImageVector) {
@@ -120,6 +122,7 @@ private val toolCards = listOf(
     ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, pdfTool = PdfTool.SPLIT),
     ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, pdfTool = PdfTool.COMPRESS),
     ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER),
+    ToolCard("Rodar páginas", "Rodar páginas 90°", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE),
     ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, action = Action.SCAN),
     ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF),
     ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN),
@@ -487,6 +490,7 @@ private fun pdfToolAccent(tool: PdfTool): Color = when (tool) {
     PdfTool.SPLIT -> Color(0xFF7C4DFF)
     PdfTool.COMPRESS -> Color(0xFF008C95)
     PdfTool.REORDER -> Color(0xFFB45309)
+    PdfTool.ROTATE -> Color(0xFFDB4B73)
 }
 
 @Composable
@@ -801,6 +805,7 @@ private fun ToolWorkspace(
                     PdfTool.SPLIT -> "Escolhe o intervalo que queres guardar."
                     PdfTool.COMPRESS -> "Otimiza imagens incorporadas no PDF."
                     PdfTool.REORDER -> "Define a sequência final das páginas."
+                    PdfTool.ROTATE -> "Roda cada página 90° e guarda uma nova cópia."
                 },
                 icon = tool.icon,
                 accent = pdfToolAccent(tool),
@@ -812,6 +817,7 @@ private fun ToolWorkspace(
                     PdfTool.SPLIT -> "Selecione um PDF e indique o intervalo de páginas."
                     PdfTool.COMPRESS -> "Imagens grandes serão reduzidas e recomprimidas localmente."
                     PdfTool.REORDER -> "Indique a nova ordem, por exemplo: 3,1,2,4."
+                    PdfTool.ROTATE -> "Roda todas as páginas 90° no sentido horário."
                 },
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -902,6 +908,7 @@ private fun ToolWorkspace(
                         PdfTool.SPLIT -> "A extrair páginas"
                         PdfTool.COMPRESS -> "A otimizar imagens"
                         PdfTool.REORDER -> "A reorganizar páginas"
+                        PdfTool.ROTATE -> "A rodar páginas"
                     },
                     detail = "O DocPilot está a criar uma nova cópia do teu PDF.",
                     accent = pdfToolAccent(tool),
@@ -986,6 +993,16 @@ private fun ToolWorkspace(
                                         uri,
                                         orderResult.getOrThrow(),
                                     )
+                                }
+                            }
+                        }
+
+                        PdfTool.ROTATE -> {
+                            if (selectedUris.size != 1) {
+                                scope.launch { snackbar.showSnackbar("Selecione um PDF.") }
+                            } else {
+                                createOutput("docpilot-rotated.pdf") { uri ->
+                                    PdfProcessor.rotateAllPages(resolver, selectedUris.single(), uri)
                                 }
                             }
                         }
