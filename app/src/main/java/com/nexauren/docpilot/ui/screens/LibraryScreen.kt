@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
@@ -42,6 +43,7 @@ import com.nexauren.docpilot.ui.components.DocumentCard
 fun LibraryScreen(
     documents: List<DocumentItem>,
     onOpenDocument: (DocumentItem) -> Unit,
+    onOpenMenu: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var sortByName by remember { mutableStateOf(false) }
@@ -51,7 +53,16 @@ fun LibraryScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Biblioteca") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Biblioteca") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenMenu) {
+                        Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
+                    }
+                },
+            )
+        },
     ) { padding ->
         Column(
             modifier = Modifier
