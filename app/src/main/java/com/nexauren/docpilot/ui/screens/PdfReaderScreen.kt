@@ -20,6 +20,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -33,6 +37,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.FormatListNumbered
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.ZoomOutMap
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -87,6 +92,9 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     var jumpDialog by remember(document.uri) { mutableStateOf(false) }
     var jumpPageText by remember(document.uri) { mutableStateOf("") }
     var isBookmarked by remember(document.uri) { mutableStateOf(false) }
+    var readingMode by remember(document.uri) { mutableStateOf(false) }
+    var readingText by remember(document.uri) { mutableStateOf("") }
+    var readingModeLoading by remember(document.uri) { mutableStateOf(false) }
     val bookmarkKey = remember(document.uri) { "bookmark_page_${document.uri.hashCode()}" }
     val positionKey = remember(document.uri) { "reader_page_${document.uri.hashCode()}" }
 
@@ -118,8 +126,9 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
 
     LaunchedEffect(currentPage, pageCount, document.uri) {
         if (pageCount > 0) {
-            context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
-                .edit().putInt(positionKey, currentPage).apply()
+            val preferences = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
+            preferences.edit().putInt(positionKey, currentPage).apply()
+            isBookmarked = preferences.getInt(bookmarkKey, -1) == currentPage
         }
     }
 
@@ -144,6 +153,42 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        if (readingMode) {
+                            readingMode = false
+                        } else if (readingText.isNotBlank()) {
+                            readingMode = true
+                        } else {
+                            readingModeLoading = true
+                            scope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    runCatching { extractPdfText(context, document.uri) }
+                                }
+                                readingModeLoading = false
+                                result.onSuccess { extracted ->
+                                    readingText = extracted
+                                    readingMode = extracted.isNotBlank()
+                                    if (extracted.isBlank()) {
+                                        searchMessage = "Este PDF não contém texto extraível. Para documentos digitalizados, usa OCR."
+                                        searchDialog = true
+                                    }
+                                }.onFailure {
+                                    searchMessage = "Não foi possível extrair o texto deste PDF."
+                                    searchDialog = true
+                                }
+                            }
+                        }
+                    }) {
+                        if (readingModeLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                Icons.Outlined.MenuBook,
+                                contentDescription = if (readingMode) "Voltar à página PDF" else "Modo de leitura",
+                                tint = if (readingMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                     IconButton(onClick = { searchDialog = true }) {
                         Icon(Icons.Outlined.Search, contentDescription = "Pesquisar no PDF")
                     }
@@ -241,35 +286,62 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .background(Color(0xFFEDEDF3)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
-                    ThumbnailStrip(
-                        context = context,
-                        uri = document.uri,
-                        pageCount = pageCount,
-                        currentPage = currentPage,
-                        onSelectPage = { page ->
-                            scope.launch {
-                                pageListState.animateScrollToItem(page - 1)
-                            }
-                        },
-                    )
-
-                    LazyColumn(
-                        state = pageListState,
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                    ) {
-                        items(
-                            items = (0 until pageCount).toList(),
-                            key = { it },
-                        ) { pageIndex ->
-                            PdfPage(
-                                uri = document.uri,
-                                pageIndex = pageIndex,
-                                resetZoomToken = resetZoomToken,
+                    if (readingMode) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 20.dp, vertical = 18.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text(
+                                "MODO DE LEITURA",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
                             )
+                            Text(
+                                document.name,
+                                style = MaterialTheme.typography.headlineSmall,
+                            )
+                            SelectionContainer {
+                                Text(
+                                    readingText,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.25f,
+                                    ),
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                        }
+                    } else {
+                        ThumbnailStrip(
+                            context = context,
+                            uri = document.uri,
+                            pageCount = pageCount,
+                            currentPage = currentPage,
+                            onSelectPage = { page ->
+                                scope.launch { pageListState.animateScrollToItem(page - 1) }
+                            },
+                        )
+
+                        LazyColumn(
+                            state = pageListState,
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            items(
+                                items = (0 until pageCount).toList(),
+                                key = { it },
+                            ) { pageIndex ->
+                                PdfPage(
+                                    uri = document.uri,
+                                    pageIndex = pageIndex,
+                                    resetZoomToken = resetZoomToken,
+                                )
+                            }
                         }
                     }
                 }
@@ -583,4 +655,16 @@ private fun searchPdfPages(
         }
     }
     return matches
+}
+
+private fun extractPdfText(
+    context: android.content.Context,
+    uriString: String,
+): String {
+    context.contentResolver.openInputStream(android.net.Uri.parse(uriString)).use { input ->
+        requireNotNull(input) { "Não foi possível ler este PDF." }
+        PDDocument.load(input).use { document ->
+            return PDFTextStripper().getText(document).trim()
+        }
+    }
 }
