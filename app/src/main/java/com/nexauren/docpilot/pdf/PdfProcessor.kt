@@ -3,6 +3,8 @@ package com.nexauren.docpilot.pdf
 import android.content.ContentResolver
 import android.net.Uri
 import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
+import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import com.tom_roush.pdfbox.pdmodel.PDResources
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
@@ -72,6 +74,88 @@ object PdfProcessor {
             requireNotNull(input) { "Não foi possível abrir o PDF." }
             PDDocument.load(input).use { document ->
                 document.pages.forEach { page -> optimizeImages(document, page.resources, quality, maxDimension) }
+                resolver.openOutputStream(outputUri).use { output ->
+                    requireNotNull(output) { "Não foi possível criar o PDF de saída." }
+                    document.save(output)
+                }
+            }
+        }
+        return fileSize(resolver, outputUri)
+    }
+
+    fun rotatePages(resolver: ContentResolver, inputUri: Uri, outputUri: Uri, degrees: Int): Long {
+        require(degrees in setOf(90, 180, 270)) { "Escolhe 90, 180 ou 270 graus." }
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                document.pages.forEach { page ->
+                    page.rotation = (page.rotation + degrees) % 360
+                }
+                resolver.openOutputStream(outputUri).use { output ->
+                    requireNotNull(output) { "Não foi possível criar o PDF de saída." }
+                    document.save(output)
+                }
+            }
+        }
+        return fileSize(resolver, outputUri)
+    }
+
+    fun addWatermark(resolver: ContentResolver, inputUri: Uri, outputUri: Uri, text: String): Long {
+        val label = text.trim().replace(Regex("\\s+"), " ").take(64)
+        require(label.isNotBlank()) { "Escreve o texto da marca de água." }
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                document.pages.forEach { page ->
+                    val box = page.mediaBox
+                    val x = ((box.width - label.length * 13f) / 2f).coerceAtLeast(24f)
+                    val y = (box.height / 2f).coerceAtLeast(48f)
+                    PDPageContentStream(
+                        document,
+                        page,
+                        PDPageContentStream.AppendMode.APPEND,
+                        true,
+                    ).use { stream ->
+                        stream.beginText()
+                        stream.setFont(PDType1Font.HELVETICA_BOLD, 22f)
+                        stream.setNonStrokingColor(0.78f, 0.80f, 0.86f)
+                        stream.newLineAtOffset(x, y)
+                        stream.showText(label)
+                        stream.endText()
+                    }
+                }
+                resolver.openOutputStream(outputUri).use { output ->
+                    requireNotNull(output) { "Não foi possível criar o PDF de saída." }
+                    document.save(output)
+                }
+            }
+        }
+        return fileSize(resolver, outputUri)
+    }
+
+    fun addPageNumbers(resolver: ContentResolver, inputUri: Uri, outputUri: Uri): Long {
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                val total = document.numberOfPages
+                document.pages.forEachIndexed { index, page ->
+                    val box = page.mediaBox
+                    val label = "${index + 1} / $total"
+                    val x = (box.width / 2f - label.length * 3f).coerceAtLeast(18f)
+                    PDPageContentStream(
+                        document,
+                        page,
+                        PDPageContentStream.AppendMode.APPEND,
+                        true,
+                    ).use { stream ->
+                        stream.beginText()
+                        stream.setFont(PDType1Font.HELVETICA, 9f)
+                        stream.setNonStrokingColor(0.35f, 0.39f, 0.48f)
+                        stream.newLineAtOffset(x, 18f)
+                        stream.showText(label)
+                        stream.endText()
+                    }
+                }
                 resolver.openOutputStream(outputUri).use { output ->
                     requireNotNull(output) { "Não foi possível criar o PDF de saída." }
                     document.save(output)
