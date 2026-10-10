@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -70,14 +70,14 @@ fun DocumentCard(
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text = "PDF • Toque para abrir",
+                    text = "PDF • Toque para ler",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             IconButton(onClick = onClick) {
-                Icon(Icons.Outlined.MoreVert, contentDescription = "Abrir")
+                Icon(Icons.Outlined.ChevronRight, contentDescription = "Abrir documento", tint = MaterialTheme.colorScheme.primary)
             }
         }
     }
