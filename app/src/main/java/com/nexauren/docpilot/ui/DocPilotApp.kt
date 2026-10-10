@@ -35,6 +35,7 @@ import com.nexauren.docpilot.ui.screens.ToolsScreen
 
 private const val PREFS = "docpilot_documents"
 private const val KEY_URIS = "uris"
+private const val KEY_URIS_ORDERED = "uris_ordered"
 
 private enum class Destination(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     HOME("Início", Icons.Outlined.Home),
@@ -67,6 +68,7 @@ fun DocPilotApp() {
             )
             documents = listOf(document) + documents.filterNot { it.uri == document.uri }
             saveDocuments(context, documents)
+            selectedDocument = document
         }
     }
 
@@ -110,7 +112,23 @@ fun DocPilotApp() {
                     documents = documents,
                     onOpenDocument = { selectedDocument = it },
                 )
-                Destination.TOOLS -> ToolsScreen()
+                Destination.TOOLS -> ToolsScreen(
+                    onOutputSaved = { uriString ->
+                        val outputUri = android.net.Uri.parse(uriString)
+                        runCatching {
+                            context.contentResolver.takePersistableUriPermission(
+                                outputUri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                            )
+                        }
+                        val document = DocumentItem(
+                            name = queryDisplayName(context, uriString),
+                            uri = uriString,
+                        )
+                        documents = listOf(document) + documents.filterNot { it.uri == document.uri }
+                        saveDocuments(context, documents)
+                    },
+                )
                 Destination.SETTINGS -> SettingsScreen()
             }
         }
@@ -118,10 +136,16 @@ fun DocPilotApp() {
 }
 
 private fun loadDocuments(context: Context): List<DocumentItem> {
-    val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        .getStringSet(KEY_URIS, emptySet())
-        .orEmpty()
-    return raw.mapNotNull { uriString ->
+    val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val orderedUris = preferences.getString(KEY_URIS_ORDERED, null)?.let { serialized ->
+        runCatching {
+            val array = org.json.JSONArray(serialized)
+            List(array.length()) { index -> array.getString(index) }
+        }.getOrNull()
+    }
+    // Migrate installations that only have the original unordered StringSet.
+    val raw = orderedUris ?: preferences.getStringSet(KEY_URIS, emptySet()).orEmpty().toList()
+    return raw.distinct().mapNotNull { uriString ->
         runCatching {
             DocumentItem(
                 name = queryDisplayName(context, uriString),
@@ -132,9 +156,12 @@ private fun loadDocuments(context: Context): List<DocumentItem> {
 }
 
 private fun saveDocuments(context: Context, documents: List<DocumentItem>) {
+    val uris = documents.map { it.uri }.distinct()
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         .edit()
-        .putStringSet(KEY_URIS, documents.map { it.uri }.toSet())
+        .putString(KEY_URIS_ORDERED, org.json.JSONArray(uris).toString())
+        // Keep the legacy key during migration so older builds can still read the library.
+        .putStringSet(KEY_URIS, uris.toSet())
         .apply()
 }
 
