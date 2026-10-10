@@ -46,6 +46,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -288,6 +289,10 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         .padding(padding)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
+                    LinearProgressIndicator(
+                        progress = (currentPage.toFloat() / pageCount.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     if (readingMode) {
                         Column(
                             modifier = Modifier
