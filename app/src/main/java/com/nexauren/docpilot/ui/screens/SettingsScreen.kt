@@ -8,8 +8,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,7 +28,7 @@ import com.nexauren.docpilot.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(hasDocumentAccess: Boolean, onRequestDocumentAccess: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Definições") })
@@ -54,7 +56,23 @@ fun SettingsScreen() {
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
-                Column {
+                Column(modifier = Modifier.padding(bottom = 14.dp)) {
+                    ListItem(
+                        headlineContent = { Text("Biblioteca do dispositivo") },
+                        supportingContent = {
+                            Text(
+                                if (hasDocumentAccess) "Acesso ativo. O DocPilot pode localizar PDFs no armazenamento partilhado."
+                                else "Ativa o acesso para encontrar PDFs automaticamente no dispositivo."
+                            )
+                        },
+                        leadingContent = { Icon(Icons.Outlined.Folder, contentDescription = null) },
+                    )
+                    Button(
+                        onClick = onRequestDocumentAccess,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    ) {
+                        Text(if (hasDocumentAccess) "Atualizar biblioteca" else "Configurar acesso a documentos")
+                    }
                     ListItem(
                         headlineContent = { Text("Aparência") },
                         supportingContent = { Text("O tema acompanha as definições do sistema.") },
