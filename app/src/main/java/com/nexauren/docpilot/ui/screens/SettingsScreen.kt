@@ -22,6 +22,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.nexauren.docpilot.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +74,7 @@ fun SettingsScreen() {
             ) {
                 ListItem(
                     headlineContent = { Text("Sobre o DocPilot") },
-                    supportingContent = { Text("DocPilot • versão 0.1.2") },
+                    supportingContent = { Text("DocPilot • versão ${BuildConfig.VERSION_NAME}") },
                     leadingContent = { Icon(Icons.Outlined.Info, contentDescription = null) },
                 )
             }
