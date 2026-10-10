@@ -69,21 +69,18 @@ jobs:
           body: |
             ## DocPilot 0.1.5 — Installable Android Preview
 
-            This release contains an APK built by GitHub Actions after unit tests and an APK signature verification step.
+            This APK is built by GitHub Actions only after unit tests, release assembly and APK signature verification pass.
 
-            **Signing notice:** this preview uses the default Android debug signing identity so that the APK can be installed for device testing. It is not the permanent production signing key and must not be used for a store launch. A persistent production keystore must be configured before publishing a stable release.
+            **Signing notice:** this preview uses the default Android debug signing identity for device testing. It is not the permanent production signing key and must not be used for a stable store launch. A persistent production keystore must be configured before publishing a production release.
 
             ### Included
-            - Multi-page PDF reader with text search, reflow reading mode, page jump, saved reading position, page bookmarks and zoom
-            - Merge, split, reorder and compress PDF tools
-            - Scanner and image OCR
-            - Images to PDF
-            - Password protection and visual text signature
-            - Device PDF library with an explicit all-files access explanation and on-device scanning
-            - Reflow reading mode, full-text search for text-based PDFs, page jump, saved reading position and reading progress indicator
-            - Library search with one-tap clearing and Recentes / Nome A–Z sorting
+            - PDF reader with text search, reflow mode, page jump, saved position, page bookmarks, zoom and reading progress
+            - Device PDF library with on-device discovery, search clearing, Recentes / Nome A–Z sorting and single-file picker fallback
+            - PDF merge, split, page reorder and compression tools
+            - Document scanning, image OCR and images-to-PDF conversion
+            - Password protection and visual text signatures
 
-            **Storage permission note:** Android 11+ requires the user to enable all-files access in system settings to build the automatic device-wide PDF library. The app keeps individual PDF opening available as a fallback. Google Play distribution requires a separate permission-policy review.
+            **Storage permission note:** Android 11+ requires the user to enable all-files access in system settings to build the automatic device-wide PDF library. Opening an individual PDF remains available as a fallback. Google Play distribution requires a separate permission-policy review.
           files: DocPilot-0.1.5-preview.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
