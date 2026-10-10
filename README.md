@@ -5,13 +5,13 @@ DocPilot is an Android-first document hub focused on reading, organizing and pro
 ## Current features
 
 - Jetpack Compose + Material 3 interface
-- Home dashboard and document library with local persistence, reliable recent-item order, search clearing and Recentes / Nome A–Z sorting
+- Home dashboard with inline document search, sidebar navigation with animated transitions, and a document library with local persistence, reliable recent-item order, search clearing and Recentes / Nome A–Z sorting
 - Opening a selected PDF launches the reader immediately
 - PDFs created by the processing tools are added to the library after a successful save
 - Optional device-wide PDF discovery after a clear storage-access explanation and Android permission grant
 - PDF opening through the Android document picker remains available as a privacy-friendly fallback
 - Multi-page PDF reader with on-demand Android PdfRenderer rendering
-- Text search in text-based PDFs, page jump, page bookmarks, saved reading position and a live reading progress indicator, pinch-to-zoom and a reflow reading mode for selectable text
+- Live inline search in text-based PDFs as the user types, page jump, page bookmarks, saved reading position and a live reading progress indicator, pinch-to-zoom and a reflow reading mode for selectable text
 - Horizontal page thumbnails, direct page selection and previous/next navigation
 - Pinch-to-zoom and pan with one-tap zoom reset
 - Local PDF processing powered by PdfBox-Android 2.0.27.0
@@ -31,7 +31,11 @@ Processing happens on-device. The app uses the Android system document picker fo
 Current tools include:
 
 - **Merge PDFs:** combines pages from two or more source PDFs.
+- **Rotate pages:** rotates every page 90° clockwise and saves a separate PDF.
+- **PDF to text:** exports selectable text from a PDF to a UTF-8 TXT file; scanned PDFs need OCR first.
 - **Split PDF:** extracts an inclusive page interval.
+- **Rotate pages:** rotates every page clockwise by 90 degrees and writes a separate PDF.
+- **PDF text export:** writes selectable text to a UTF-8 TXT file; scanned pages require OCR.
 - **Organize:** creates a new PDF using a custom page order such as `3,1,2,4`.
 - **Compress:** downscales oversized raster images and recompresses them.
 - **Images to PDF:** creates a PDF from selected image files.
