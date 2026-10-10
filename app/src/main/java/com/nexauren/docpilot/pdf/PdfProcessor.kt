@@ -67,6 +67,22 @@ object PdfProcessor {
         return fileSize(resolver, outputUri)
     }
 
+    fun rotateAllPages(resolver: ContentResolver, inputUri: Uri, outputUri: Uri): Long {
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                document.pages.forEach { page ->
+                    page.rotation = (page.rotation + 90) % 360
+                }
+                resolver.openOutputStream(outputUri).use { output ->
+                    requireNotNull(output) { "Não foi possível criar o PDF rodado." }
+                    document.save(output)
+                }
+            }
+        }
+        return fileSize(resolver, outputUri)
+    }
+
     fun compress(resolver: ContentResolver, inputUri: Uri, outputUri: Uri, quality: Float = 0.72f, maxDimension: Int = 1800): Long {
         resolver.openInputStream(inputUri).use { input ->
             requireNotNull(input) { "Não foi possível abrir o PDF." }

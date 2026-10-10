@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
@@ -123,6 +124,27 @@ object DocumentTools {
             }
         }
 
+        return resolver.openAssetFileDescriptor(outputUri, "r")?.use { it.length } ?: -1L
+    }
+
+    fun extractPdfTextToTextFile(
+        resolver: ContentResolver,
+        inputUri: Uri,
+        outputUri: Uri,
+    ): Long {
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                val extractedText = PDFTextStripper().getText(document).trim()
+                require(extractedText.isNotBlank()) {
+                    "Este PDF não contém texto extraível. Se for um documento digitalizado, usa OCR."
+                }
+                resolver.openOutputStream(outputUri).use { output ->
+                    requireNotNull(output) { "Não foi possível criar o ficheiro TXT." }
+                    output.write(extractedText.toByteArray(Charsets.UTF_8))
+                }
+            }
+        }
         return resolver.openAssetFileDescriptor(outputUri, "r")?.use { it.length } ?: -1L
     }
 

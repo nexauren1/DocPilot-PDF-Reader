@@ -4,6 +4,9 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -36,12 +39,14 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FormatListNumbered
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.ZoomOutMap
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -72,6 +77,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.nexauren.docpilot.model.DocumentItem
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -84,7 +90,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     var pageCount by remember(document.uri) { mutableStateOf(0) }
     var error by remember(document.uri) { mutableStateOf<String?>(null) }
     var resetZoomToken by remember(document.uri) { mutableStateOf(0) }
-    var searchDialog by remember(document.uri) { mutableStateOf(false) }
+    var searchOpen by remember(document.uri) { mutableStateOf(false) }
     var searchQuery by remember(document.uri) { mutableStateOf("") }
     var searchResults by remember(document.uri) { mutableStateOf<List<Int>>(emptyList()) }
     var searchResultIndex by remember(document.uri) { mutableStateOf(0) }
@@ -133,6 +139,36 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
         }
     }
 
+    LaunchedEffect(searchQuery, document.uri, pageCount, searchOpen) {
+        val query = searchQuery.trim()
+        searching = false
+        if (query.isBlank() || pageCount == 0 || !searchOpen) {
+            searchResults = emptyList()
+            searchResultIndex = 0
+            return@LaunchedEffect
+        }
+
+        delay(400)
+        searching = true
+        val result = withContext(Dispatchers.IO) {
+            runCatching { searchPdfPages(context, document.uri, query) }
+        }
+        searching = false
+        result.onSuccess { pages ->
+            searchResults = pages
+            searchResultIndex = 0
+            searchMessage = if (pages.isEmpty()) {
+                "Não foram encontradas correspondências. PDFs digitalizados podem precisar de OCR."
+            } else {
+                "${pages.size} página(s) com correspondências."
+            }
+            if (pages.isNotEmpty()) pageListState.animateScrollToItem(pages.first() - 1)
+        }.onFailure {
+            searchMessage = "Não foi possível pesquisar este PDF."
+            searchResults = emptyList()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -171,11 +207,11 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                     readingMode = extracted.isNotBlank()
                                     if (extracted.isBlank()) {
                                         searchMessage = "Este PDF não contém texto extraível. Para documentos digitalizados, usa OCR."
-                                        searchDialog = true
+                                        searchOpen = true
                                     }
                                 }.onFailure {
                                     searchMessage = "Não foi possível extrair o texto deste PDF."
-                                    searchDialog = true
+                                    searchOpen = true
                                 }
                             }
                         }
@@ -190,7 +226,16 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                             )
                         }
                     }
-                    IconButton(onClick = { searchDialog = true }) {
+                    IconButton(onClick = {
+                        searchOpen = !searchOpen
+                        if (searchOpen) {
+                            readingMode = false
+                        } else {
+                            searchQuery = ""
+                            searchResults = emptyList()
+                            searchMessage = null
+                        }
+                    }) {
                         Icon(Icons.Outlined.Search, contentDescription = "Pesquisar no PDF")
                     }
                     IconButton(onClick = { jumpPageText = currentPage.toString(); jumpDialog = true }) {
@@ -293,6 +338,87 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         progress = (currentPage.toFloat() / pageCount.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f),
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    AnimatedVisibility(visible = searchOpen, enter = fadeIn(), exit = fadeOut()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    OutlinedTextField(
+                                        value = searchQuery,
+                                        onValueChange = { searchQuery = it; searchMessage = null },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(14.dp),
+                                        label = { Text("Pesquisar neste PDF") },
+                                        placeholder = { Text("Escreve uma palavra ou frase") },
+                                        trailingIcon = {
+                                            if (searchQuery.isNotEmpty()) {
+                                                IconButton(onClick = { searchQuery = ""; searchMessage = null }) {
+                                                    Icon(Icons.Outlined.Close, contentDescription = "Limpar pesquisa")
+                                                }
+                                            }
+                                        },
+                                    )
+                                    IconButton(onClick = {
+                                        searchOpen = false
+                                        searchQuery = ""
+                                        searchResults = emptyList()
+                                        searchMessage = null
+                                    }) {
+                                        Icon(Icons.Outlined.Close, contentDescription = "Fechar pesquisa")
+                                    }
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    if (searching) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                        Text("A procurar enquanto escreves…", style = MaterialTheme.typography.bodySmall)
+                                    } else if (searchResults.isNotEmpty()) {
+                                        Text(
+                                            "Página ${searchResults[searchResultIndex]} • ${searchResultIndex + 1}/${searchResults.size}",
+                                            modifier = Modifier.weight(1f),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                        IconButton(onClick = {
+                                            searchResultIndex = (searchResultIndex - 1 + searchResults.size) % searchResults.size
+                                            scope.launch { pageListState.animateScrollToItem(searchResults[searchResultIndex] - 1) }
+                                        }) {
+                                            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Resultado anterior")
+                                        }
+                                        IconButton(onClick = {
+                                            searchResultIndex = (searchResultIndex + 1) % searchResults.size
+                                            scope.launch { pageListState.animateScrollToItem(searchResults[searchResultIndex] - 1) }
+                                        }) {
+                                            Icon(Icons.Outlined.ChevronRight, contentDescription = "Resultado seguinte")
+                                        }
+                                    } else {
+                                        Text(
+                                            "Os resultados aparecem automaticamente.",
+                                            modifier = Modifier.weight(1f),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                                searchMessage?.let {
+                                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
                     if (readingMode) {
                         Column(
                             modifier = Modifier
@@ -382,71 +508,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
         )
     }
 
-    if (searchDialog) {
-        AlertDialog(
-            onDismissRequest = { searchDialog = false },
-            title = { Text("Pesquisar neste PDF") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it; searchMessage = null },
-                        label = { Text("Palavra ou frase") },
-                        singleLine = true,
-                    )
-                    if (searching) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            Text("A procurar texto…")
-                        }
-                    }
-                    searchMessage?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    if (searchResults.isNotEmpty()) {
-                        Text("Resultado ${searchResultIndex + 1} de ${searchResults.size}")
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = searchQuery.isNotBlank() && !searching,
-                    onClick = {
-                        searching = true
-                        scope.launch {
-                            val result = withContext(Dispatchers.IO) {
-                                runCatching { searchPdfPages(context, document.uri, searchQuery.trim()) }
-                            }
-                            searching = false
-                            result.onSuccess { pages ->
-                                searchResults = pages
-                                searchResultIndex = 0
-                                searchMessage = if (pages.isEmpty()) {
-                                    "Não foram encontradas correspondências. PDFs digitalizados podem precisar de OCR."
-                                } else {
-                                    "${pages.size} página(s) com correspondências."
-                                }
-                                if (pages.isNotEmpty()) {
-                                    pageListState.animateScrollToItem(pages.first() - 1)
-                                }
-                            }.onFailure {
-                                searchMessage = "Não foi possível pesquisar este PDF."
-                            }
-                        }
-                    },
-                ) { Text("Pesquisar") }
-            },
-            dismissButton = {
-                Row {
-                    if (searchResults.isNotEmpty()) {
-                        TextButton(onClick = {
-                            searchResultIndex = (searchResultIndex + 1) % searchResults.size
-                            scope.launch { pageListState.animateScrollToItem(searchResults[searchResultIndex] - 1) }
-                        }) { Text("Seguinte") }
-                    }
-                    TextButton(onClick = { searchDialog = false }) { Text("Fechar") }
-                }
-            },
-        )
-    }
+
 }
 
 @Composable
