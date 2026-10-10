@@ -86,6 +86,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.mlkit.vision.common.InputImage
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
@@ -120,7 +122,7 @@ private data class ToolCard(
     val action: Action = Action.NONE,
 )
 
-private enum class Action { NONE, SCAN, IMAGE_TO_PDF, OCR, PDF_INFO }
+private enum class Action { NONE, SCAN, IMAGE_TO_PDF, OCR, PDF_INFO, EXTRACT_TEXT }
 
 private val toolCards = listOf(
     ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, pdfTool = PdfTool.MERGE),
@@ -131,7 +133,8 @@ private val toolCards = listOf(
     ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF),
     ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN),
     ToolCard("Proteger", "Senha e permissões", Icons.Outlined.Lock, securityTool = SecurityTool.PROTECT),
-    ToolCard("Extrair texto", "OCR em imagens", Icons.Outlined.Description, action = Action.OCR),
+    ToolCard("OCR de imagem", "Reconhecer texto numa imagem", Icons.Outlined.Description, action = Action.OCR),
+    ToolCard("Extrair texto PDF", "Guardar texto num ficheiro .txt", Icons.Outlined.Description, action = Action.EXTRACT_TEXT),
     ToolCard("Informações do PDF", "Páginas, nome e tamanho", Icons.Outlined.Info, action = Action.PDF_INFO),
 )
 
@@ -147,6 +150,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     var selectedSecurityTool by remember { mutableStateOf<SecurityTool?>(null) }
     var ocrResult by remember { mutableStateOf<String?>(null) }
     var pdfInfoResult by remember { mutableStateOf<String?>(null) }
+    var pendingPdfText by remember { mutableStateOf<String?>(null) }
     var processing by remember { mutableStateOf(false) }
 
     var toolQuery by remember { mutableStateOf("") }
@@ -156,7 +160,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             val queryMatches = card.title.contains(toolQuery, ignoreCase = true) ||
                 card.subtitle.contains(toolQuery, ignoreCase = true)
             val categoryMatches = when (toolCategory) {
-                "PDF" -> card.pdfTool != null || card.action == Action.PDF_INFO
+                "PDF" -> card.pdfTool != null || card.action == Action.PDF_INFO || card.action == Action.EXTRACT_TEXT
                 "Segurança" -> card.securityTool != null
                 "Digitalização" -> card.action == Action.SCAN || card.action == Action.OCR
                 "Conversão" -> card.action == Action.IMAGE_TO_PDF
@@ -224,6 +228,57 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             }.onFailure {
                 processing = false
                 scope.launch { snackbar.showSnackbar("Não foi possível abrir a imagem.") }
+            }
+        }
+    }
+
+    val textOutputPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain"),
+    ) { outputUri ->
+        val text = pendingPdfText
+        pendingPdfText = null
+        if (outputUri != null && text != null) {
+            processing = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openOutputStream(outputUri)?.use { output ->
+                            output.write(text.toByteArray(Charsets.UTF_8))
+                        } ?: error("Não foi possível guardar o ficheiro de texto.")
+                        text.length
+                    }
+                }
+                processing = false
+                snackbar.showSnackbar(
+                    result.fold(
+                        { "Texto exportado • $it caracteres." },
+                        { "Não foi possível guardar o texto: " + (it.message ?: "erro desconhecido") },
+                    ),
+                )
+            }
+        }
+    }
+
+    val textPdfPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { sourceUri ->
+        if (sourceUri != null) {
+            processing = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching { extractPdfTextFromDocument(context, sourceUri) }
+                }
+                processing = false
+                result.onSuccess { extracted ->
+                    if (extracted.isBlank()) {
+                        snackbar.showSnackbar("Este PDF não tem texto extraível. Se for digitalizado, usa OCR.")
+                    } else {
+                        pendingPdfText = extracted
+                        textOutputPicker.launch("docpilot-extracted-text.txt")
+                    }
+                }.onFailure {
+                    snackbar.showSnackbar("Não foi possível extrair o texto deste PDF.")
+                }
             }
         }
     }
@@ -450,6 +505,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                                         card.action == Action.IMAGE_TO_PDF -> imagePicker.launch(arrayOf("image/*"))
                                         card.action == Action.OCR -> ocrPicker.launch(arrayOf("image/*"))
                                         card.action == Action.PDF_INFO -> infoPicker.launch(arrayOf("application/pdf"))
+                                        card.action == Action.EXTRACT_TEXT -> textPdfPicker.launch(arrayOf("application/pdf"))
                                     }
                                 },
                                 enabled = enabled,
@@ -963,7 +1019,7 @@ private fun ToolWorkspace(
 
 
 private fun categoryFor(card: ToolCard): String = when {
-    card.pdfTool != null || card.action == Action.PDF_INFO -> "PDF"
+    card.pdfTool != null || card.action == Action.PDF_INFO || card.action == Action.EXTRACT_TEXT -> "PDF"
     card.securityTool != null -> "Segurança"
     card.action == Action.SCAN || card.action == Action.OCR -> "Digitalização"
     card.action == Action.IMAGE_TO_PDF -> "Conversão"
@@ -976,6 +1032,7 @@ private fun accentFor(card: ToolCard): Color = when {
     card.action == Action.SCAN -> Color(0xFF0C8A78)
     card.action == Action.IMAGE_TO_PDF -> Color(0xFFE58A20)
     card.action == Action.OCR -> Color(0xFF8A4DE8)
+    card.action == Action.EXTRACT_TEXT -> Color(0xFF2F63D8)
     else -> Color(0xFF4566C8)
 }
 
@@ -1057,6 +1114,16 @@ private fun ProcessingOverlay(title: String, detail: String) {
                     }
                 }
             }
+        }
+    }
+}
+
+ 
+private fun extractPdfTextFromDocument(context: Context, uri: Uri): String {
+    context.contentResolver.openInputStream(uri).use { input ->
+        requireNotNull(input) { "Não foi possível ler este PDF." }
+        PDDocument.load(input).use { document ->
+            return PDFTextStripper().getText(document).trim()
         }
     }
 }
