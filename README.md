@@ -8,8 +8,10 @@ DocPilot is an Android-first document hub focused on reading, organizing and pro
 - Home dashboard and document library with local persistence, reliable recent-item order and search
 - Opening a selected PDF launches the reader immediately
 - PDFs created by the processing tools are added to the library after a successful save
-- PDF import through the Android document picker
+- Optional device-wide PDF discovery after a clear storage-access explanation and Android permission grant
+- PDF opening through the Android document picker remains available as a privacy-friendly fallback
 - Multi-page PDF reader with on-demand Android PdfRenderer rendering
+- Text search in text-based PDFs, page jump, page bookmarks, saved reading position, pinch-to-zoom and a reflow reading mode for selectable text
 - Horizontal page thumbnails, direct page selection and previous/next navigation
 - Pinch-to-zoom and pan with one-tap zoom reset
 - Local PDF processing powered by PdfBox-Android 2.0.27.0
