@@ -12,8 +12,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,8 +44,10 @@ fun LibraryScreen(
     onOpenDocument: (DocumentItem) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
-    val filtered = remember(documents, query) {
-        documents.filter { it.name.contains(query, ignoreCase = true) }
+    var sortByName by remember { mutableStateOf(false) }
+    val filtered = remember(documents, query, sortByName) {
+        val matching = documents.filter { it.name.contains(query, ignoreCase = true) }
+        if (sortByName) matching.sortedBy { it.name.lowercase() } else matching
     }
 
     Scaffold(
@@ -100,9 +105,39 @@ fun LibraryScreen(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = "Pesquisar") },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Outlined.Close, contentDescription = "Limpar pesquisa")
+                        }
+                    }
+                },
                 placeholder = { Text("Pesquisar documentos") },
             )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    "${filtered.size} resultados",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FilterChip(
+                    selected = !sortByName,
+                    onClick = { sortByName = false },
+                    label = { Text("Recentes") },
+                )
+                FilterChip(
+                    selected = sortByName,
+                    onClick = { sortByName = true },
+                    label = { Text("Nome A–Z") },
+                )
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
