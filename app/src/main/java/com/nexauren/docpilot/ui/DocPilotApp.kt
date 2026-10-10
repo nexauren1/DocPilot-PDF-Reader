@@ -2,9 +2,14 @@ package com.nexauren.docpilot.ui
 
 import android.content.Context
 import android.content.Intent
+import android.Manifest
+import android.os.Build
+import android.provider.Settings
+import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.nexauren.docpilot.storage.DocumentAccess
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -50,7 +55,46 @@ fun DocPilotApp() {
     var destination by remember { mutableStateOf(Destination.HOME) }
     var documents by remember { mutableStateOf(loadDocuments(context)) }
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
+    var hasDocumentAccess by remember { mutableStateOf(DocumentAccess.hasAccess(context)) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    fun refreshDeviceDocuments() {
+        hasDocumentAccess = DocumentAccess.hasAccess(context)
+        if (hasDocumentAccess) {
+            val discovered = DocumentAccess.scanPdfs(context)
+            documents = (discovered + documents).distinctBy { it.uri }
+            saveDocuments(context, documents)
+        }
+    }
+
+    val broadAccessLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        refreshDeviceDocuments()
+    }
+
+    val legacyStorageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        hasDocumentAccess = granted || DocumentAccess.hasAccess(context)
+        if (hasDocumentAccess) refreshDeviceDocuments()
+    }
+
+    fun requestDocumentAccess() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (DocumentAccess.hasAccess(context)) {
+                refreshDeviceDocuments()
+            } else {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                    Uri.parse("package:${context.packageName}"),
+                )
+                broadAccessLauncher.launch(intent)
+            }
+        } else {
+            legacyStorageLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
 
     fun openDocument(document: DocumentItem) {
         documents = listOf(document) + documents.filterNot { it.uri == document.uri }
@@ -108,6 +152,9 @@ fun DocPilotApp() {
                 Destination.HOME -> HomeScreen(
                     documents = documents,
                     onImportPdf = { picker.launch(arrayOf("application/pdf")) },
+                    hasDocumentAccess = hasDocumentAccess,
+                    onRequestDocumentAccess = { requestDocumentAccess() },
+                    onRefreshDeviceDocuments = { refreshDeviceDocuments() },
                     onOpenDocument = { openDocument(it) },
                     onViewLibrary = { destination = Destination.LIBRARY },
                     onViewTools = { destination = Destination.TOOLS },
@@ -133,7 +180,10 @@ fun DocPilotApp() {
                         saveDocuments(context, documents)
                     },
                 )
-                Destination.SETTINGS -> SettingsScreen()
+                Destination.SETTINGS -> SettingsScreen(
+                    hasDocumentAccess = hasDocumentAccess,
+                    onRequestDocumentAccess = { requestDocumentAccess() },
+                )
             }
         }
     }
