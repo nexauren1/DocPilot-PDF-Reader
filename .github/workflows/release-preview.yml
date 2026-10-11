@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - ".github/workflows/release-preview.yml"
+      - "app/build.gradle.kts"
   workflow_dispatch:
 
 permissions:
@@ -17,6 +18,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Read app version
+        id: version
+        shell: bash
+        run: |
+          VERSION_NAME="$(sed -nE 's/.*versionName = "([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)"
+          VERSION_CODE="$(sed -nE 's/.*versionCode = ([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)"
+          test -n "$VERSION_NAME"
+          test -n "$VERSION_CODE"
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "Preparing DocPilot $VERSION_NAME (versionCode $VERSION_CODE)"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v6
@@ -85,46 +98,40 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
 
       - name: Prepare APK artifact
-        run: cp app/build/outputs/apk/release/app-release.apk DocPilot-PDF-Reader-0.1.7.apk
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: cp app/build/outputs/apk/release/app-release.apk "DocPilot-PDF-Reader-${VERSION_NAME}.apk"
 
       - name: Upload APK for validation
         uses: actions/upload-artifact@v4
         with:
-          name: docpilot-pdf-reader-v0.1.7-${{ steps.signing.outputs.production == 'true' && 'production-signed' || 'debug-signed-ci-only' }}
-          path: DocPilot-PDF-Reader-0.1.7.apk
+          name: docpilot-pdf-reader-v${{ steps.version.outputs.name }}-${{ steps.signing.outputs.production == 'true' && 'production-signed' || 'debug-signed-ci-only' }}
+          path: DocPilot-PDF-Reader-${{ steps.version.outputs.name }}.apk
           retention-days: 90
 
       - name: Publish GitHub Release
         if: steps.signing.outputs.production == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.7-preview.1
+          tag_name: v${{ steps.version.outputs.name }}-preview.1
           target_commitish: ${{ github.sha }}
-          name: DocPilot - PDF Reader 0.1.7
+          name: DocPilot - PDF Reader ${{ steps.version.outputs.name }}
           prerelease: true
           make_latest: false
           fail_on_unmatched_files: true
           body: |
-            ## DocPilot - PDF Reader 0.1.7
+            ## DocPilot - PDF Reader ${{ steps.version.outputs.name }}
 
             This Android APK is published only after unit tests, release assembly and APK signature verification pass.
 
             Signing: this release uses the persistent production keystore supplied through the four protected GitHub Actions secrets. Preserve that keystore for every future app update.
 
-            Branding and build:
-            - Android app label and Home, navigation and Settings branding updated to DocPilot - PDF Reader
-            - Refreshed blue-violet document launcher icon
-            - Version 0.1.7 (versionCode 8)
-            - Existing Android application ID preserved as com.nexauren.docpilot to retain update compatibility
-
-            Included PDF tools:
-            - PDF reader with inline search, page navigation, saved reading position, bookmarks, zoom and reading progress
-            - Dashboard, library and tool search
-            - PDF merge, split, page reorder, 90-degree rotation and image compression
-            - Export selectable PDF text, scanner, image OCR and images-to-PDF conversion
-            - Password protection and visual text signatures
+            Build:
+            - Version ${{ steps.version.outputs.name }} (versionCode ${{ steps.version.outputs.code }})
+            - Existing Android application ID preserved as com.nexauren.docpilot
+            - Professional PDF and text tool workflow: configure, process, preview and save
 
             Storage permission note: Android 11+ may require all-files access for automatic device-wide PDF discovery. Individual PDF opening remains available as a fallback.
-          files: DocPilot-PDF-Reader-0.1.7.apk
+          files: DocPilot-PDF-Reader-${{ steps.version.outputs.name }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
