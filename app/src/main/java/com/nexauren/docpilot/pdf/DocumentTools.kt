@@ -13,6 +13,7 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import java.io.IOException
 import kotlin.math.min
+import kotlin.math.max
 
 object DocumentTools {
 
@@ -29,9 +30,29 @@ object DocumentTools {
         val pdf = PdfDocument()
         try {
             imageUris.forEachIndexed { index, uri ->
-                val bitmap = resolver.openInputStream(uri).use { input ->
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                resolver.openInputStream(uri).use { input ->
                     requireNotNull(input) { "Não foi possível abrir a imagem." }
-                    BitmapFactory.decodeStream(input)
+                    BitmapFactory.decodeStream(input, null, bounds)
+                }
+                require(bounds.outWidth > 0 && bounds.outHeight > 0) { "Imagem inválida." }
+
+                // Downsample large camera images before decoding to reduce peak memory use.
+                val maxDimensionPx = max(pageWidth, pageHeight) * 2
+                var sampleSize = 1
+                while (
+                    bounds.outWidth / sampleSize > maxDimensionPx ||
+                    bounds.outHeight / sampleSize > maxDimensionPx
+                ) {
+                    sampleSize *= 2
+                }
+                val decodeOptions = BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                    inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                }
+                val bitmap = resolver.openInputStream(uri).use { input ->
+                    requireNotNull(input) { "Não foi possível reabrir a imagem." }
+                    BitmapFactory.decodeStream(input, null, decodeOptions)
                 } ?: throw IOException("Imagem inválida.")
 
                 try {
