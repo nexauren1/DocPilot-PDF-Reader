@@ -54,7 +54,7 @@ object PdfProcessor {
         resolver.openInputStream(inputUri).use { input ->
             requireNotNull(input) { "Não foi possível abrir o PDF." }
             PDDocument.load(input).use { source ->
-                validateOrder(order, source.numberOfPages)
+                validatePageOrder(order, source.numberOfPages)
                 PDDocument().use { outputDocument ->
                     order.forEach { pageNumber -> outputDocument.importPage(source.getPage(pageNumber - 1)) }
                     resolver.openOutputStream(outputUri).use { output ->
@@ -115,10 +115,6 @@ object PdfProcessor {
         }
     }
 
-    private fun validateOrder(order: List<Int>, pageCount: Int) {
-        require(order.all { it in 1..pageCount }) { "A ordem contém uma página fora do intervalo 1.." + pageCount + "." }
-    }
-
     private fun fileSize(resolver: ContentResolver, uri: Uri): Long = runCatching {
         resolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
     }.getOrDefault(-1L)
@@ -136,3 +132,16 @@ fun formatBytes(bytes: Long): String {
     if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0)
     return String.format("%.1f MB", bytes / (1024.0 * 1024.0))
 }
+internal fun validatePageOrder(order: List<Int>, pageCount: Int) {
+    require(pageCount > 0) { "Este PDF não contém páginas." }
+    require(order.size == pageCount) {
+        "A nova ordem deve incluir todas as $pageCount páginas. Para extrair páginas, usa Dividir PDF."
+    }
+    require(order.all { it in 1..pageCount }) {
+        "A ordem contém uma página fora do intervalo 1..$pageCount."
+    }
+    require(order.distinct().size == pageCount) {
+        "Cada página deve aparecer uma única vez na nova ordem."
+    }
+}
+
