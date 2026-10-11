@@ -28,14 +28,14 @@ object DocumentTools {
 
         val pdf = PdfDocument()
         try {
-            imageUris.forEach { uri ->
+            imageUris.forEachIndexed { index, uri ->
                 val bitmap = resolver.openInputStream(uri).use { input ->
                     requireNotNull(input) { "Não foi possível abrir a imagem." }
                     BitmapFactory.decodeStream(input)
                 } ?: throw IOException("Imagem inválida.")
 
                 try {
-                    val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pdf.pages.size + 1).create()
+                    val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, index + 1).create()
                     val page = pdf.startPage(pageInfo)
                     val scale = min(pageWidth.toFloat() / bitmap.width, pageHeight.toFloat() / bitmap.height)
                     val drawWidth = bitmap.width * scale
@@ -76,7 +76,9 @@ object DocumentTools {
                 permissions.setCanExtractContent(false)
                 permissions.setCanPrint(true)
 
-                val policy = StandardProtectionPolicy(password, password, permissions)
+                // Keep the owner password separate so the viewer password does not also grant owner privileges.
+                val ownerPassword = java.util.UUID.randomUUID().toString().replace("-", "")
+                val policy = StandardProtectionPolicy(ownerPassword, password, permissions)
                 policy.encryptionKeyLength = 128
                 policy.permissions = permissions
                 document.protect(policy)
@@ -113,7 +115,19 @@ object DocumentTools {
                         stream.setFont(PDType1Font.HELVETICA_BOLD, 11f)
                         stream.setNonStrokingColor(80f / 255f, 80f / 255f, 150f / 255f)
                         stream.newLineAtOffset(36f, 28f)
-                        stream.showText(signatureText.take(120))
+                        val safeSignature = buildString {
+                            signatureText.take(120).forEach { character ->
+                                val value = character.toString()
+                                append(
+                                    if (runCatching { PDType1Font.HELVETICA_BOLD.encode(value) }.isSuccess) {
+                                        value
+                                    } else {
+                                        "?"
+                                    },
+                                )
+                            }
+                        }
+                        stream.showText(safeSignature)
                         stream.endText()
                     }
                 }
