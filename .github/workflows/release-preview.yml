@@ -1,4 +1,4 @@
-name: DocPilot Installable Preview Release
+name: DocPilot - PDF Reader | Release
 
 on:
   push:
@@ -40,49 +40,91 @@ jobs:
       - name: Run unit tests
         run: gradle test --stacktrace
 
+      - name: Configure production signing
+        id: signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          configured=0
+          for value in "$KEYSTORE_BASE64" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD"; do
+            if [[ -n "$value" ]]; then
+              configured=$((configured + 1))
+            fi
+          done
+
+          if [[ "$configured" -eq 4 ]]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/docpilot-release.jks"
+            test -s "$RUNNER_TEMP/docpilot-release.jks"
+            echo "production=true" >> "$GITHUB_OUTPUT"
+            echo "mode=Persistent production keystore" >> "$GITHUB_OUTPUT"
+            echo "Production signing is configured."
+          elif [[ "$configured" -eq 0 ]]; then
+            echo "production=false" >> "$GITHUB_OUTPUT"
+            echo "mode=Debug signing for CI validation only" >> "$GITHUB_OUTPUT"
+            echo "::warning::The four production signing secrets are not configured. The build will be validated, but no GitHub Release will be published."
+          else
+            echo "::error::Configure all four signing secrets together: SIGNING_KEYSTORE_BASE64, SIGNING_KEYSTORE_PASSWORD, SIGNING_KEY_ALIAS and SIGNING_KEY_PASSWORD."
+            exit 1
+          fi
+
       - name: Build release APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/docpilot-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: gradle assembleRelease --stacktrace
 
       - name: Verify APK signature
         run: |
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
 
-      - name: Prepare release asset
-        run: cp app/build/outputs/apk/release/app-release.apk DocPilot-0.1.6-preview.apk
+      - name: Prepare APK artifact
+        run: cp app/build/outputs/apk/release/app-release.apk DocPilot-PDF-Reader-0.1.7.apk
 
-      - name: Upload exact release APK as workflow artifact
+      - name: Upload APK for validation
         uses: actions/upload-artifact@v4
         with:
-          name: docpilot-release-apk-v0.1.6-preview.1
-          path: DocPilot-0.1.6-preview.apk
+          name: docpilot-pdf-reader-v0.1.7-${{ steps.signing.outputs.production == 'true' && 'production-signed' || 'debug-signed-ci-only' }}
+          path: DocPilot-PDF-Reader-0.1.7.apk
           retention-days: 90
 
       - name: Publish GitHub Release
+        if: steps.signing.outputs.production == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.6-preview.1
+          tag_name: v0.1.7-preview.1
           target_commitish: ${{ github.sha }}
-          name: DocPilot 0.1.6 — Installable Preview
+          name: DocPilot - PDF Reader 0.1.7
           prerelease: true
           make_latest: false
           fail_on_unmatched_files: true
           body: |
-            ## DocPilot 0.1.6 — Installable Android Preview
+            ## DocPilot - PDF Reader 0.1.7
 
-            This APK is built by GitHub Actions only after unit tests, release assembly and APK signature verification pass.
+            This Android APK is published only after unit tests, release assembly and APK signature verification pass.
 
-            **Signing notice:** this preview uses the default Android debug signing identity for device testing. It is not the permanent production signing key and must not be used for a stable store launch. A persistent production keystore must be configured before publishing a production release.
+            Signing: this release uses the persistent production keystore supplied through the four protected GitHub Actions secrets. Preserve that keystore for every future app update.
 
-            ### Included
-            - PDF reader with live inline text search, reflow mode, page jump, saved position, page bookmarks, zoom and reading progress
-            - Dashboard, library and tool search that filters results in place rather than opening a separate search screen
-            - Sidebar navigation menu with animated transitions and distinct tool visuals
+            Branding and build:
+            - Android app label and Home, navigation and Settings branding updated to DocPilot - PDF Reader
+            - Refreshed blue-violet document launcher icon
+            - Version 0.1.7 (versionCode 8)
+            - Existing Android application ID preserved as com.nexauren.docpilot to retain update compatibility
+
+            Included PDF tools:
+            - PDF reader with inline search, page navigation, saved reading position, bookmarks, zoom and reading progress
+            - Dashboard, library and tool search
             - PDF merge, split, page reorder, 90-degree rotation and image compression
-            - Export selectable PDF text to a TXT file, document scanning, image OCR and images-to-PDF conversion
-            - Per-tool processing panels and animated loading states
+            - Export selectable PDF text, scanner, image OCR and images-to-PDF conversion
             - Password protection and visual text signatures
 
-            **Storage permission note:** Android 11+ requires the user to enable all-files access in system settings to build the automatic device-wide PDF library. Opening an individual PDF remains available as a fallback. Google Play distribution requires a separate permission-policy review.
-          files: DocPilot-0.1.6-preview.apk
+            Storage permission note: Android 11+ may require all-files access for automatic device-wide PDF discovery. Individual PDF opening remains available as a fallback.
+          files: DocPilot-PDF-Reader-0.1.7.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

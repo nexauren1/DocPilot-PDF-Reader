@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "DocPilot"
+rootProject.name = "DocPilot-PDF-Reader"
 include(":app")

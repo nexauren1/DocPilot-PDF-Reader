@@ -84,7 +84,7 @@ fun HomeScreen(
             onDismissRequest = { showAccessDialog = false },
             title = { Text("Aceder aos teus documentos") },
             text = {
-                Text("O DocPilot pode procurar PDFs no armazenamento partilhado do dispositivo para criar uma biblioteca automática. Os ficheiros são lidos no teu dispositivo e não são enviados para um servidor. Podes continuar a abrir um PDF individualmente se preferires não conceder este acesso.")
+                Text("O DocPilot - PDF Reader pode procurar PDFs no armazenamento partilhado do dispositivo para criar uma biblioteca automática. Os ficheiros são lidos no teu dispositivo e não são enviados para um servidor. Podes continuar a abrir um PDF individualmente se preferires não conceder este acesso.")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -121,7 +121,7 @@ fun HomeScreen(
                         }
                         Spacer(Modifier.width(11.dp))
                         Column {
-                            Text("DocPilot", style = MaterialTheme.typography.titleLarge)
+                            Text("DocPilot - PDF Reader", style = MaterialTheme.typography.titleLarge)
                             Text(
                                 "Espaço de documentos",
                                 style = MaterialTheme.typography.labelSmall,
@@ -388,7 +388,7 @@ fun HomeScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text("Privacidade por defeito", style = MaterialTheme.typography.titleSmall)
                             Text(
-                                "Os teus PDFs são trabalhados localmente. Não precisas de criar uma conta DocPilot.",
+                                "Os teus PDFs são trabalhados localmente. Não precisas de criar uma conta.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -433,7 +433,7 @@ fun HomeScreen(
                             }
                             Text("A tua biblioteca começa aqui", style = MaterialTheme.typography.titleMedium)
                             Text(
-                                if (hasDocumentAccess) "Ainda não encontrámos PDFs. Podes voltar a procurar ou abrir um ficheiro individualmente." else "Permite ao DocPilot procurar PDFs no dispositivo ou abre um ficheiro individualmente.",
+                                if (hasDocumentAccess) "Ainda não encontrámos PDFs. Podes voltar a procurar ou abrir um ficheiro individualmente." else "Permite ao DocPilot - PDF Reader procurar PDFs no dispositivo ou abre um ficheiro individualmente.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
