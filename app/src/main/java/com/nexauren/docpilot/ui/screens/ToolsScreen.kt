@@ -1458,7 +1458,7 @@ private fun ToolWorkspace(
                     Spacer(Modifier.width(10.dp))
                     Text("A processar…")
                 } else {
-                    Text("Criar PDF")
+                    Text(if (tool == PdfTool.EXPORT_PAGE_IMAGE) "Exportar PNG" else "Criar PDF")
                 }
             }
 
