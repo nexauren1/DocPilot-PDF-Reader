@@ -200,6 +200,11 @@ internal fun PdfResultWorkspace(
     val snackbar = remember { SnackbarHostState() }
     var saving by remember { mutableStateOf(false) }
 
+    // Delete the private temporary file when the result workspace is closed.
+    DisposableEffect(result.file) {
+        onDispose { result.file.delete() }
+    }
+
     val savePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/pdf"),
     ) { destination ->
