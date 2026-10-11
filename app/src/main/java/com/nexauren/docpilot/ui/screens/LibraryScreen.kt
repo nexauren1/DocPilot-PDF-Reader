@@ -77,7 +77,7 @@ fun LibraryScreen(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Pesquisa e abre os documentos que guardaste no DocPilot - PDF Reader.",
+                "Pesquisa e abre os documentos que guardaste no DocPilot.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
