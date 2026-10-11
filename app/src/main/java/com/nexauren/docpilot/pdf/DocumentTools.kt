@@ -2,7 +2,10 @@ package com.nexauren.docpilot.pdf
 
 import android.content.ContentResolver
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import com.tom_roush.pdfbox.pdmodel.PDDocument
@@ -79,6 +82,61 @@ object DocumentTools {
         }
 
         return resolver.openAssetFileDescriptor(outputUri, "r")?.use { it.length } ?: -1L
+    }
+
+    fun exportPdfPageAsPng(
+        resolver: ContentResolver,
+        inputUri: Uri,
+        pageNumber: Int,
+        outputUri: Uri,
+        maxDimension: Int = 2200,
+    ): Long {
+        require(pageNumber >= 1) { "O número da página deve ser 1 ou maior." }
+        require(maxDimension in 720..3200) { "A resolução de exportação está fora do intervalo permitido." }
+
+        resolver.openFileDescriptor(inputUri, "r").use { descriptor ->
+            requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
+            PdfRenderer(descriptor).use { renderer ->
+                require(pageNumber in 1..renderer.pageCount) {
+                    "Este PDF tem ${renderer.pageCount} página(s)."
+                }
+                renderer.openPage(pageNumber - 1).use { page ->
+                    val scale = min(
+                        maxDimension.toFloat() / page.width.coerceAtLeast(1),
+                        maxDimension.toFloat() / page.height.coerceAtLeast(1),
+                    )
+                    val width = (page.width * scale).toInt().coerceAtLeast(1)
+                    val height = (page.height * scale).toInt().coerceAtLeast(1)
+                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    try {
+                        bitmap.eraseColor(android.graphics.Color.WHITE)
+                        val transform = Matrix().apply {
+                            setScale(width.toFloat() / page.width, height.toFloat() / page.height)
+                        }
+                        page.render(
+                            bitmap,
+                            null,
+                            transform,
+                            PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY,
+                        )
+                        resolver.openOutputStream(outputUri, "wt").use { output ->
+                            requireNotNull(output) { "Não foi possível criar a imagem PNG." }
+                            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                                "Não foi possível codificar a página como PNG."
+                            }
+                        }
+                    } finally {
+                        bitmap.recycle()
+                    }
+                }
+            }
+        }
+
+        val size = runCatching {
+            resolver.openAssetFileDescriptor(outputUri, "r")?.use { it.length } ?: -1L
+        }.getOrDefault(-1L)
+        require(size > 0L) { "A imagem exportada está vazia." }
+        return size
     }
 
     fun protectPdf(
