@@ -160,7 +160,7 @@ fun DocPilotApp() {
                         .padding(vertical = 20.dp),
                 ) {
                     Text(
-                        "DocPilot",
+                        "DocPilot - PDF Reader",
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
                     )
