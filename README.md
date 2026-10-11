@@ -1,6 +1,6 @@
-# DocPilot
+# DocPilot - PDF Reader
 
-DocPilot is an Android-first document hub focused on reading, organizing and processing PDFs.
+DocPilot - PDF Reader is an Android-first document hub focused on reading, organizing and processing PDFs.
 
 ## Current features
 
@@ -26,7 +26,7 @@ DocPilot is an Android-first document hub focused on reading, organizing and pro
 
 ## PDF processing and privacy
 
-Processing happens on-device. The app uses the Android system document picker for input and output files; selected PDFs and images are not uploaded to a DocPilot server.
+Processing happens on-device. The app uses the Android system document picker for input and output files; selected PDFs and images are not uploaded to a DocPilot - PDF Reader server.
 
 Current tools include:
 
@@ -55,12 +55,20 @@ The GitHub Actions pipeline runs unit tests, builds debug and release APKs, and 
 
 ## Signing status
 
-The installable preview release uses the default Android debug signing identity so it can be installed for testing. **This is not the permanent production signing key**. Before a store launch, configure a persistent production keystore through protected GitHub Actions secrets; future versions must keep the same signing key to support in-place updates.
+The 0.1.7 release workflow is prepared for a persistent production keystore. Until all four signing secrets are configured, CI builds can use the debug identity for testing, but GitHub Release publication is skipped. Do not distribute debug-signed APKs as production releases. Keep the same private signing key for every future update.
+
+Required GitHub repository secrets (Settings → Secrets and variables → Actions):
+- `SIGNING_KEYSTORE_BASE64`: the release keystore encoded as a single base64 string.
+- `SIGNING_KEYSTORE_PASSWORD`: password protecting the keystore.
+- `SIGNING_KEY_ALIAS`: alias of the signing key inside the keystore.
+- `SIGNING_KEY_PASSWORD`: password for that key.
+
+The release workflow decodes the keystore into the temporary runner directory and never commits it to the repository. Configure all four secrets together, then run **DocPilot - PDF Reader | Release** from Actions to publish the signed release. Never paste the keystore, passwords or secret values into source files, Issues or chat. If the keystore is lost, future APKs signed with a different key cannot update the current installation in-place.
 
 ## Roadmap
 
-1. Persisted signing configuration and store-ready signed release.
+1. Finish the first persistent-key signed release after adding the four protected GitHub secrets.
 2. Better compression settings and size reporting.
 3. Richer document organization, favorites, folders and history.
-4. Scanner/OCR workflows refinements.
+4. Scanner/OCR workflow refinements.
 5. Additional accessibility, device testing and release checks.
