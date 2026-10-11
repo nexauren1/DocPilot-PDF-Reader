@@ -1092,7 +1092,7 @@ private fun ToolWorkspace(
                         PdfTool.REORDER -> "A reorganizar páginas"
                         PdfTool.ROTATE -> "A rodar páginas"
                     },
-                    detail = "O DocPilot - PDF Reader está a criar uma nova cópia do teu PDF.",
+                    detail = "O DocPilot está a criar uma nova cópia do teu PDF.",
                     accent = pdfToolAccent(tool),
                 )
             }
