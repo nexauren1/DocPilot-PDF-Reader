@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.net.Uri
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDResources
+import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.pdmodel.graphics.PDXObject
@@ -83,6 +84,66 @@ object PdfProcessor {
         return fileSize(resolver, outputUri)
     }
 
+    fun rotatePage(
+        resolver: ContentResolver,
+        inputUri: Uri,
+        outputUri: Uri,
+        pageNumber: Int,
+        degrees: Int,
+    ): Long {
+        requireValidRotationDegrees(degrees)
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                requireValidPageNumber(pageNumber, document.numberOfPages)
+                val page = document.getPage(pageNumber - 1)
+                page.rotation = (page.rotation + degrees) % 360
+                resolver.openOutputStream(outputUri).use { output ->
+                    requireNotNull(output) { "Não foi possível criar o PDF rodado." }
+                    document.save(output)
+                }
+            }
+        }
+        return fileSize(resolver, outputUri)
+    }
+
+    fun cropPage(
+        resolver: ContentResolver,
+        inputUri: Uri,
+        outputUri: Uri,
+        pageNumber: Int,
+        marginRatio: Float,
+    ): Long {
+        require(marginRatio in 0f..0.2f) { "Escolhe um recorte entre 0% e 20% por margem." }
+        require(marginRatio > 0f) { "Escolhe uma margem de recorte maior que 0%." }
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                requireValidPageNumber(pageNumber, document.numberOfPages)
+                val page = document.getPage(pageNumber - 1)
+                val original = page.cropBox
+                val marginX = original.width * marginRatio
+                val marginY = original.height * marginRatio
+                val croppedWidth = original.width - 2f * marginX
+                val croppedHeight = original.height - 2f * marginY
+                require(croppedWidth > 0f && croppedHeight > 0f) {
+                    "O recorte é demasiado grande para esta página."
+                }
+                page.cropBox = PDRectangle(
+                    original.lowerLeftX + marginX,
+                    original.lowerLeftY + marginY,
+                    croppedWidth,
+                    croppedHeight,
+                )
+                resolver.openOutputStream(outputUri).use { output ->
+                    requireNotNull(output) { "Não foi possível criar o PDF recortado." }
+                    document.save(output)
+                }
+            }
+        }
+        return fileSize(resolver, outputUri)
+    }
+
     fun compress(resolver: ContentResolver, inputUri: Uri, outputUri: Uri, quality: Float = 0.72f, maxDimension: Int = 1800): Long {
         resolver.openInputStream(inputUri).use { input ->
             requireNotNull(input) { "Não foi possível abrir o PDF." }
@@ -144,6 +205,17 @@ internal fun validatePageOrder(order: List<Int>, pageCount: Int) {
     }
     require(order.distinct().size == pageCount) {
         "Cada página deve aparecer uma única vez na nova ordem."
+    }
+}
+
+internal fun requireValidPageNumber(pageNumber: Int, pageCount: Int) {
+    require(pageCount > 0) { "Este PDF não contém páginas." }
+    require(pageNumber in 1..pageCount) { "A página deve estar entre 1 e $pageCount." }
+}
+
+internal fun requireValidRotationDegrees(degrees: Int) {
+    require(degrees in setOf(90, 180, 270)) {
+        "Escolhe uma rotação de 90°, 180° ou 270°."
     }
 }
 
