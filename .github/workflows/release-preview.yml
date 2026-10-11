@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/release-preview.yml"
       - "app/build.gradle.kts"
+      - "build.gradle.kts"
   workflow_dispatch:
 
 permissions:
