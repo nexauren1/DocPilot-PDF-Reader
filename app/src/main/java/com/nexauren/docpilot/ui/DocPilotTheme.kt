@@ -2,11 +2,49 @@ package com.nexauren.docpilot.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
+
+private val BaseTypography = Typography()
+private val DocPilotTypography = Typography(
+    displaySmall = BaseTypography.displaySmall.copy(
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = (-0.35).sp,
+    ),
+    headlineLarge = BaseTypography.headlineLarge.copy(
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = (-0.3).sp,
+    ),
+    headlineMedium = BaseTypography.headlineMedium.copy(
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = (-0.2).sp,
+    ),
+    headlineSmall = BaseTypography.headlineSmall.copy(
+        fontWeight = FontWeight.SemiBold,
+    ),
+    titleLarge = BaseTypography.titleLarge.copy(
+        fontWeight = FontWeight.SemiBold,
+    ),
+    titleMedium = BaseTypography.titleMedium.copy(
+        fontWeight = FontWeight.Medium,
+    ),
+)
+
+private val DocPilotShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(18.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(30.dp),
+)
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF2F63D8),
@@ -53,7 +91,8 @@ fun DocPilotTheme(
 ) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = Typography(),
+        typography = DocPilotTypography,
+        shapes = DocPilotShapes,
         content = content,
     )
 }
