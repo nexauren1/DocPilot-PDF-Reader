@@ -63,6 +63,15 @@ Required GitHub repository secrets (Settings → Secrets and variables → Actio
 - `SIGNING_KEY_ALIAS`: alias of the signing key inside the keystore.
 - `SIGNING_KEY_PASSWORD`: password for that key.
 
+Create the keystore once on a trusted device with a JDK (Android users can use a trusted Termux environment with a JDK installed):
+
+```sh
+keytool -genkeypair -v -keystore docpilot-release.jks -alias docpilot-release -keyalg RSA -keysize 2048 -validity 10000
+base64 -w 0 docpilot-release.jks > docpilot-release.base64
+```
+
+Use alias `docpilot-release` for `SIGNING_KEY_ALIAS`. Put the full contents of `docpilot-release.base64` into `SIGNING_KEYSTORE_BASE64`; use the passwords you entered when generating the key for the two password secrets. In GitHub, open this repository's **Settings → Secrets and variables → Actions → New repository secret** and create each secret with the exact name above. Keep both the original `.jks` file and its passwords backed up privately, and never commit either file.
+
 The release workflow decodes the keystore into the temporary runner directory and never commits it to the repository. Configure all four secrets together, then run **DocPilot - PDF Reader | Release** from Actions to publish the signed release. Never paste the keystore, passwords or secret values into source files, Issues or chat. If the keystore is lost, future APKs signed with a different key cannot update the current installation in-place.
 
 ## Roadmap
