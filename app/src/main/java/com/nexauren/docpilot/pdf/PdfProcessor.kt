@@ -104,7 +104,9 @@ object PdfProcessor {
             if (xObject !is PDImageXObject) continue
             val image = runCatching { xObject.image }.getOrNull() ?: continue
             val largestSide = max(image.width, image.height)
-            if (largestSide <= maxDimension) continue
+            // JPEG cannot preserve alpha. Leave transparent artwork untouched rather than
+            // flattening logos and icons onto an unintended background.
+            if (image.hasAlpha() || largestSide <= maxDimension) continue
             val scale = maxDimension.toFloat() / largestSide.toFloat()
             val resizedWidth = (image.width * scale).roundToInt().coerceAtLeast(1)
             val resizedHeight = (image.height * scale).roundToInt().coerceAtLeast(1)
