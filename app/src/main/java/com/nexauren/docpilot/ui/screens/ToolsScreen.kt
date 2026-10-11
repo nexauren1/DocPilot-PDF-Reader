@@ -166,7 +166,6 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             outcome.fold(
                 onSuccess = {
                     resultPdf = it
-                    activeUtility = null
                 },
                 onFailure = {
                     workflowError = it.message ?: "O processamento não foi concluído."
@@ -191,7 +190,6 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             outcome.fold(
                 onSuccess = {
                     resultText = it
-                    activeUtility = null
                 },
                 onFailure = {
                     workflowError = it.message ?: "O processamento do texto falhou."
