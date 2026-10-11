@@ -2,6 +2,7 @@ package com.nexauren.docpilot.ui.screens
 
 import android.app.Activity
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -42,6 +43,7 @@ import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.RotateRight
@@ -118,7 +120,22 @@ private data class ToolCard(
     val action: Action = Action.NONE,
 )
 
-private enum class Action { NONE, SCAN, IMAGE_TO_PDF, OCR, PDF_TEXT }
+private enum class Action { NONE, SCAN, IMAGE_TO_PDF, OCR, PDF_TEXT, PDF_INFO }
+
+private fun displayName(context: android.content.Context, uri: Uri, fallback: String): String {
+    val fromProvider = runCatching {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0) cursor.getString(index) else null
+                } else null
+            }
+    }.getOrNull()
+    return fromProvider?.takeIf { it.isNotBlank() }
+        ?: uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+        ?: fallback
+}
 
 private val toolCards = listOf(
     ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, pdfTool = PdfTool.MERGE),
@@ -132,6 +149,7 @@ private val toolCards = listOf(
     ToolCard("Proteger", "Senha e permissões", Icons.Outlined.Lock, securityTool = SecurityTool.PROTECT),
     ToolCard("OCR de imagem", "Ler texto em fotos", Icons.Outlined.Description, action = Action.OCR),
     ToolCard("Extrair texto PDF", "Exportar texto para TXT", Icons.Outlined.ContentCopy, action = Action.PDF_TEXT),
+    ToolCard("Informações do PDF", "Páginas, tamanho e metadados", Icons.Outlined.Info, action = Action.PDF_INFO),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -204,6 +222,14 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
         if (uri != null) {
             pendingPdfTextUri = uri
             activeUtility = Action.PDF_TEXT
+        }
+    }
+    val pdfInfoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            pendingPdfTextUri = uri
+            activeUtility = Action.PDF_INFO
         }
     }
 
@@ -342,6 +368,36 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
         }
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 10.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Brush.linearGradient(listOf(Color(0xFF245BE2), Color(0xFF7250E8))), RoundedCornerShape(24.dp))
+                            .padding(18.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Box(
+                                modifier = Modifier.size(52.dp).background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(17.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(Icons.Outlined.Description, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text("Os teus PDFs, mais simples.", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                                Text(
+                                    toolCards.size.toString() + " ferramentas gratuitas para organizar, proteger e transformar documentos no dispositivo.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.88f),
+                                )
+                            }
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = toolQuery,
                     onValueChange = { toolQuery = it },
@@ -384,6 +440,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                                     card.action == Action.IMAGE_TO_PDF -> imagePicker.launch(arrayOf("image/*"))
                                     card.action == Action.OCR -> ocrPicker.launch(arrayOf("image/*"))
                                     card.action == Action.PDF_TEXT -> pdfTextPicker.launch(arrayOf("application/pdf"))
+                                    card.action == Action.PDF_INFO -> pdfInfoPicker.launch(arrayOf("application/pdf"))
                                 }
                             },
                             enabled = enabled,
@@ -475,6 +532,7 @@ private fun UtilityWorkspace(
         Action.IMAGE_TO_PDF -> "Imagem para PDF"
         Action.OCR -> "Reconhecer texto (OCR)"
         Action.PDF_TEXT -> "Extrair texto do PDF"
+        Action.PDF_INFO -> "Informações do PDF"
         Action.NONE -> "Ferramenta"
     }
     val subtitle = when (action) {
@@ -482,6 +540,7 @@ private fun UtilityWorkspace(
         Action.IMAGE_TO_PDF -> "Configura a página antes de converter as imagens."
         Action.OCR -> "Reconhece texto localmente e mostra-o antes de guardar."
         Action.PDF_TEXT -> "Extrai o texto, revê o conteúdo e só depois guarda."
+        Action.PDF_INFO -> "Consulta o tamanho, as páginas e os metadados disponíveis."
         Action.NONE -> ""
     }
 
@@ -511,6 +570,7 @@ private fun UtilityWorkspace(
                     Action.IMAGE_TO_PDF -> Icons.Outlined.PhotoLibrary
                     Action.OCR -> Icons.Outlined.Description
                     Action.PDF_TEXT -> Icons.Outlined.ContentCopy
+                    Action.PDF_INFO -> Icons.Outlined.Info
                     Action.NONE -> Icons.Outlined.Description
                 },
                 accent = when (action) {
@@ -518,6 +578,7 @@ private fun UtilityWorkspace(
                     Action.IMAGE_TO_PDF -> Color(0xFF7C4DFF)
                     Action.OCR -> Color(0xFF356AE6)
                     Action.PDF_TEXT -> Color(0xFF008C95)
+                    Action.PDF_INFO -> Color(0xFF7250E8)
                     Action.NONE -> MaterialTheme.colorScheme.primary
                 },
             )
@@ -529,7 +590,7 @@ private fun UtilityWorkspace(
                         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                             imageUris.take(8).forEachIndexed { index, uri ->
                                 Text(
-                                    "${index + 1}. ${uri.lastPathSegment ?: "Imagem"}",
+                                    "${index + 1}. ${displayName(context, uri, "Imagem")}",
                                     maxLines = 1,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
@@ -561,7 +622,7 @@ private fun UtilityWorkspace(
 
                 Action.OCR -> {
                     Text("Imagem selecionada", style = MaterialTheme.typography.titleSmall)
-                    Text(imageUris.firstOrNull()?.lastPathSegment ?: "Imagem", style = MaterialTheme.typography.bodyMedium)
+                    Text(imageUris.firstOrNull()?.let { displayName(context, it, "Imagem") } ?: "Imagem", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         "Depois do reconhecimento, poderás rever o texto, copiá-lo ou guardá-lo como TXT.",
                         style = MaterialTheme.typography.bodySmall,
@@ -571,7 +632,7 @@ private fun UtilityWorkspace(
 
                 Action.PDF_TEXT -> {
                     Text("PDF selecionado", style = MaterialTheme.typography.titleSmall)
-                    Text(pdfUri?.lastPathSegment ?: "Documento PDF", style = MaterialTheme.typography.bodyMedium)
+                    Text(pdfUri?.let { displayName(context, it, "Documento PDF") } ?: "Documento PDF", style = MaterialTheme.typography.bodyMedium)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = removeBlankLines, onCheckedChange = { removeBlankLines = it })
                         Column(Modifier.weight(1f)) {
@@ -587,9 +648,19 @@ private fun UtilityWorkspace(
 
                 Action.SCAN -> {
                     Text("Digitalização pronta para processar", style = MaterialTheme.typography.titleSmall)
-                    Text(scanUri?.lastPathSegment ?: "Documento digitalizado", style = MaterialTheme.typography.bodyMedium)
+                    Text(scanUri?.let { displayName(context, it, "Documento digitalizado") } ?: "Documento digitalizado", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         "O DocPilot vai preparar uma pré-visualização. O PDF só será guardado no destino escolhido depois de reveres o resultado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Action.PDF_INFO -> {
+                    Text("PDF selecionado", style = MaterialTheme.typography.titleSmall)
+                    Text(pdfUri?.let { displayName(context, it, "Documento PDF") } ?: "Documento PDF", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Consulta o número de páginas, o tamanho do ficheiro, as dimensões da primeira página e os metadados. O original não será alterado.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -605,6 +676,7 @@ private fun UtilityWorkspace(
                         Action.IMAGE_TO_PDF -> "A converter imagens"
                         Action.OCR -> "A reconhecer texto"
                         Action.PDF_TEXT -> "A extrair texto"
+                        Action.PDF_INFO -> "A analisar informações"
                         Action.NONE -> "A processar"
                     },
                     detail = "O trabalho é feito no dispositivo. Mantém o DocPilot aberto.",
@@ -618,6 +690,7 @@ private fun UtilityWorkspace(
                     Action.IMAGE_TO_PDF -> imageUris.isNotEmpty()
                     Action.OCR -> imageUris.isNotEmpty()
                     Action.PDF_TEXT -> pdfUri != null
+                    Action.PDF_INFO -> pdfUri != null
                     Action.NONE -> false
                 },
                 onClick = {
@@ -668,6 +741,13 @@ private fun UtilityWorkspace(
                             }
                         }
 
+                        Action.PDF_INFO -> {
+                            val source = pdfUri ?: return@Button
+                            onProcessText("docpilot-info.txt") {
+                                DocumentTools.inspectPdf(resolver, source)
+                            }
+                        }
+
                         Action.NONE -> Unit
                     }
                 },
@@ -684,6 +764,7 @@ private fun UtilityWorkspace(
                             Action.IMAGE_TO_PDF -> "Converter e pré-visualizar"
                             Action.OCR -> "Reconhecer texto"
                             Action.PDF_TEXT -> "Extrair e pré-visualizar"
+                            Action.PDF_INFO -> "Ver informações"
                             Action.NONE -> "Continuar"
                         },
                     )
@@ -863,7 +944,7 @@ private fun SecurityWorkspace(
 
             inputUri?.let {
                 Text(
-                    "PDF selecionado: " + (it.lastPathSegment ?: "documento.pdf"),
+                    "PDF selecionado: " + (displayName(context, it, "documento.pdf")),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1038,7 +1119,7 @@ private fun ToolWorkspace(
                         selectedUris.forEachIndexed { index, uri ->
                             Text(
                                 (index + 1).toString() + ". " +
-                                    (uri.lastPathSegment ?: "PDF"),
+                                    (displayName(context, uri, "PDF")),
                                 maxLines = 1,
                             )
                         }
