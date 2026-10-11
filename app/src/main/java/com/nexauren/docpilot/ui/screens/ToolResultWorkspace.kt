@@ -69,6 +69,7 @@ internal data class CachedPdfResult(
     val file: File,
     val outputName: String,
     val sizeBytes: Long,
+    val previewPage: Int = 1,
 )
 
 internal data class CachedTextResult(
@@ -86,6 +87,7 @@ internal fun createCachedPdfResult(
     context: Context,
     outputName: String,
     action: (Uri) -> Long,
+    previewPage: Int = 1,
 ): CachedPdfResult {
     val directory = File(context.cacheDir, "tool-results")
     check(directory.exists() || directory.mkdirs()) { "Não foi possível preparar o espaço temporário." }
@@ -102,6 +104,7 @@ internal fun createCachedPdfResult(
             file = file,
             outputName = outputName,
             sizeBytes = reportedSize.takeIf { it > 0L } ?: file.length(),
+            previewPage = previewPage.coerceAtLeast(1),
         )
     } catch (error: Throwable) {
         file.delete()
@@ -151,14 +154,15 @@ private fun copyFileToUri(context: Context, source: File, destination: Uri): Lon
 private data class PdfPreviewData(
     val bitmap: Bitmap,
     val pageCount: Int,
+    val displayedPage: Int,
 )
 
 @Composable
-private fun PdfFirstPagePreview(file: File) {
-    var preview by remember(file) { mutableStateOf<PdfPreviewData?>(null) }
-    var previewError by remember(file) { mutableStateOf<String?>(null) }
+private fun PdfFirstPagePreview(file: File, requestedPage: Int) {
+    var preview by remember(file, requestedPage) { mutableStateOf<PdfPreviewData?>(null) }
+    var previewError by remember(file, requestedPage) { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(file) {
+    LaunchedEffect(file, requestedPage) {
         preview = null
         previewError = null
         val outcome = withContext(Dispatchers.IO) {
@@ -166,8 +170,9 @@ private fun PdfFirstPagePreview(file: File) {
                 ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
                     PdfRenderer(descriptor).use { renderer ->
                         require(renderer.pageCount > 0) { "O documento não contém páginas." }
-                        renderer.openPage(0).use { page ->
-                            // Preserve each page's natural aspect ratio and cap its bitmap size.
+                        val pageNumber = requestedPage.coerceIn(1, renderer.pageCount)
+                        renderer.openPage(pageNumber - 1).use { page ->
+                            // Preserve the selected page's natural ratio and cap memory use.
                             val scale = minOf(
                                 720f / page.width.toFloat(),
                                 1800f / page.height.toFloat(),
@@ -180,7 +185,7 @@ private fun PdfFirstPagePreview(file: File) {
                                 setScale(width.toFloat() / page.width, height.toFloat() / page.height)
                             }
                             page.render(bitmap, null, transform, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                            PdfPreviewData(bitmap, renderer.pageCount)
+                            PdfPreviewData(bitmap, renderer.pageCount, pageNumber)
                         }
                     }
                 }
@@ -211,12 +216,12 @@ private fun PdfFirstPagePreview(file: File) {
                 preview != null -> {
                     Image(
                         bitmap = preview!!.bitmap.asImageBitmap(),
-                        contentDescription = "Pré-visualização da primeira página do PDF",
+                        contentDescription = "Pré-visualização da página ${preview!!.displayedPage} do PDF",
                         modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
                         contentScale = ContentScale.Fit,
                     )
                     Text(
-                        "Página 1 de ${preview!!.pageCount}",
+                        "Página ${preview!!.displayedPage} de ${preview!!.pageCount}",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -296,11 +301,11 @@ internal fun PdfResultWorkspace(
             Spacer(Modifier.height(4.dp))
             Text("O resultado está pronto", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Revê a primeira página. O ficheiro original não foi alterado. Guarda uma cópia quando estiveres satisfeito.",
+                "Revê a página ${result.previewPage}. O ficheiro original não foi alterado. Guarda uma cópia quando estiveres satisfeito.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            PdfFirstPagePreview(result.file)
+            PdfFirstPagePreview(result.file, result.previewPage)
             Card(shape = RoundedCornerShape(18.dp)) {
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(result.outputName, style = MaterialTheme.typography.titleMedium)
