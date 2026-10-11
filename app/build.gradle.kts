@@ -26,8 +26,8 @@ android {
         applicationId = "com.nexauren.docpilot"
         minSdk = 24
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.1.9"
+        versionCode = 11
+        versionName = "0.1.10"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -50,6 +50,7 @@ android {
         debug {
             // Keep the registered Firebase application ID across variants. Debug APKs remain
             // debug-key signed and are never used for a production release.
+        }
         release {
             // Production signing is activated only when all four protected values are present.
             // CI must not publish a release APK signed with the temporary debug key.
