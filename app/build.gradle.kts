@@ -15,6 +15,7 @@ val hasProductionSigning = listOf(
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -25,8 +26,8 @@ android {
         applicationId = "com.nexauren.docpilot"
         minSdk = 24
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.1.8"
+        versionCode = 10
+        versionName = "0.1.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -52,7 +53,7 @@ android {
         }
         release {
             // Production signing is activated only when all four protected values are present.
-            // CI can build a debug-signed validation APK while secrets are being configured.
+            // CI must not publish a release APK signed with the temporary debug key.
             signingConfig = if (hasProductionSigning) {
                 signingConfigs.getByName("production")
             } else {
@@ -94,6 +95,11 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
+
+    // Firebase products use a shared BoM to keep SDK versions compatible.
+    implementation(platform("com.google.firebase:firebase-bom:35.0.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-analytics")
 
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.activity:activity-compose:1.10.1")
