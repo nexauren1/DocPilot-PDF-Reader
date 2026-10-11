@@ -39,15 +39,38 @@ jobs:
       - name: Run unit tests
         run: gradle test --stacktrace
 
+      - name: Configure production signing
+        id: signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          configured=0
+          for value in "$KEYSTORE_BASE64" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD"; do
+            if [[ -n "$value" ]]; then
+              configured=$((configured + 1))
+            fi
+          done
+
+          if [[ "$configured" -eq 4 ]]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/docpilot-release.jks"
+            test -s "$RUNNER_TEMP/docpilot-release.jks"
+            echo "production=true" >> "$GITHUB_OUTPUT"
+            echo "Production signing is configured."
+          elif [[ "$configured" -eq 0 ]]; then
+            echo "production=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Production signing secrets are not configured. CI will build only the debug APK; it will not publish a misleading release APK."
+          else
+            echo "::error::Configure all four signing secrets together: SIGNING_KEYSTORE_BASE64, SIGNING_KEYSTORE_PASSWORD, SIGNING_KEY_ALIAS and SIGNING_KEY_PASSWORD."
+            exit 1
+          fi
+
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
-
-      - name: Build release APK
-        run: gradle assembleRelease --stacktrace
-
-      - name: Verify release APK signature
-        run: |
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -55,8 +78,23 @@ jobs:
           name: docpilot-pdf-reader-debug-apk
           path: app/build/outputs/apk/debug/*.apk
 
-      - name: Upload release APK
+      - name: Build production release APK
+        if: steps.signing.outputs.production == 'true'
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/docpilot-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: gradle assembleRelease --stacktrace
+
+      - name: Verify production release APK signature
+        if: steps.signing.outputs.production == 'true'
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload production release APK
+        if: steps.signing.outputs.production == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: docpilot-pdf-reader-release-build
+          name: docpilot-pdf-reader-production-signed-release
           path: app/build/outputs/apk/release/app-release.apk
