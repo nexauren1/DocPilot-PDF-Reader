@@ -129,11 +129,20 @@ private fun PdfFirstPagePreview(file: File) {
                     PdfRenderer(descriptor).use { renderer ->
                         require(renderer.pageCount > 0) { "O documento não contém páginas." }
                         renderer.openPage(0).use { page ->
-                            val width = 720
-                            val height = (width.toFloat() * page.height / page.width).toInt().coerceIn(280, 1200)
+                            // Keep the original page ratio and cap bitmap dimensions to avoid
+                            // distorted previews and excessive memory use on unusually tall pages.
+                            val scale = minOf(
+                                720f / page.width.toFloat(),
+                                1800f / page.height.toFloat(),
+                            )
+                            val width = (page.width * scale).toInt().coerceAtLeast(1)
+                            val height = (page.height * scale).toInt().coerceAtLeast(1)
                             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                             bitmap.eraseColor(android.graphics.Color.WHITE)
-                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            val transform = android.graphics.Matrix().apply {
+                                setScale(width.toFloat() / page.width, height.toFloat() / page.height)
+                            }
+                            page.render(bitmap, null, transform, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             PdfPreviewData(bitmap, renderer.pageCount)
                         }
                     }
