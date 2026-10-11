@@ -60,6 +60,7 @@ import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.nexauren.docpilot.pdf.formatBytes
 import java.io.File
 import java.io.FileInputStream
 
