@@ -3,6 +3,7 @@ package com.nexauren.docpilot.ui.screens
 import android.content.Context
 import android.net.Uri
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -75,6 +76,12 @@ internal data class CachedTextResult(
     val outputName: String = "docpilot-text.txt",
 )
 
+internal data class CachedImageResult(
+    val file: File,
+    val outputName: String,
+    val sizeBytes: Long,
+)
+
 internal fun createCachedPdfResult(
     context: Context,
     outputName: String,
@@ -92,6 +99,37 @@ internal fun createCachedPdfResult(
         val reportedSize = action(uri)
         check(file.exists() && file.length() > 0L) { "A ferramenta não produziu um PDF válido." }
         return CachedPdfResult(
+            file = file,
+            outputName = outputName,
+            sizeBytes = reportedSize.takeIf { it > 0L } ?: file.length(),
+        )
+    } catch (error: Throwable) {
+        file.delete()
+        throw error
+    }
+}
+
+internal fun createCachedImageResult(
+    context: Context,
+    outputName: String,
+    action: (Uri) -> Long,
+): CachedImageResult {
+    val directory = File(context.cacheDir, "tool-results")
+    check(directory.exists() || directory.mkdirs()) {
+        "Não foi possível preparar o espaço temporário."
+    }
+    val file = File.createTempFile("docpilot-image-", ".png", directory)
+    try {
+        val uri = FileProvider.getUriForFile(
+            context,
+            context.packageName + ".fileprovider",
+            file,
+        )
+        val reportedSize = action(uri)
+        check(file.exists() && file.length() > 8L) {
+            "A ferramenta não produziu uma imagem PNG válida."
+        }
+        return CachedImageResult(
             file = file,
             outputName = outputName,
             sizeBytes = reportedSize.takeIf { it > 0L } ?: file.length(),
@@ -290,6 +328,172 @@ internal fun PdfResultWorkspace(
             }
             OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
                 Text("Voltar às opções")
+            }
+            Spacer(Modifier.height(18.dp))
+        }
+    }
+}
+
+private data class ImagePreviewData(val bitmap: Bitmap)
+
+@Composable
+private fun PngResultPreview(file: File) {
+    var preview by remember(file) { mutableStateOf<ImagePreviewData?>(null) }
+    var previewError by remember(file) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(file) {
+        preview = null
+        previewError = null
+        val outcome = withContext(Dispatchers.IO) {
+            runCatching {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(file.absolutePath, bounds)
+                require(bounds.outWidth > 0 && bounds.outHeight > 0) {
+                    "A imagem exportada não é válida."
+                }
+                var sampleSize = 1
+                while (
+                    bounds.outWidth / sampleSize > 1200 ||
+                    bounds.outHeight / sampleSize > 1200
+                ) {
+                    sampleSize *= 2
+                }
+                val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                val bitmap = BitmapFactory.decodeFile(file.absolutePath, options)
+                requireNotNull(bitmap) { "Não foi possível pré-visualizar a imagem." }
+                ImagePreviewData(bitmap)
+            }
+        }
+        outcome.fold(
+            onSuccess = { preview = it },
+            onFailure = { previewError = it.message ?: "Não foi possível carregar a imagem." },
+        )
+    }
+
+    DisposableEffect(preview?.bitmap) {
+        val bitmap = preview?.bitmap
+        onDispose { bitmap?.recycle() }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                preview != null -> Image(
+                    bitmap = preview!!.bitmap.asImageBitmap(),
+                    contentDescription = "Pré-visualização da página exportada",
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                previewError != null -> Text(
+                    previewError.orEmpty(),
+                    color = MaterialTheme.colorScheme.error,
+                )
+                else -> CircularProgressIndicator()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ImageResultWorkspace(
+    result: CachedImageResult,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+    var saving by remember { mutableStateOf(false) }
+
+    DisposableEffect(result.file) {
+        onDispose { result.file.delete() }
+    }
+
+    val savePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("image/png"),
+    ) { destination ->
+        if (destination != null) {
+            saving = true
+            scope.launch {
+                val outcome = withContext(Dispatchers.IO) {
+                    runCatching { copyFileToUri(context, result.file, destination) }
+                }
+                saving = false
+                outcome.fold(
+                    onSuccess = { snackbar.showSnackbar("Imagem PNG guardada com sucesso.") },
+                    onFailure = {
+                        snackbar.showSnackbar(
+                            "Não foi possível guardar a imagem: ${it.message ?: "erro desconhecido"}",
+                        )
+                    },
+                )
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Pré-visualização da imagem") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
+                    }
+                },
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Spacer(Modifier.height(4.dp))
+            Text("A página foi exportada", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                "Revê a imagem antes de a guardar. O PDF original não foi alterado.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            PngResultPreview(result.file)
+            Card(shape = RoundedCornerShape(18.dp)) {
+                Column(
+                    Modifier.fillMaxWidth().padding(15.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Text(result.outputName, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "PNG • ${formatBytes(result.sizeBytes)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Button(
+                onClick = { savePicker.launch(result.outputName) },
+                enabled = !saving,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+            ) {
+                if (saving) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.size(10.dp))
+                    Text("A guardar…")
+                } else {
+                    Icon(Icons.Outlined.SaveAlt, contentDescription = null)
+                    Spacer(Modifier.size(8.dp))
+                    Text("Guardar imagem PNG")
+                }
+            }
+            OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                Text("Voltar às ferramentas")
             }
             Spacer(Modifier.height(18.dp))
         }
