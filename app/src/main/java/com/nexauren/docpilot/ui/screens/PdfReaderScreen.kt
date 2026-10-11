@@ -408,6 +408,13 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                         Icon(Icons.Outlined.Close, contentDescription = "Fechar pesquisa")
                                     }
                                 }
+                                if (searchQuery.isNotBlank()) {
+                                    Text(
+                                        "Termo pesquisado: “${searchQuery.trim()}”",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
