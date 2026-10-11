@@ -1,11 +1,19 @@
 package com.nexauren.docpilot.ui.screens
 
+import android.util.Patterns
+import android.os.Bundle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Info
@@ -13,6 +21,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -21,17 +30,59 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.google.firebase.FirebaseException
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.nexauren.docpilot.BuildConfig
+import com.nexauren.docpilot.analytics.DocPilotAnalytics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(hasDocumentAccess: Boolean, onRequestDocumentAccess: () -> Unit, onOpenMenu: () -> Unit) {
+fun SettingsScreen(
+    hasDocumentAccess: Boolean,
+    onRequestDocumentAccess: () -> Unit,
+    onOpenMenu: () -> Unit,
+) {
+    val context = LocalContext.current
+    val auth = remember { FirebaseAuth.getInstance() }
+    var currentUser by remember { mutableStateOf(auth.currentUser) }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var isCreatingAccount by remember { mutableStateOf(true) }
+    var authBusy by remember { mutableStateOf(false) }
+    var authMessage by remember { mutableStateOf<String?>(null) }
+    var analyticsEnabled by remember { mutableStateOf(DocPilotAnalytics.isEnabled(context)) }
+
+    DisposableEffect(auth) {
+        val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+            currentUser = firebaseAuth.currentUser
+        }
+        auth.addAuthStateListener(listener)
+        onDispose { auth.removeAuthStateListener(listener) }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -48,19 +99,223 @@ fun SettingsScreen(hasDocumentAccess: Boolean, onRequestDocumentAccess: () -> Un
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(
                 "DocPilot - PDF Reader, à tua maneira.",
                 style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(top = 8.dp),
             )
             Text(
-                "Preferências da aplicação e informação útil.",
+                "Preferências, conta opcional e privacidade.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "Conta DocPilot (opcional)",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(start = 10.dp),
+                        )
+                    }
+                    Text(
+                        "Podes continuar a ler e tratar PDFs sem criar uma conta. A conta usa o Firebase Authentication para registo e início de sessão.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    if (currentUser != null) {
+                        Text("Sessão iniciada", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            currentUser?.email.orEmpty(),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                DocPilotAnalytics.logEvent(context, "account_signed_out")
+                                auth.signOut()
+                                password = ""
+                                authMessage = "Sessão terminada."
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Terminar sessão")
+                        }
+                    } else {
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it; authMessage = null },
+                            label = { Text("E-mail") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next,
+                            ),
+                        )
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it; authMessage = null },
+                            label = { Text("Palavra-passe") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done,
+                            ),
+                        )
+                        Button(
+                            onClick = {
+                                val normalizedEmail = email.trim()
+                                when {
+                                    !Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches() -> {
+                                        authMessage = "Introduz um endereço de e-mail válido."
+                                    }
+                                    isCreatingAccount && password.length < 6 -> {
+                                        authMessage = "A palavra-passe deve ter pelo menos 6 caracteres."
+                                    }
+                                    password.isBlank() -> {
+                                        authMessage = "Introduz a palavra-passe."
+                                    }
+                                    else -> {
+                                        authBusy = true
+                                        authMessage = null
+                                        val task = if (isCreatingAccount) {
+                                            auth.createUserWithEmailAndPassword(normalizedEmail, password)
+                                        } else {
+                                            auth.signInWithEmailAndPassword(normalizedEmail, password)
+                                        }
+                                        task.addOnCompleteListener { result ->
+                                            authBusy = false
+                                            if (result.isSuccessful) {
+                                                currentUser = auth.currentUser
+                                                password = ""
+                                                authMessage = if (isCreatingAccount) {
+                                                    "Conta criada com sucesso."
+                                                } else {
+                                                    "Sessão iniciada com sucesso."
+                                                }
+                                                val event = if (isCreatingAccount) "account_created" else "account_signed_in"
+                                                val parameters = Bundle().apply {
+                                                    putString(FirebaseAnalytics.Param.METHOD, "email_password")
+                                                }
+                                                DocPilotAnalytics.logEvent(context, event, parameters)
+                                            } else {
+                                                authMessage = authErrorMessage(result.exception)
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !authBusy,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (authBusy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.height(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Text(if (isCreatingAccount) "Criar conta" else "Entrar")
+                            }
+                        }
+
+                        TextButton(
+                            onClick = {
+                                isCreatingAccount = !isCreatingAccount
+                                authMessage = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                if (isCreatingAccount) "Já tenho conta: entrar"
+                                else "Ainda não tenho conta: criar conta",
+                            )
+                        }
+
+                        if (!isCreatingAccount) {
+                            TextButton(
+                                onClick = {
+                                    val normalizedEmail = email.trim()
+                                    if (!Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
+                                        authMessage = "Introduz primeiro o teu e-mail válido."
+                                    } else {
+                                        authBusy = true
+                                        auth.sendPasswordResetEmail(normalizedEmail)
+                                            .addOnCompleteListener { result ->
+                                                authBusy = false
+                                                authMessage = if (result.isSuccessful) {
+                                                    "Se a conta existir, receberás uma mensagem para redefinir a palavra-passe."
+                                                } else {
+                                                    authErrorMessage(result.exception)
+                                                }
+                                            }
+                                    }
+                                },
+                                enabled = !authBusy,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Esqueci a palavra-passe")
+                            }
+                        }
+                    }
+
+                    authMessage?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Google Analytics", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                if (analyticsEnabled) "Partilha de estatísticas de utilização ativada."
+                                else "Desativado. Não recolhemos eventos do Analytics até ativares esta opção.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = analyticsEnabled,
+                            onCheckedChange = { enabled ->
+                                analyticsEnabled = enabled
+                                DocPilotAnalytics.setConsent(context, enabled)
+                            },
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Quando ativo, o Google Analytics pode receber eventos gerais de utilização para ajudar a melhorar a aplicação. Não enviamos nomes nem conteúdo dos PDFs ou o teu e-mail nesses eventos. Podes alterar esta escolha a qualquer momento.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
 
             Card(
                 shape = RoundedCornerShape(20.dp),
@@ -89,8 +344,10 @@ fun SettingsScreen(hasDocumentAccess: Boolean, onRequestDocumentAccess: () -> Un
                         leadingContent = { Icon(Icons.Outlined.DarkMode, contentDescription = null) },
                     )
                     ListItem(
-                        headlineContent = { Text("Privacidade") },
-                        supportingContent = { Text("Os documentos selecionados são processados no dispositivo.") },
+                        headlineContent = { Text("Privacidade dos documentos") },
+                        supportingContent = {
+                            Text("Os PDFs são processados localmente. Não precisas de uma conta para usar as ferramentas locais.")
+                        },
                         leadingContent = { Icon(Icons.Outlined.Security, contentDescription = null) },
                     )
                 }
@@ -118,5 +375,20 @@ fun SettingsScreen(hasDocumentAccess: Boolean, onRequestDocumentAccess: () -> Un
                 )
             }
         }
+    }
+}
+
+private fun authErrorMessage(error: Exception?): String {
+    val code = (error as? FirebaseAuthException)?.errorCode.orEmpty()
+    return when {
+        code.contains("EMAIL_ALREADY_IN_USE") -> "Este e-mail já está registado. Experimenta entrar."
+        code.contains("WEAK_PASSWORD") -> "Escolhe uma palavra-passe mais forte, com pelo menos 6 caracteres."
+        code.contains("INVALID_EMAIL") -> "O endereço de e-mail não é válido."
+        code.contains("INVALID_LOGIN_CREDENTIALS") ||
+            code.contains("WRONG_PASSWORD") ||
+            code.contains("USER_NOT_FOUND") -> "E-mail ou palavra-passe incorretos."
+        code.contains("OPERATION_NOT_ALLOWED") -> "O método E-mail/Palavra-passe ainda não está ativado no Firebase."
+        code.contains("NETWORK_REQUEST_FAILED") -> "Sem ligação à Internet. Verifica a conexão e tenta novamente."
+        else -> "Não foi possível concluir a operação. Verifica a ligação e as definições de autenticação do Firebase."
     }
 }
