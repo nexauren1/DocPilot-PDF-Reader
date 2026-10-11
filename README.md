@@ -1,6 +1,6 @@
 # DocPilot
 
-DocPilot is an Android-first PDF reader and document toolkit from Nexauren. This first public version is designed to be useful without a paid plan or an account.
+DocPilot is a free, Android-first PDF reader and document toolkit from Nexauren. Reading and the current document tools do not require a paid plan or an account. The project prioritizes reliable reading, predictable page layout, on-device processing, and clear save flows over adding tool buttons that do not work.
 
 ## Product principles
 
@@ -24,7 +24,7 @@ DocPilot is an Android-first PDF reader and document toolkit from Nexauren. This
 
 - Merge multiple PDFs
 - Extract an inclusive page range
-- Reorder pages using a sequence such as `3,1,2,4`
+- Reorder every page using a sequence such as `3,1,2,4`; the sequence must include each page exactly once. Use Split PDF when you need only a subset
 - Rotate all pages 90 degrees clockwise
 - Compress PDFs by downscaling oversized embedded raster images
 - Convert multiple images to a PDF with paper-size and orientation options
