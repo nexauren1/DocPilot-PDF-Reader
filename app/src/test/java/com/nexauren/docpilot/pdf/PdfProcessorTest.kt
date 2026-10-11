@@ -40,6 +40,35 @@ class PdfProcessorTest {
     }
 
     @Test
+    fun accepts_valid_single_page_numbers() {
+        requireValidPageNumber(1, pageCount = 1)
+        requireValidPageNumber(4, pageCount = 4)
+    }
+
+    @Test
+    fun rejects_page_number_outside_document() {
+        runCatching { requireValidPageNumber(0, pageCount = 4) }
+            .onSuccess { error("Expected page zero to be rejected") }
+        runCatching { requireValidPageNumber(5, pageCount = 4) }
+            .onSuccess { error("Expected page beyond document to be rejected") }
+    }
+
+    @Test
+    fun accepts_supported_page_rotation_angles() {
+        requireValidRotationDegrees(90)
+        requireValidRotationDegrees(180)
+        requireValidRotationDegrees(270)
+    }
+
+    @Test
+    fun rejects_unsupported_page_rotation_angles() {
+        runCatching { requireValidRotationDegrees(0) }
+            .onSuccess { error("Expected zero-degree rotation to be rejected") }
+        runCatching { requireValidRotationDegrees(45) }
+            .onSuccess { error("Expected unsupported rotation to be rejected") }
+    }
+
+    @Test
     fun formats_bytes_for_ui() {
         assertEquals("1.0 KB", formatBytes(1024))
     }
