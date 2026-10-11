@@ -1,6 +1,8 @@
 package com.nexauren.docpilot.ui.screens
 
 import android.app.Activity
+import android.content.Context
+import android.provider.OpenableColumns
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -89,6 +91,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.google.android.gms.tasks.Tasks
 import com.nexauren.docpilot.pdf.DocumentTools
+import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.nexauren.docpilot.pdf.PdfProcessor
 import com.nexauren.docpilot.pdf.formatBytes
 import com.nexauren.docpilot.pdf.parsePageOrder
@@ -561,7 +564,7 @@ private fun UtilityWorkspace(
 
                 Action.OCR -> {
                     Text("Imagem selecionada", style = MaterialTheme.typography.titleSmall)
-                    Text(imageUris.firstOrNull()?.lastPathSegment ?: "Imagem", style = MaterialTheme.typography.bodyMedium)
+                    Text(imageUris.firstOrNull()?.let { displayName(context, it, "Imagem") } ?: "Imagem", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         "Depois do reconhecimento, poderás rever o texto, copiá-lo ou guardá-lo como TXT.",
                         style = MaterialTheme.typography.bodySmall,
@@ -571,7 +574,7 @@ private fun UtilityWorkspace(
 
                 Action.PDF_TEXT -> {
                     Text("PDF selecionado", style = MaterialTheme.typography.titleSmall)
-                    Text(pdfUri?.lastPathSegment ?: "Documento PDF", style = MaterialTheme.typography.bodyMedium)
+                    Text(pdfUri?.let { displayName(context, it, "Documento PDF") } ?: "Documento PDF", style = MaterialTheme.typography.bodyMedium)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = removeBlankLines, onCheckedChange = { removeBlankLines = it })
                         Column(Modifier.weight(1f)) {
@@ -587,7 +590,7 @@ private fun UtilityWorkspace(
 
                 Action.SCAN -> {
                     Text("Digitalização pronta para processar", style = MaterialTheme.typography.titleSmall)
-                    Text(scanUri?.lastPathSegment ?: "Documento digitalizado", style = MaterialTheme.typography.bodyMedium)
+                    Text(scanUri?.let { displayName(context, it, "Documento digitalizado") } ?: "Documento digitalizado", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         "O DocPilot vai preparar uma pré-visualização. O PDF só será guardado no destino escolhido depois de reveres o resultado.",
                         style = MaterialTheme.typography.bodySmall,
@@ -863,7 +866,7 @@ private fun SecurityWorkspace(
 
             inputUri?.let {
                 Text(
-                    "PDF selecionado: " + (it.lastPathSegment ?: "documento.pdf"),
+                    "PDF selecionado: " + displayName(context, it, "documento.pdf"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -940,7 +943,8 @@ private fun ToolWorkspace(
     var selectedUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var startPage by remember { mutableStateOf("1") }
     var endPage by remember { mutableStateOf("1") }
-    var orderText by remember { mutableStateOf("1,2,3") }
+    var orderText by remember { mutableStateOf("1") }
+    var detectedPageCount by remember { mutableStateOf<Int?>(null) }
 
     val multiPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -951,7 +955,29 @@ private fun ToolWorkspace(
     val singlePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
-        if (uri != null) selectedUris = listOf(uri)
+        if (uri != null) {
+            selectedUris = listOf(uri)
+            detectedPageCount = null
+            scope.launch {
+                val pageCountResult = withContext(Dispatchers.IO) {
+                    runCatching {
+                        resolver.openInputStream(uri).use { input ->
+                            requireNotNull(input) { "Não foi possível abrir este PDF." }
+                            PDDocument.load(input).use { it.numberOfPages }
+                        }
+                    }
+                }
+                pageCountResult.onSuccess { count ->
+                    detectedPageCount = count
+                    if (count > 0) {
+                        endPage = count.toString()
+                        orderText = (1..count).joinToString(",")
+                    }
+                }.onFailure {
+                    snackbar.showSnackbar("Não foi possível ler as páginas: " + (it.message ?: "erro desconhecido"))
+                }
+            }
+        }
     }
 
     fun createOutput(name: String, action: (Uri) -> Long) {
@@ -997,7 +1023,7 @@ private fun ToolWorkspace(
                 text = when (tool) {
                     PdfTool.MERGE -> "Selecione dois ou mais PDFs para criar um único documento."
                     PdfTool.SPLIT -> "Selecione um PDF e indique o intervalo de páginas."
-                    PdfTool.COMPRESS -> "Imagens grandes serão reduzidas e recomprimidas localmente."
+                    PdfTool.COMPRESS -> "Otimiza imagens incorporadas, quando adequado. PDFs de texto ou vetoriais podem reduzir pouco."
                     PdfTool.REORDER -> "Indique a nova ordem, por exemplo: 3,1,2,4."
                     PdfTool.ROTATE -> "Roda todas as páginas 90° no sentido horário."
                 },
@@ -1038,7 +1064,7 @@ private fun ToolWorkspace(
                         selectedUris.forEachIndexed { index, uri ->
                             Text(
                                 (index + 1).toString() + ". " +
-                                    (uri.lastPathSegment ?: "PDF"),
+                                    displayName(context, uri, "Documento.pdf"),
                                 maxLines = 1,
                             )
                         }
@@ -1048,6 +1074,13 @@ private fun ToolWorkspace(
 
             when (tool) {
                 PdfTool.SPLIT -> {
+                    detectedPageCount?.let { count ->
+                        Text(
+                            "Documento com $count página(s).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(
                             value = startPage,
@@ -1067,6 +1100,13 @@ private fun ToolWorkspace(
                 }
 
                 PdfTool.REORDER -> {
+                    detectedPageCount?.let { count ->
+                        Text(
+                            "Páginas disponíveis: 1 a $count. A ordem preenche-se automaticamente ao selecionar o PDF.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     OutlinedTextField(
                         value = orderText,
                         onValueChange = { orderText = it },
@@ -1208,7 +1248,11 @@ private fun ToolWorkspace(
             }
 
             Text(
-                "O processamento é local no dispositivo. Os PDFs não são enviados para um servidor.",
+                if (tool == PdfTool.COMPRESS) {
+                    "A compressão tenta reduzir imagens raster grandes. O resultado pode não ficar menor em PDFs já otimizados; compara o tamanho antes de substituir o original."
+                } else {
+                    "O processamento é local no dispositivo. Os PDFs não são enviados para um servidor."
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1216,4 +1260,23 @@ private fun ToolWorkspace(
             Spacer(Modifier.height(18.dp))
         }
     }
+}
+
+private fun displayName(context: Context, uri: Uri, fallback: String): String {
+    return runCatching {
+        context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (column >= 0) cursor.getString(column)?.takeIf { it.isNotBlank() } else null
+            } else {
+                null
+            }
+        }
+    }.getOrNull() ?: uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: fallback
 }
