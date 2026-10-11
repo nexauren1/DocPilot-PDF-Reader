@@ -1,83 +1,61 @@
-# DocPilot - PDF Reader
+# DocPilot
 
-DocPilot - PDF Reader is an Android-first document hub focused on reading, organizing and processing PDFs.
+DocPilot is an Android-first PDF reader and document toolkit from Nexauren. This first public version is designed to be useful without a paid plan or an account.
 
-## Current features
+## Product principles
 
-- Jetpack Compose + Material 3 interface
-- Home dashboard with inline document search, sidebar navigation with animated transitions, and a document library with local persistence, reliable recent-item order, search clearing and Recentes / Nome A–Z sorting
-- Opening a selected PDF launches the reader immediately
-- PDFs created by the processing tools are added to the library after a successful save
-- Optional device-wide PDF discovery after a clear storage-access explanation and Android permission grant
-- PDF opening through the Android document picker remains available as a privacy-friendly fallback
-- Multi-page PDF reader with on-demand Android PdfRenderer rendering
-- Live inline search in text-based PDFs as the user types, page jump, page bookmarks, saved reading position and a live reading progress indicator, pinch-to-zoom and a reflow reading mode for selectable text
-- Horizontal page thumbnails, direct page selection and previous/next navigation
-- Pinch-to-zoom and pan with one-tap zoom reset
-- Local PDF processing powered by PdfBox-Android 2.0.27.0
-- **Merge PDFs**, **split page ranges**, **reorder pages** and **image compression**
-- Scanner flow using Google ML Kit Document Scanner
-- OCR for images using ML Kit Text Recognition
-- Convert selected images into PDF
-- Password-protect a PDF
-- Add a visual text signature to PDF pages
-- Settings screen, starter app icon and Material 3 theme
-- JVM unit tests and GitHub Actions test/build pipeline
+- **Free first:** the reader and current document tools stay available without a subscription.
+- **Private by default:** PDF files are opened and processed on the device; document contents and filenames are not sent to DocPilot analytics.
+- **Account optional:** Firebase Authentication supports email/password and Google sign-in from Settings, but reading does not require an account.
+- **Analytics by consent:** Google Analytics collection is off until the user enables it in Settings.
+- **Clear result flow:** choose a document, configure a tool, process a copy, review the result, and save it.
 
-## PDF processing and privacy
+## Reader
 
-Processing happens on-device. The app uses the Android system document picker for input and output files; selected PDFs and images are not uploaded to a DocPilot - PDF Reader server.
+- Multi-page PDF viewing powered by Android's `PdfRenderer`
+- Text search for selectable PDFs, with matching words highlighted and underlined
+- Horizontal page thumbnails, direct page selection, previous/next navigation, and jump-to-page
+- Saved reading position, a page bookmark, reading progress, pinch-to-zoom, pan, and zoom reset
+- Reflow reading mode for selectable text
+- Page placeholders use each page's measured aspect ratio to reduce scroll jumps while rendering
+- Scanned or image-only PDFs without a text layer cannot currently be searched in the reader. Image OCR is available for individual image files; whole-PDF OCR remains future work.
 
-Current tools include:
+## Free document tools
 
-- **Merge PDFs:** combines pages from two or more source PDFs.
-- **Rotate pages:** rotates every page 90° clockwise and saves a separate PDF.
-- **PDF to text:** exports selectable text from a PDF to a UTF-8 TXT file; scanned PDFs need OCR first.
-- **Split PDF:** extracts an inclusive page interval.
-- **Rotate pages:** rotates every page clockwise by 90 degrees and writes a separate PDF.
-- **PDF text export:** writes selectable text to a UTF-8 TXT file; scanned pages require OCR.
-- **Organize:** creates a new PDF using a custom page order such as `3,1,2,4`.
-- **Compress:** downscales oversized raster images and recompresses them.
-- **Images to PDF:** creates a PDF from selected image files.
-- **Protect:** creates a password-protected PDF.
-- **Visual signature:** adds user-provided text to each page. This is not a certificate-based cryptographic digital signature.
-- **Scanner/OCR:** uses ML Kit for scanning and text recognition.
+- Merge multiple PDFs
+- Extract an inclusive page range
+- Reorder pages using a sequence such as `3,1,2,4`
+- Rotate all pages 90 degrees clockwise
+- Compress PDFs by downscaling oversized embedded raster images
+- Convert multiple images to a PDF with paper-size and orientation options
+- Scan documents using Google ML Kit Document Scanner
+- Recognize text in images with ML Kit OCR
+- Export selectable PDF text to TXT, with an option to remove blank lines
+- Inspect PDF page count, file size, first-page dimensions, encryption indicator, and available metadata
+- Protect a PDF with a password
+- Add a visual text signature to pages
 
-## Build
+The visual signature is not a certificate-backed digital signature. Compression primarily optimizes embedded images, so PDFs dominated by text or vector content may show little size reduction.
 
-- JDK 17
-- Gradle 9.6.0
-- Android compile SDK 36
-- Minimum Android API 24
+## Privacy and storage
+
+The app uses Android's system document picker as a private, per-file access option. Users may also grant wider storage access to discover PDFs throughout the device. Selected PDFs and images are not uploaded to a DocPilot server. Firebase is used for optional authentication, and analytics collection is limited to cases where the user explicitly opts in.
+
+## Build and release
+
+- JDK 17, Gradle 9.6.0, Android compile SDK 36, minimum Android API 24
 - Application ID: `com.nexauren.docpilot`
+- GitHub Actions runs JVM tests and builds the debug APK; it validates a production-signed release when signing secrets are present.
 
-The GitHub Actions pipeline runs unit tests, builds debug and release APKs, and verifies the signature.
+Every production release must use these four GitHub Actions secrets:
 
-## Signing status
+- `SIGNING_KEYSTORE_BASE64`
+- `SIGNING_KEYSTORE_PASSWORD`
+- `SIGNING_KEY_ALIAS`
+- `SIGNING_KEY_PASSWORD`
 
-The 0.1.7 release workflow is prepared for a persistent production keystore. Until all four signing secrets are configured, CI builds can use the debug identity for testing, but GitHub Release publication is skipped. Do not distribute debug-signed APKs as production releases. Keep the same private signing key for every future update.
+The release workflow blocks publishing if the four secrets are missing or incomplete. Keep the persistent signing key and its passwords backed up privately. Never commit the keystore or expose secret values in source code, Issues, or chat.
 
-Required GitHub repository secrets (Settings → Secrets and variables → Actions):
-- `SIGNING_KEYSTORE_BASE64`: the release keystore encoded as a single base64 string.
-- `SIGNING_KEYSTORE_PASSWORD`: password protecting the keystore.
-- `SIGNING_KEY_ALIAS`: alias of the signing key inside the keystore.
-- `SIGNING_KEY_PASSWORD`: password for that key.
+## Candidates for a future iteration
 
-Create the keystore once on a trusted device with a JDK (Android users can use a trusted Termux environment with a JDK installed):
-
-```sh
-keytool -genkeypair -v -keystore docpilot-release.jks -alias docpilot-release -keyalg RSA -keysize 2048 -validity 10000
-base64 -w 0 docpilot-release.jks > docpilot-release.base64
-```
-
-Use alias `docpilot-release` for `SIGNING_KEY_ALIAS`. Put the full contents of `docpilot-release.base64` into `SIGNING_KEYSTORE_BASE64`; use the passwords you entered when generating the key for the two password secrets. In GitHub, open this repository's **Settings → Secrets and variables → Actions → New repository secret** and create each secret with the exact name above. Keep both the original `.jks` file and its passwords backed up privately, and never commit either file.
-
-The release workflow decodes the keystore into the temporary runner directory and never commits it to the repository. Configure all four secrets together, then run **DocPilot - PDF Reader | Release** from Actions to publish the signed release. Never paste the keystore, passwords or secret values into source files, Issues or chat. If the keystore is lost, future APKs signed with a different key cannot update the current installation in-place.
-
-## Roadmap
-
-1. Finish the first persistent-key signed release after adding the four protected GitHub secrets.
-2. Better compression settings and size reporting.
-3. Richer document organization, favorites, folders and history.
-4. Scanner/OCR workflow refinements.
-5. Additional accessibility, device testing and release checks.
+After real-device validation, useful additions to evaluate include exporting selected pages as image files, per-page rotate/crop and visual page reordering, favourites and user-created folders, annotations/highlighting, more complete print/share controls, and an explicit reader appearance setting. These are roadmap candidates, not features advertised as available today. Reader accuracy and reliable saving take priority over adding more tools.

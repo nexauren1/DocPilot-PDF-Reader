@@ -7,6 +7,18 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+
+private val DocPilotTypography = Typography().let { base ->
+    base.copy(
+        displaySmall = base.displaySmall.copy(fontWeight = FontWeight.Bold),
+        headlineLarge = base.headlineLarge.copy(fontWeight = FontWeight.Bold),
+        headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.Bold),
+        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+        titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+    )
+}
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF2F63D8),
@@ -53,7 +65,7 @@ fun DocPilotTheme(
 ) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = Typography(),
+        typography = DocPilotTypography,
         content = content,
     )
 }

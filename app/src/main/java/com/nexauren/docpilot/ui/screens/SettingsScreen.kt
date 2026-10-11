@@ -168,7 +168,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(
-                "DocPilot - PDF Reader, à tua maneira.",
+                "DocPilot, à tua maneira.",
                 style = MaterialTheme.typography.headlineSmall,
             )
             Text(
@@ -439,8 +439,8 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 ListItem(
-                    headlineContent = { Text("Sobre o DocPilot - PDF Reader") },
-                    supportingContent = { Text("DocPilot - PDF Reader • versão ${BuildConfig.VERSION_NAME}") },
+                    headlineContent = { Text("Sobre o DocPilot") },
+                    supportingContent = { Text("DocPilot • versão ${BuildConfig.VERSION_NAME}") },
                     leadingContent = { Icon(Icons.Outlined.Info, contentDescription = null) },
                 )
             }

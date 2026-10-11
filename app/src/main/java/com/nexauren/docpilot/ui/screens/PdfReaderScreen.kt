@@ -4,15 +4,18 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
+import com.tom_roush.pdfbox.text.TextPosition
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -68,6 +71,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -81,6 +86,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private data class SearchHighlight(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
@@ -88,11 +100,14 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     val pageListState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var pageCount by remember(document.uri) { mutableStateOf(0) }
+    var pageAspectRatios by remember(document.uri) { mutableStateOf<List<Float>>(emptyList()) }
+    var positionRestored by remember(document.uri) { mutableStateOf(false) }
     var error by remember(document.uri) { mutableStateOf<String?>(null) }
     var resetZoomToken by remember(document.uri) { mutableStateOf(0) }
     var searchOpen by remember(document.uri) { mutableStateOf(false) }
     var searchQuery by remember(document.uri) { mutableStateOf("") }
     var searchResults by remember(document.uri) { mutableStateOf<List<Int>>(emptyList()) }
+    var searchHighlights by remember(document.uri) { mutableStateOf<Map<Int, List<SearchHighlight>>>(emptyMap()) }
     var searchResultIndex by remember(document.uri) { mutableStateOf(0) }
     var searching by remember(document.uri) { mutableStateOf(false) }
     var searchMessage by remember(document.uri) { mutableStateOf<String?>(null) }
@@ -113,11 +128,18 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
 
     LaunchedEffect(document.uri) {
         pageCount = 0
+        pageAspectRatios = emptyList()
+        positionRestored = false
         error = null
+        pageListState.scrollToItem(0)
         isBookmarked = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
             .getInt(bookmarkKey, -1) > 0
         runCatching {
-            pageCount = withContext(Dispatchers.IO) { openPdfPageCount(context, document.uri) }
+            val ratios = withContext(Dispatchers.IO) {
+                openPdfPageAspectRatios(context, document.uri)
+            }
+            pageAspectRatios = ratios
+            pageCount = ratios.size
         }.onFailure {
             error = "Não foi possível abrir este PDF."
         }
@@ -125,14 +147,16 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
 
     LaunchedEffect(pageCount, document.uri) {
         if (pageCount > 0) {
+            positionRestored = false
             val preferences = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
             val initialPage = preferences.getInt(positionKey, 1).coerceIn(1, pageCount)
             pageListState.scrollToItem(initialPage - 1)
+            positionRestored = true
         }
     }
 
-    LaunchedEffect(currentPage, pageCount, document.uri) {
-        if (pageCount > 0) {
+    LaunchedEffect(currentPage, pageCount, document.uri, positionRestored) {
+        if (pageCount > 0 && positionRestored) {
             val preferences = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
             preferences.edit().putInt(positionKey, currentPage).apply()
             isBookmarked = preferences.getInt(bookmarkKey, -1) == currentPage
@@ -144,28 +168,35 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
         searching = false
         if (query.isBlank() || pageCount == 0 || !searchOpen) {
             searchResults = emptyList()
+            searchHighlights = emptyMap()
             searchResultIndex = 0
             return@LaunchedEffect
         }
 
-        delay(400)
+        searchResults = emptyList()
+        searchHighlights = emptyMap()
+        delay(350)
         searching = true
         val result = withContext(Dispatchers.IO) {
-            runCatching { searchPdfPages(context, document.uri, query) }
+            runCatching { searchPdfMatches(context, document.uri, query) }
         }
         searching = false
-        result.onSuccess { pages ->
+        result.onSuccess { matches ->
+            searchHighlights = matches
+            val pages = matches.keys.sorted()
             searchResults = pages
             searchResultIndex = 0
+            val totalMatches = matches.values.sumOf { it.size }
             searchMessage = if (pages.isEmpty()) {
                 "Não foram encontradas correspondências. PDFs digitalizados podem precisar de OCR."
             } else {
-                "${pages.size} página(s) com correspondências."
+                "$totalMatches correspondência(s) destacada(s) em ${pages.size} página(s)."
             }
             if (pages.isNotEmpty()) pageListState.animateScrollToItem(pages.first() - 1)
         }.onFailure {
             searchMessage = "Não foi possível pesquisar este PDF."
             searchResults = emptyList()
+            searchHighlights = emptyMap()
         }
     }
 
@@ -471,6 +502,8 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                     uri = document.uri,
                                     pageIndex = pageIndex,
                                     resetZoomToken = resetZoomToken,
+                                    pageAspectRatio = pageAspectRatios.getOrNull(pageIndex) ?: (595f / 842f),
+                                    highlights = searchHighlights[pageIndex + 1].orEmpty(),
                                 )
                             }
                         }
@@ -591,6 +624,8 @@ private fun PdfPage(
     uri: String,
     pageIndex: Int,
     resetZoomToken: Int,
+    pageAspectRatio: Float,
+    highlights: List<SearchHighlight>,
 ) {
     val context = LocalContext.current
     var bitmap by remember(uri, pageIndex) { mutableStateOf<Bitmap?>(null) }
@@ -613,13 +648,11 @@ private fun PdfPage(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().aspectRatio(pageAspectRatio.coerceIn(0.25f, 3f)),
         shape = RoundedCornerShape(10.dp),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White),
+            modifier = Modifier.fillMaxSize().background(Color.White),
             contentAlignment = Alignment.Center,
         ) {
             bitmap?.let { image ->
@@ -627,7 +660,7 @@ private fun PdfPage(
                     bitmap = image.asImageBitmap(),
                     contentDescription = "Página ${pageIndex + 1}",
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .graphicsLayer {
                             scaleX = scale
                             scaleY = scale
@@ -635,12 +668,40 @@ private fun PdfPage(
                             translationY = offsetY
                         }
                         .transformable(transformState),
-                    contentScale = ContentScale.FillWidth,
+                    contentScale = ContentScale.FillBounds,
                 )
+                if (highlights.isNotEmpty()) {
+                    Canvas(
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            translationX = offsetX
+                            translationY = offsetY
+                        },
+                    ) {
+                        highlights.forEach { match ->
+                            val left = match.left.coerceIn(0f, 1f) * size.width
+                            val top = match.top.coerceIn(0f, 1f) * size.height
+                            val right = match.right.coerceIn(0f, 1f) * size.width
+                            val bottom = match.bottom.coerceIn(0f, 1f) * size.height
+                            if (right > left && bottom > top) {
+                                drawRect(
+                                    color = Color(0xFFFFD54F).copy(alpha = 0.42f),
+                                    topLeft = Offset(left, top),
+                                    size = Size(right - left, bottom - top),
+                                )
+                                drawLine(
+                                    color = Color(0xFF9B6500),
+                                    start = Offset(left, bottom),
+                                    end = Offset(right, bottom),
+                                    strokeWidth = 2.dp.toPx(),
+                                )
+                            }
+                        }
+                    }
+                }
             } ?: Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator()
@@ -649,15 +710,19 @@ private fun PdfPage(
     }
 }
 
-private fun openPdfPageCount(
+private fun openPdfPageAspectRatios(
     context: android.content.Context,
     uriString: String,
-): Int {
+): List<Float> {
     val uri = android.net.Uri.parse(uriString)
     context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
         requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
         PdfRenderer(descriptor).use { renderer ->
-            return renderer.pageCount
+            return (0 until renderer.pageCount).map { pageIndex ->
+                renderer.openPage(pageIndex).use { page ->
+                    page.width.toFloat() / page.height.coerceAtLeast(1).toFloat()
+                }
+            }
         }
     }
 }
@@ -701,27 +766,73 @@ private fun renderPdfPage(
         }
     }
 }
-private fun searchPdfPages(
+private fun searchPdfMatches(
     context: android.content.Context,
     uriString: String,
     query: String,
-): List<Int> {
+): Map<Int, List<SearchHighlight>> {
     require(query.isNotBlank()) { "Escreve o texto que queres procurar." }
-    val matches = mutableListOf<Int>()
+    val terms = query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+    val pagesWithMatches = linkedMapOf<Int, List<SearchHighlight>>()
     context.contentResolver.openInputStream(android.net.Uri.parse(uriString)).use { input ->
         requireNotNull(input) { "Não foi possível ler este PDF." }
         PDDocument.load(input).use { document ->
-            val stripper = PDFTextStripper()
-            for (page in 1..document.numberOfPages) {
-                stripper.startPage = page
-                stripper.endPage = page
-                if (stripper.getText(document).contains(query, ignoreCase = true)) {
-                    matches += page
+            for (pageNumber in 1..document.numberOfPages) {
+                val page = document.getPage(pageNumber - 1)
+                val pageWidth = page.cropBox.width.coerceAtLeast(1f)
+                val pageHeight = page.cropBox.height.coerceAtLeast(1f)
+                val stripper = object : PDFTextStripper() {
+                    val highlights = mutableListOf<SearchHighlight>()
+
+                    override fun writeString(text: String, textPositions: MutableList<TextPosition>) {
+                        super.writeString(text, textPositions)
+                        if (textPositions.isEmpty()) return
+
+                        val glyphText = StringBuilder()
+                        val glyphPositions = mutableListOf<TextPosition>()
+                        textPositions.forEach { position ->
+                            position.unicode.orEmpty().forEach { character ->
+                                glyphText.append(character)
+                                glyphPositions += position
+                            }
+                        }
+                        val line = glyphText.toString()
+                        terms.forEach { term ->
+                            var start = 0
+                            while (start < line.length) {
+                                val foundAt = line.indexOf(term, start, ignoreCase = true)
+                                if (foundAt < 0) break
+                                val end = (foundAt + term.length).coerceAtMost(glyphPositions.size)
+                                if (foundAt < end) {
+                                    val foundPositions = glyphPositions.subList(foundAt, end)
+                                    val left = foundPositions.minOf { it.xDirAdj }
+                                    val right = foundPositions.maxOf { it.xDirAdj + it.widthDirAdj }
+                                    val top = foundPositions.minOf { it.yDirAdj - it.heightDir }
+                                    val bottom = foundPositions.maxOf { it.yDirAdj }
+                                    if (right > left && bottom > top) {
+                                        highlights += SearchHighlight(
+                                            left = (left / pageWidth).coerceIn(0f, 1f),
+                                            top = (top / pageHeight).coerceIn(0f, 1f),
+                                            right = (right / pageWidth).coerceIn(0f, 1f),
+                                            bottom = (bottom / pageHeight).coerceIn(0f, 1f),
+                                        )
+                                    }
+                                }
+                                start = foundAt + term.length.coerceAtLeast(1)
+                            }
+                        }
+                    }
+                }
+                stripper.startPage = pageNumber
+                stripper.endPage = pageNumber
+                val pageText = stripper.getText(document)
+                if (pageText.contains(query, ignoreCase = true)) {
+                    pagesWithMatches[pageNumber] = stripper.highlights.distinct()
                 }
             }
         }
     }
-    return matches
+    return pagesWithMatches
 }
 
 private fun extractPdfText(
