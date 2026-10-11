@@ -20,8 +20,11 @@ object DocumentTools {
         resolver: ContentResolver,
         imageUris: List<Uri>,
         outputUri: Uri,
+        pageWidth: Int = 595,
+        pageHeight: Int = 842,
     ): Long {
         require(imageUris.isNotEmpty()) { "Selecione pelo menos uma imagem." }
+        require(pageWidth > 0 && pageHeight > 0) { "O tamanho da página é inválido." }
 
         val pdf = PdfDocument()
         try {
@@ -32,8 +35,6 @@ object DocumentTools {
                 } ?: throw IOException("Imagem inválida.")
 
                 try {
-                    val pageWidth = 595
-                    val pageHeight = 842
                     val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pdf.pages.size + 1).create()
                     val page = pdf.startPage(pageInfo)
                     val scale = min(pageWidth.toFloat() / bitmap.width, pageHeight.toFloat() / bitmap.height)
@@ -125,6 +126,22 @@ object DocumentTools {
         }
 
         return resolver.openAssetFileDescriptor(outputUri, "r")?.use { it.length } ?: -1L
+    }
+
+    fun extractPdfText(
+        resolver: ContentResolver,
+        inputUri: Uri,
+    ): String {
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                val extractedText = PDFTextStripper().getText(document).trim()
+                require(extractedText.isNotBlank()) {
+                    "Este PDF não contém texto extraível. Se for um documento digitalizado, usa OCR."
+                }
+                return extractedText
+            }
+        }
     }
 
     fun extractPdfTextToTextFile(
