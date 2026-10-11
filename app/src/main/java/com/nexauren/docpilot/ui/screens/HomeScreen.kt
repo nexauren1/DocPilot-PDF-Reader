@@ -244,12 +244,16 @@ fun HomeScreen(
                             color = Color.White.copy(alpha = 0.90f),
                         )
                         Spacer(Modifier.height(2.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
                             Button(
                                 onClick = {
                                     if (hasDocumentAccess) onRefreshDeviceDocuments()
                                     else showAccessDialog = true
                                 },
+                                modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF2F55BE)),
                                 shape = RoundedCornerShape(14.dp),
                             ) {
@@ -259,6 +263,7 @@ fun HomeScreen(
                             }
                             OutlinedButton(
                                 onClick = onViewLibrary,
+                                modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
                                 border = BorderStroke(1.dp, Color.White.copy(alpha = 0.60f)),
                                 shape = RoundedCornerShape(14.dp),
