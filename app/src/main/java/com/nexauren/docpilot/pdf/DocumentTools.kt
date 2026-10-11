@@ -2,7 +2,10 @@ package com.nexauren.docpilot.pdf
 
 import android.content.ContentResolver
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import com.tom_roush.pdfbox.pdmodel.PDDocument
@@ -13,6 +16,7 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import java.io.IOException
 import kotlin.math.min
+import kotlin.math.max
 
 object DocumentTools {
 
@@ -28,14 +32,34 @@ object DocumentTools {
 
         val pdf = PdfDocument()
         try {
-            imageUris.forEach { uri ->
-                val bitmap = resolver.openInputStream(uri).use { input ->
+            imageUris.forEachIndexed { index, uri ->
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                resolver.openInputStream(uri).use { input ->
                     requireNotNull(input) { "Não foi possível abrir a imagem." }
-                    BitmapFactory.decodeStream(input)
+                    BitmapFactory.decodeStream(input, null, bounds)
+                }
+                require(bounds.outWidth > 0 && bounds.outHeight > 0) { "Imagem inválida." }
+
+                // Downsample large camera images before decoding to reduce peak memory use.
+                val maxDimensionPx = max(pageWidth, pageHeight) * 2
+                var sampleSize = 1
+                while (
+                    bounds.outWidth / sampleSize > maxDimensionPx ||
+                    bounds.outHeight / sampleSize > maxDimensionPx
+                ) {
+                    sampleSize *= 2
+                }
+                val decodeOptions = BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                    inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                }
+                val bitmap = resolver.openInputStream(uri).use { input ->
+                    requireNotNull(input) { "Não foi possível reabrir a imagem." }
+                    BitmapFactory.decodeStream(input, null, decodeOptions)
                 } ?: throw IOException("Imagem inválida.")
 
                 try {
-                    val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pdf.pages.size + 1).create()
+                    val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, index + 1).create()
                     val page = pdf.startPage(pageInfo)
                     val scale = min(pageWidth.toFloat() / bitmap.width, pageHeight.toFloat() / bitmap.height)
                     val drawWidth = bitmap.width * scale
@@ -60,6 +84,61 @@ object DocumentTools {
         return resolver.openAssetFileDescriptor(outputUri, "r")?.use { it.length } ?: -1L
     }
 
+    fun exportPdfPageAsPng(
+        resolver: ContentResolver,
+        inputUri: Uri,
+        pageNumber: Int,
+        outputUri: Uri,
+        maxDimension: Int = 2200,
+    ): Long {
+        require(pageNumber >= 1) { "O número da página deve ser 1 ou maior." }
+        require(maxDimension in 720..3200) { "A resolução de exportação está fora do intervalo permitido." }
+
+        resolver.openFileDescriptor(inputUri, "r").use { descriptor ->
+            requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
+            PdfRenderer(descriptor).use { renderer ->
+                require(pageNumber in 1..renderer.pageCount) {
+                    "Este PDF tem ${renderer.pageCount} página(s)."
+                }
+                renderer.openPage(pageNumber - 1).use { page ->
+                    val scale = min(
+                        maxDimension.toFloat() / page.width.coerceAtLeast(1),
+                        maxDimension.toFloat() / page.height.coerceAtLeast(1),
+                    )
+                    val width = (page.width * scale).toInt().coerceAtLeast(1)
+                    val height = (page.height * scale).toInt().coerceAtLeast(1)
+                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    try {
+                        bitmap.eraseColor(android.graphics.Color.WHITE)
+                        val transform = Matrix().apply {
+                            setScale(width.toFloat() / page.width, height.toFloat() / page.height)
+                        }
+                        page.render(
+                            bitmap,
+                            null,
+                            transform,
+                            PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY,
+                        )
+                        resolver.openOutputStream(outputUri, "wt").use { output ->
+                            requireNotNull(output) { "Não foi possível criar a imagem PNG." }
+                            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                                "Não foi possível codificar a página como PNG."
+                            }
+                        }
+                    } finally {
+                        bitmap.recycle()
+                    }
+                }
+            }
+        }
+
+        val size = runCatching {
+            resolver.openAssetFileDescriptor(outputUri, "r")?.use { it.length } ?: -1L
+        }.getOrDefault(-1L)
+        require(size > 0L) { "A imagem exportada está vazia." }
+        return size
+    }
+
     fun protectPdf(
         resolver: ContentResolver,
         inputUri: Uri,
@@ -76,7 +155,10 @@ object DocumentTools {
                 permissions.setCanExtractContent(false)
                 permissions.setCanPrint(true)
 
-                val policy = StandardProtectionPolicy(password, password, permissions)
+                // Keep the open password separate from the owner password so the intended
+                // permission restrictions are not bypassed with the same user-supplied secret.
+                val ownerPassword = java.util.UUID.randomUUID().toString().replace("-", "")
+                val policy = StandardProtectionPolicy(ownerPassword, password, permissions)
                 policy.encryptionKeyLength = 128
                 policy.permissions = permissions
                 document.protect(policy)
@@ -113,7 +195,19 @@ object DocumentTools {
                         stream.setFont(PDType1Font.HELVETICA_BOLD, 11f)
                         stream.setNonStrokingColor(80f / 255f, 80f / 255f, 150f / 255f)
                         stream.newLineAtOffset(36f, 28f)
-                        stream.showText(signatureText.take(120))
+                        val safeSignature = buildString {
+                            signatureText.take(120).forEach { character ->
+                                val value = character.toString()
+                                append(
+                                    if (runCatching { PDType1Font.HELVETICA_BOLD.encode(value) }.isSuccess) {
+                                        value
+                                    } else {
+                                        "?"
+                                    },
+                                )
+                            }
+                        }
+                        stream.showText(safeSignature)
                         stream.endText()
                     }
                 }

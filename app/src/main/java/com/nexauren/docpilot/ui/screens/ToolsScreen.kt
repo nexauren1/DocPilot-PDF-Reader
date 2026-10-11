@@ -39,6 +39,7 @@ import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CallSplit
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
@@ -91,6 +92,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.google.android.gms.tasks.Tasks
 import com.nexauren.docpilot.pdf.DocumentTools
+import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.nexauren.docpilot.pdf.PdfProcessor
 import com.nexauren.docpilot.pdf.formatBytes
 import com.nexauren.docpilot.pdf.parsePageOrder
@@ -103,7 +105,10 @@ private enum class PdfTool(val title: String, val subtitle: String, val icon: Im
     SPLIT("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit),
     COMPRESS("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive),
     REORDER("Organizar", "Reordenar páginas", Icons.Outlined.Edit),
-    ROTATE("Rodar páginas", "Rodar páginas 90°", Icons.Outlined.RotateRight),
+    ROTATE("Rodar páginas", "Rodar todas as páginas 90°", Icons.Outlined.RotateRight),
+    ROTATE_ONE("Rodar uma página", "Escolher a página e a rotação", Icons.Outlined.RotateRight),
+    CROP_ONE("Recortar uma página", "Ajustar a área visível de uma página", Icons.Outlined.Crop),
+    EXPORT_PAGE_IMAGE("Página para PNG", "Exportar uma página como imagem", Icons.Outlined.PhotoLibrary),
 }
 
 private enum class SecurityTool(val title: String, val subtitle: String, val icon: ImageVector) {
@@ -142,7 +147,10 @@ private val toolCards = listOf(
     ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, pdfTool = PdfTool.SPLIT),
     ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, pdfTool = PdfTool.COMPRESS),
     ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER),
-    ToolCard("Rodar páginas", "Rodar páginas 90°", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE),
+    ToolCard("Rodar páginas", "Rodar todas as páginas", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE),
+    ToolCard("Rodar uma página", "Rodar só a página escolhida", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE_ONE),
+    ToolCard("Recortar página", "Ajustar a área de uma página", Icons.Outlined.Crop, pdfTool = PdfTool.CROP_ONE),
+    ToolCard("Página para PNG", "Exportar uma página como imagem", Icons.Outlined.PhotoLibrary, pdfTool = PdfTool.EXPORT_PAGE_IMAGE),
     ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, action = Action.SCAN),
     ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF),
     ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN),
@@ -163,6 +171,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     var selectedPdfTool by remember { mutableStateOf<PdfTool?>(null) }
     var selectedSecurityTool by remember { mutableStateOf<SecurityTool?>(null) }
     var resultPdf by remember { mutableStateOf<CachedPdfResult?>(null) }
+    var resultImage by remember { mutableStateOf<CachedImageResult?>(null) }
     var resultText by remember { mutableStateOf<CachedTextResult?>(null) }
     var activeUtility by remember { mutableStateOf<Action?>(null) }
     var processing by remember { mutableStateOf(false) }
@@ -172,13 +181,17 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var workflowError by remember { mutableStateOf<String?>(null) }
 
-    fun processPdfResult(outputName: String, action: (Uri) -> Long) {
+    fun processPdfResult(
+        outputName: String,
+        action: (Uri) -> Long,
+        previewPage: Int = 1,
+    ) {
         if (processing) return
         processing = true
         workflowError = null
         scope.launch {
             val outcome = withContext(Dispatchers.IO) {
-                runCatching { createCachedPdfResult(context, outputName, action) }
+                runCatching { createCachedPdfResult(context, outputName, action, previewPage) }
             }
             processing = false
             outcome.fold(
@@ -188,6 +201,22 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                 onFailure = {
                     workflowError = it.message ?: "O processamento não foi concluído."
                 },
+            )
+        }
+    }
+
+    fun processImageResult(outputName: String, action: (Uri) -> Long) {
+        if (processing) return
+        processing = true
+        workflowError = null
+        scope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                runCatching { createCachedImageResult(context, outputName, action) }
+            }
+            processing = false
+            outcome.fold(
+                onSuccess = { resultImage = it },
+                onFailure = { workflowError = it.message ?: "A exportação da imagem falhou." },
             )
         }
     }
@@ -308,6 +337,11 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
         return
     }
 
+    resultImage?.let { result ->
+        ImageResultWorkspace(result = result, onBack = { resultImage = null })
+        return
+    }
+
     resultText?.let { result ->
         TextResultWorkspace(result = result, onBack = { resultText = null })
         return
@@ -319,6 +353,8 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             onBack = { selectedPdfTool = null },
             processing = processing,
             onProcessPdf = { name, action -> processPdfResult(name, action) },
+            onProcessPdfPage = { name, page, action -> processPdfResult(name, action, page) },
+            onProcessImage = { name, action -> processImageResult(name, action) },
         )
         return
     }
@@ -801,6 +837,9 @@ private fun pdfToolAccent(tool: PdfTool): Color = when (tool) {
     PdfTool.COMPRESS -> Color(0xFF008C95)
     PdfTool.REORDER -> Color(0xFFB45309)
     PdfTool.ROTATE -> Color(0xFFDB4B73)
+    PdfTool.ROTATE_ONE -> Color(0xFFDB4B73)
+    PdfTool.CROP_ONE -> Color(0xFF7C4DFF)
+    PdfTool.EXPORT_PAGE_IMAGE -> Color(0xFF16856B)
 }
 
 @Composable
@@ -1013,6 +1052,8 @@ private fun ToolWorkspace(
     onBack: () -> Unit,
     processing: Boolean,
     onProcessPdf: (String, (Uri) -> Long) -> Unit,
+    onProcessPdfPage: (String, Int, (Uri) -> Long) -> Unit,
+    onProcessImage: (String, (Uri) -> Long) -> Unit,
 ) {
     val context = LocalContext.current
     val resolver = context.contentResolver
@@ -1021,7 +1062,11 @@ private fun ToolWorkspace(
     var selectedUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var startPage by remember { mutableStateOf("1") }
     var endPage by remember { mutableStateOf("1") }
-    var orderText by remember { mutableStateOf("1,2,3") }
+    var orderText by remember { mutableStateOf("1") }
+    var pageNumber by remember { mutableStateOf("1") }
+    var rotationDegrees by remember { mutableStateOf(90) }
+    var cropMarginPercent by remember { mutableStateOf(5) }
+    var detectedPageCount by remember { mutableStateOf<Int?>(null) }
 
     val multiPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -1032,11 +1077,38 @@ private fun ToolWorkspace(
     val singlePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
-        if (uri != null) selectedUris = listOf(uri)
+        if (uri != null) {
+            selectedUris = listOf(uri)
+            detectedPageCount = null
+            pageNumber = "1"
+            scope.launch {
+                val pageCountResult = withContext(Dispatchers.IO) {
+                    runCatching {
+                        resolver.openInputStream(uri).use { input ->
+                            requireNotNull(input) { "Não foi possível abrir este PDF." }
+                            PDDocument.load(input).use { it.numberOfPages }
+                        }
+                    }
+                }
+                pageCountResult.onSuccess { count ->
+                    detectedPageCount = count
+                    if (count > 0) {
+                        endPage = count.toString()
+                        orderText = (1..count).joinToString(",")
+                    }
+                }.onFailure {
+                    snackbar.showSnackbar("Não foi possível ler as páginas: " + (it.message ?: "erro desconhecido"))
+                }
+            }
+        }
     }
 
     fun createOutput(name: String, action: (Uri) -> Long) {
         onProcessPdf(name, action)
+    }
+
+    fun createPageOutput(name: String, page: Int, action: (Uri) -> Long) {
+        onProcessPdfPage(name, page, action)
     }
 
     Scaffold(
@@ -1068,7 +1140,10 @@ private fun ToolWorkspace(
                     PdfTool.SPLIT -> "Escolhe o intervalo que queres guardar."
                     PdfTool.COMPRESS -> "Otimiza imagens incorporadas no PDF."
                     PdfTool.REORDER -> "Define a sequência final das páginas."
-                    PdfTool.ROTATE -> "Roda cada página 90° e guarda uma nova cópia."
+                    PdfTool.ROTATE -> "Roda todas as páginas 90° e guarda uma nova cópia."
+                    PdfTool.ROTATE_ONE -> "Roda apenas a página que escolheres."
+                    PdfTool.CROP_ONE -> "Recorta apenas a área visível da página escolhida."
+                    PdfTool.EXPORT_PAGE_IMAGE -> "Cria uma imagem PNG de uma página do PDF."
                 },
                 icon = tool.icon,
                 accent = pdfToolAccent(tool),
@@ -1078,9 +1153,12 @@ private fun ToolWorkspace(
                 text = when (tool) {
                     PdfTool.MERGE -> "Selecione dois ou mais PDFs para criar um único documento."
                     PdfTool.SPLIT -> "Selecione um PDF e indique o intervalo de páginas."
-                    PdfTool.COMPRESS -> "Imagens grandes serão reduzidas e recomprimidas localmente."
+                    PdfTool.COMPRESS -> "Otimiza imagens incorporadas, quando adequado. PDFs de texto ou vetoriais podem reduzir pouco."
                     PdfTool.REORDER -> "Indique a nova ordem, por exemplo: 3,1,2,4."
                     PdfTool.ROTATE -> "Roda todas as páginas 90° no sentido horário."
+                    PdfTool.ROTATE_ONE -> "Escolhe o número da página e roda-a 90°, 180° ou 270°."
+                    PdfTool.CROP_ONE -> "Escolhe uma página e aplica um recorte proporcional. O PDF original não será alterado."
+                    PdfTool.EXPORT_PAGE_IMAGE -> "Exporta uma página para PNG, mantendo a proporção original."
                 },
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -1129,6 +1207,13 @@ private fun ToolWorkspace(
 
             when (tool) {
                 PdfTool.SPLIT -> {
+                    detectedPageCount?.let { count ->
+                        Text(
+                            "Documento com $count página(s).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(
                             value = startPage,
@@ -1148,6 +1233,13 @@ private fun ToolWorkspace(
                 }
 
                 PdfTool.REORDER -> {
+                    detectedPageCount?.let { count ->
+                        Text(
+                            "Páginas disponíveis: 1 a $count. A ordem é preenchida automaticamente ao selecionar o PDF.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     OutlinedTextField(
                         value = orderText,
                         onValueChange = { orderText = it },
@@ -1155,6 +1247,55 @@ private fun ToolWorkspace(
                         supportingText = { Text("Ex.: 3,1,2,4") },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                }
+
+                PdfTool.ROTATE_ONE, PdfTool.CROP_ONE, PdfTool.EXPORT_PAGE_IMAGE -> {
+                    detectedPageCount?.let { count ->
+                        Text(
+                            "O documento tem $count página(s).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedTextField(
+                        value = pageNumber,
+                        onValueChange = { pageNumber = it.filter(Char::isDigit) },
+                        label = { Text("Número da página") },
+                        supportingText = {
+                            Text("Escolhe um valor entre 1 e ${detectedPageCount ?: "…"}")
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (tool == PdfTool.ROTATE_ONE) {
+                        Text("Rotação", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(90, 180, 270).forEach { angle ->
+                                FilterChip(
+                                    selected = rotationDegrees == angle,
+                                    onClick = { rotationDegrees = angle },
+                                    label = { Text("$angle°") },
+                                )
+                            }
+                        }
+                    }
+                    if (tool == PdfTool.CROP_ONE) {
+                        Text("Margem do recorte por lado", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(5, 10, 15).forEach { margin ->
+                                FilterChip(
+                                    selected = cropMarginPercent == margin,
+                                    onClick = { cropMarginPercent = margin },
+                                    label = { Text("$margin%") },
+                                )
+                            }
+                        }
+                        Text(
+                            "O recorte altera a área visível. O conteúdo fora da área recortada não é apagado permanentemente.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
 
                 else -> Unit
@@ -1171,7 +1312,10 @@ private fun ToolWorkspace(
                         PdfTool.SPLIT -> "A extrair páginas"
                         PdfTool.COMPRESS -> "A otimizar imagens"
                         PdfTool.REORDER -> "A reorganizar páginas"
-                        PdfTool.ROTATE -> "A rodar páginas"
+                        PdfTool.ROTATE -> "A rodar todas as páginas"
+                        PdfTool.ROTATE_ONE -> "A rodar uma página"
+                        PdfTool.CROP_ONE -> "A recortar uma página"
+                        PdfTool.EXPORT_PAGE_IMAGE -> "A exportar a página como PNG"
                     },
                     detail = "O DocPilot - PDF Reader está a criar uma nova cópia do teu PDF.",
                     accent = pdfToolAccent(tool),
@@ -1269,6 +1413,46 @@ private fun ToolWorkspace(
                                 }
                             }
                         }
+
+                        PdfTool.ROTATE_ONE -> {
+                            val number = pageNumber.toIntOrNull()
+                            val count = detectedPageCount
+                            if (selectedUris.size != 1 || number == null || count == null || number !in 1..count) {
+                                scope.launch { snackbar.showSnackbar("Seleciona um PDF e uma página válida.") }
+                            } else {
+                                createPageOutput("docpilot-page-rotated.pdf", number) { uri ->
+                                    PdfProcessor.rotatePage(
+                                        resolver, selectedUris.single(), uri, number, rotationDegrees,
+                                    )
+                                }
+                            }
+                        }
+
+                        PdfTool.CROP_ONE -> {
+                            val number = pageNumber.toIntOrNull()
+                            val count = detectedPageCount
+                            if (selectedUris.size != 1 || number == null || count == null || number !in 1..count) {
+                                scope.launch { snackbar.showSnackbar("Seleciona um PDF e uma página válida.") }
+                            } else {
+                                createPageOutput("docpilot-page-cropped.pdf", number) { uri ->
+                                    PdfProcessor.cropPage(
+                                        resolver, selectedUris.single(), uri, number, cropMarginPercent / 100f,
+                                    )
+                                }
+                            }
+                        }
+
+                        PdfTool.EXPORT_PAGE_IMAGE -> {
+                            val number = pageNumber.toIntOrNull()
+                            val count = detectedPageCount
+                            if (selectedUris.size != 1 || number == null || count == null || number !in 1..count) {
+                                scope.launch { snackbar.showSnackbar("Seleciona um PDF e uma página válida.") }
+                            } else {
+                                onProcessImage("docpilot-page-$number.png") { uri ->
+                                    DocumentTools.exportPdfPageAsPng(resolver, selectedUris.single(), number, uri)
+                                }
+                            }
+                        }
                     }
                 },
                 enabled = !processing,
@@ -1284,12 +1468,16 @@ private fun ToolWorkspace(
                     Spacer(Modifier.width(10.dp))
                     Text("A processar…")
                 } else {
-                    Text("Criar PDF")
+                    Text(if (tool == PdfTool.EXPORT_PAGE_IMAGE) "Exportar PNG" else "Criar PDF")
                 }
             }
 
             Text(
-                "O processamento é local no dispositivo. Os PDFs não são enviados para um servidor.",
+                if (tool == PdfTool.COMPRESS) {
+                    "A compressão tenta reduzir imagens raster grandes. O resultado pode não ficar menor em PDFs já otimizados; compara o tamanho antes de substituir o original."
+                } else {
+                    "O processamento é local no dispositivo. Os PDFs não são enviados para um servidor."
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

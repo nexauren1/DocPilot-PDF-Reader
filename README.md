@@ -1,6 +1,6 @@
 # DocPilot
 
-DocPilot is an Android-first PDF reader and document toolkit from Nexauren. This first public version is designed to be useful without a paid plan or an account.
+DocPilot is a free, Android-first PDF reader and document toolkit from Nexauren. Reading and the current document tools do not require a paid plan or an account. The project prioritizes reliable reading, predictable page layout, on-device processing, and clear save flows over adding tool buttons that do not work.
 
 ## Product principles
 
@@ -17,6 +17,7 @@ DocPilot is an Android-first PDF reader and document toolkit from Nexauren. This
 - Horizontal page thumbnails, direct page selection, previous/next navigation, and jump-to-page
 - Saved reading position, a page bookmark, reading progress, pinch-to-zoom, pan, and zoom reset
 - Reflow reading mode for selectable text
+- Persistent light, sepia, and dark reading appearances
 - Page placeholders use each page's measured aspect ratio to reduce scroll jumps while rendering
 - Scanned or image-only PDFs without a text layer cannot currently be searched in the reader. Image OCR is available for individual image files; whole-PDF OCR remains future work.
 
@@ -24,8 +25,11 @@ DocPilot is an Android-first PDF reader and document toolkit from Nexauren. This
 
 - Merge multiple PDFs
 - Extract an inclusive page range
-- Reorder pages using a sequence such as `3,1,2,4`
+- Reorder every page using a sequence such as `3,1,2,4`; the sequence must include each page exactly once. Use Split PDF when you need only a subset
 - Rotate all pages 90 degrees clockwise
+- Rotate one selected page by 90°, 180°, or 270°
+- Crop the visible area of one selected page using adjustable margins
+- Export a selected page as a PNG image with preview and a save dialog
 - Compress PDFs by downscaling oversized embedded raster images
 - Convert multiple images to a PDF with paper-size and orientation options
 - Scan documents using Google ML Kit Document Scanner
@@ -58,4 +62,4 @@ The release workflow blocks publishing if the four secrets are missing or incomp
 
 ## Candidates for a future iteration
 
-After real-device validation, useful additions to evaluate include exporting selected pages as image files, per-page rotate/crop and visual page reordering, favourites and user-created folders, annotations/highlighting, more complete print/share controls, and an explicit reader appearance setting. These are roadmap candidates, not features advertised as available today. Reader accuracy and reliable saving take priority over adding more tools.
+After real-device validation, useful additions to evaluate include persistent highlights and underlines saved into the PDF, sticky-note annotations, fillable AcroForm fields and safe export of completed forms, visual page drag-and-drop ordering, favourites and user-created folders, and print/share improvements. These are roadmap candidates, not features advertised as available today. Reader accuracy and reliable saving take priority over adding more tools.

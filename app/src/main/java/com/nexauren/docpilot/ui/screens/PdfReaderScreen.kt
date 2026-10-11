@@ -12,6 +12,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +53,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -75,6 +77,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -85,6 +89,48 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private enum class ReaderAppearance(val title: String) {
+    LIGHT("Claro"),
+    SEPIA("Sépia"),
+    DARK("Escuro"),
+}
+
+private fun ReaderAppearance.pageColor(): Color = when (this) {
+    ReaderAppearance.LIGHT -> Color.White
+    ReaderAppearance.SEPIA -> Color(0xFFF4ECD8)
+    ReaderAppearance.DARK -> Color.Black
+}
+
+private fun ReaderAppearance.textColor(): Color = when (this) {
+    ReaderAppearance.LIGHT -> Color(0xFF202534)
+    ReaderAppearance.SEPIA -> Color(0xFF483A2A)
+    ReaderAppearance.DARK -> Color(0xFFF0F1F5)
+}
+
+private fun ReaderAppearance.colorFilter(): ColorFilter? = when (this) {
+    ReaderAppearance.LIGHT -> null
+    ReaderAppearance.SEPIA -> ColorFilter.colorMatrix(
+        ColorMatrix(
+            floatArrayOf(
+                0.300f, 0.550f, 0.107f, 0f, 0f,
+                0.240f, 0.550f, 0.135f, 0f, 0f,
+                0.180f, 0.450f, 0.217f, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f,
+            ),
+        ),
+    )
+    ReaderAppearance.DARK -> ColorFilter.colorMatrix(
+        ColorMatrix(
+            floatArrayOf(
+                -1f, 0f, 0f, 0f, 255f,
+                0f, -1f, 0f, 0f, 255f,
+                0f, 0f, -1f, 0f, 255f,
+                0f, 0f, 0f, 1f, 0f,
+            ),
+        ),
+    )
+}
 
 private data class SearchHighlight(
     val left: Float,
@@ -97,6 +143,19 @@ private data class SearchHighlight(
 @Composable
 fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     val context = LocalContext.current
+    val readerPreferences = remember {
+        context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
+    }
+    var appearance by remember {
+        mutableStateOf(
+            runCatching {
+                ReaderAppearance.valueOf(
+                    readerPreferences.getString("reader_appearance", ReaderAppearance.LIGHT.name)
+                        ?: ReaderAppearance.LIGHT.name,
+                )
+            }.getOrDefault(ReaderAppearance.LIGHT),
+        )
+    }
     val pageListState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var pageCount by remember(document.uri) { mutableStateOf(0) }
@@ -119,6 +178,10 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     var readingModeLoading by remember(document.uri) { mutableStateOf(false) }
     val bookmarkKey = remember(document.uri) { "bookmark_page_${document.uri.hashCode()}" }
     val positionKey = remember(document.uri) { "reader_page_${document.uri.hashCode()}" }
+
+    LaunchedEffect(appearance) {
+        readerPreferences.edit().putString("reader_appearance", appearance.name).apply()
+    }
 
     val currentPage by remember {
         derivedStateOf {
@@ -369,6 +432,27 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         progress = (currentPage.toFloat() / pageCount.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f),
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Página",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        ReaderAppearance.entries.forEach { option ->
+                            FilterChip(
+                                selected = appearance == option,
+                                onClick = { appearance = option },
+                                label = { Text(option.title) },
+                            )
+                        }
+                    }
                     AnimatedVisibility(visible = searchOpen, enter = fadeIn(), exit = fadeOut()) {
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -407,6 +491,13 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                     }) {
                                         Icon(Icons.Outlined.Close, contentDescription = "Fechar pesquisa")
                                     }
+                                }
+                                if (searchQuery.isNotBlank()) {
+                                    Text(
+                                        "Termo pesquisado: “${searchQuery.trim()}”",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
                                 }
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -454,6 +545,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .background(appearance.pageColor())
                                 .verticalScroll(rememberScrollState())
                                 .padding(horizontal = 20.dp, vertical = 18.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -473,7 +565,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                     style = MaterialTheme.typography.bodyLarge.copy(
                                         lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.25f,
                                     ),
-                                    color = MaterialTheme.colorScheme.onBackground,
+                                    color = appearance.textColor(),
                                 )
                             }
                         }
@@ -504,6 +596,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                     resetZoomToken = resetZoomToken,
                                     pageAspectRatio = pageAspectRatios.getOrNull(pageIndex) ?: (595f / 842f),
                                     highlights = searchHighlights[pageIndex + 1].orEmpty(),
+                                    appearance = appearance,
                                 )
                             }
                         }
@@ -626,8 +719,11 @@ private fun PdfPage(
     resetZoomToken: Int,
     pageAspectRatio: Float,
     highlights: List<SearchHighlight>,
+    appearance: ReaderAppearance,
 ) {
     val context = LocalContext.current
+    val pageColor = appearance.pageColor()
+    val imageColorFilter = remember(appearance) { appearance.colorFilter() }
     var bitmap by remember(uri, pageIndex) { mutableStateOf<Bitmap?>(null) }
     var scale by remember(uri, pageIndex, resetZoomToken) { mutableStateOf(1f) }
     var offsetX by remember(uri, pageIndex, resetZoomToken) { mutableStateOf(0f) }
@@ -650,15 +746,17 @@ private fun PdfPage(
     Card(
         modifier = Modifier.fillMaxWidth().aspectRatio(pageAspectRatio.coerceIn(0.25f, 3f)),
         shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = pageColor),
     ) {
         Box(
-            modifier = Modifier.fillMaxSize().background(Color.White),
+            modifier = Modifier.fillMaxSize().background(pageColor),
             contentAlignment = Alignment.Center,
         ) {
             bitmap?.let { image ->
                 Image(
                     bitmap = image.asImageBitmap(),
                     contentDescription = "Página ${pageIndex + 1}",
+                    colorFilter = imageColorFilter,
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {
@@ -743,10 +841,19 @@ private fun renderPdfPage(
             }
 
             renderer.openPage(pageIndex).use { page ->
-                val width = targetWidth.coerceAtLeast(240)
-                val height = (width.toFloat() * page.height / page.width.toFloat())
-                    .toInt()
-                    .coerceAtLeast(1)
+                val sourceWidth = page.width.coerceAtLeast(1)
+                val sourceHeight = page.height.coerceAtLeast(1)
+                val requestedWidth = targetWidth.coerceAtLeast(240).toFloat()
+                // Avoid exceptionally tall or wide pages creating oversized bitmaps on devices
+                // with limited RAM while retaining the page's exact aspect ratio.
+                val maxDimension = 2800f
+                val scale = minOf(
+                    requestedWidth / sourceWidth.toFloat(),
+                    maxDimension / sourceWidth.toFloat(),
+                    maxDimension / sourceHeight.toFloat(),
+                )
+                val width = (sourceWidth * scale).toInt().coerceAtLeast(1)
+                val height = (sourceHeight * scale).toInt().coerceAtLeast(1)
 
                 val bitmap = Bitmap.createBitmap(
                     width,

@@ -50,7 +50,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
 import com.nexauren.docpilot.analytics.DocPilotAnalytics
 import com.nexauren.docpilot.model.DocumentItem
 import com.nexauren.docpilot.ui.screens.HomeScreen
@@ -62,6 +65,7 @@ import com.nexauren.docpilot.ui.screens.ToolsScreen
 private const val PREFS = "docpilot_documents"
 private const val KEY_URIS = "uris"
 private const val KEY_URIS_ORDERED = "uris_ordered"
+private const val KEY_DOCUMENTS_JSON = "documents_json"
 
 private enum class Destination(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     HOME("Início", Icons.Outlined.Home),
@@ -77,6 +81,7 @@ fun DocPilotApp() {
     var documents by remember { mutableStateOf(loadDocuments(context)) }
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
     var hasDocumentAccess by remember { mutableStateOf(DocumentAccess.hasAccess(context)) }
+    var isScanningDocuments by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -87,10 +92,26 @@ fun DocPilotApp() {
 
     fun refreshDeviceDocuments() {
         hasDocumentAccess = DocumentAccess.hasAccess(context)
-        if (hasDocumentAccess) {
-            val discovered = DocumentAccess.scanPdfs(context)
-            documents = (discovered + documents).distinctBy { it.uri }
-            saveDocuments(context, documents)
+        if (!hasDocumentAccess || isScanningDocuments) return
+
+        isScanningDocuments = true
+        scope.launch {
+            try {
+                val discovered = withContext(Dispatchers.IO) {
+                    DocumentAccess.scanPdfs(context)
+                }
+                documents = (discovered + documents).distinctBy { it.uri }
+                saveDocuments(context, documents)
+                snackbarHostState.showSnackbar(
+                    "Biblioteca atualizada: ${discovered.size} documento(s) encontrados."
+                )
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                snackbarHostState.showSnackbar("Não foi possível atualizar a biblioteca.")
+            } finally {
+                isScanningDocuments = false
+            }
         }
     }
 
@@ -272,6 +293,23 @@ fun DocPilotApp() {
 
 private fun loadDocuments(context: Context): List<DocumentItem> {
     val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    // Newer builds restore names directly and avoid one ContentResolver query per document
+    // on every application start.
+    val cachedDocuments = preferences.getString(KEY_DOCUMENTS_JSON, null)?.let { serialized ->
+        runCatching {
+            val array = org.json.JSONArray(serialized)
+            List(array.length()) { index ->
+                val item = array.getJSONObject(index)
+                DocumentItem(
+                    name = item.optString("name", "Documento.pdf"),
+                    uri = item.getString("uri"),
+                )
+            }
+        }.getOrNull()
+    }
+    if (cachedDocuments != null) return cachedDocuments.distinctBy { it.uri }
+
     val orderedUris = preferences.getString(KEY_URIS_ORDERED, null)?.let { serialized ->
         runCatching {
             val array = org.json.JSONArray(serialized)
@@ -291,11 +329,22 @@ private fun loadDocuments(context: Context): List<DocumentItem> {
 }
 
 private fun saveDocuments(context: Context, documents: List<DocumentItem>) {
-    val uris = documents.map { it.uri }.distinct()
+    val distinctDocuments = documents.distinctBy { it.uri }
+    val uris = distinctDocuments.map { it.uri }
+    val documentJson = org.json.JSONArray().apply {
+        distinctDocuments.forEach { document ->
+            put(
+                org.json.JSONObject()
+                    .put("name", document.name)
+                    .put("uri", document.uri)
+            )
+        }
+    }
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         .edit()
+        .putString(KEY_DOCUMENTS_JSON, documentJson.toString())
         .putString(KEY_URIS_ORDERED, org.json.JSONArray(uris).toString())
-        // Keep the legacy key during migration so older builds can still read the library.
+        // Keep the legacy keys during migration so older builds can still read the library.
         .putStringSet(KEY_URIS, uris.toSet())
         .apply()
 }
