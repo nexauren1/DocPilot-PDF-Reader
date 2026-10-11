@@ -70,20 +70,37 @@ jobs:
             fi
           done
 
-          if [[ "$configured" -eq 4 ]]; then
-            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/docpilot-release.jks"
-            test -s "$RUNNER_TEMP/docpilot-release.jks"
-            echo "production=true" >> "$GITHUB_OUTPUT"
-            echo "mode=Persistent production keystore" >> "$GITHUB_OUTPUT"
-            echo "Production signing is configured."
-          elif [[ "$configured" -eq 0 ]]; then
-            echo "production=false" >> "$GITHUB_OUTPUT"
-            echo "mode=Debug signing for CI validation only" >> "$GITHUB_OUTPUT"
-            echo "::warning::The four production signing secrets are not configured. The build will be validated, but no GitHub Release will be published."
-          else
-            echo "::error::Configure all four signing secrets together: SIGNING_KEYSTORE_BASE64, SIGNING_KEYSTORE_PASSWORD, SIGNING_KEY_ALIAS and SIGNING_KEY_PASSWORD."
+          if [[ "$configured" -ne 4 ]]; then
+            echo "::error::Release blocked. All four production signing secrets are required: SIGNING_KEYSTORE_BASE64, SIGNING_KEYSTORE_PASSWORD, SIGNING_KEY_ALIAS and SIGNING_KEY_PASSWORD."
             exit 1
           fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/docpilot-release.jks"
+          test -s "$RUNNER_TEMP/docpilot-release.jks"
+          echo "production=true" >> "$GITHUB_OUTPUT"
+          echo "mode=Persistent production keystore" >> "$GITHUB_OUTPUT"
+          echo "All four production signing secrets are configured."
+
+      - name: Report production certificate fingerprints for Firebase
+        shell: bash
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/docpilot-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          keytool -list -v -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > "$RUNNER_TEMP/docpilot-certificate.txt"
+          SHA1="$(awk -F': ' '/SHA1:/{print $2; exit}' "$RUNNER_TEMP/docpilot-certificate.txt")"
+          SHA256="$(awk -F': ' '/SHA256:/{print $2; exit}' "$RUNNER_TEMP/docpilot-certificate.txt")"
+          test -n "$SHA1"
+          test -n "$SHA256"
+          {
+            echo "### DocPilot Firebase Android certificate fingerprints"
+            echo "- Application ID: `com.nexauren.docpilot`"
+            echo "- SHA-1: `$SHA1`"
+            echo "- SHA-256: `$SHA256`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "DocPilot release SHA-1: $SHA1"
+          echo "DocPilot release SHA-256: $SHA256"
 
       - name: Build release APK
         env:
