@@ -50,6 +50,8 @@ import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -85,6 +87,7 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.google.android.gms.tasks.Tasks
 import com.nexauren.docpilot.pdf.DocumentTools
 import com.nexauren.docpilot.pdf.PdfProcessor
 import com.nexauren.docpilot.pdf.formatBytes
@@ -141,58 +144,59 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
 
     var selectedPdfTool by remember { mutableStateOf<PdfTool?>(null) }
     var selectedSecurityTool by remember { mutableStateOf<SecurityTool?>(null) }
-    var ocrResult by remember { mutableStateOf<String?>(null) }
+    var resultPdf by remember { mutableStateOf<CachedPdfResult?>(null) }
+    var resultText by remember { mutableStateOf<CachedTextResult?>(null) }
+    var activeUtility by remember { mutableStateOf<Action?>(null) }
     var processing by remember { mutableStateOf(false) }
     var toolQuery by remember { mutableStateOf("") }
     var pendingPdfTextUri by remember { mutableStateOf<Uri?>(null) }
-
     var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
-    var pendingOutputAction by remember { mutableStateOf<((Uri) -> Long)?>(null) }
+    var workflowError by remember { mutableStateOf<String?>(null) }
 
-    val outputPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/pdf"),
-    ) { uri ->
-        val action = pendingOutputAction
-        pendingOutputAction = null
-        if (uri != null && action != null) {
-            processing = true
-            scope.launch {
-                val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
-                processing = false
-                // Add the finished PDF to the app library only after processing succeeds.
-                result.onSuccess { onOutputSaved(uri.toString()) }
-                snackbar.showSnackbar(
-                    result.fold(
-                        { "PDF criado • " + formatBytes(it) },
-                        { "Erro: " + (it.message ?: "processamento falhou") },
-                    ),
-                )
+    fun processPdfResult(outputName: String, action: (Uri) -> Long) {
+        if (processing) return
+        processing = true
+        workflowError = null
+        scope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                runCatching { createCachedPdfResult(context, outputName, action) }
             }
+            processing = false
+            outcome.fold(
+                onSuccess = {
+                    resultPdf = it
+                    activeUtility = null
+                },
+                onFailure = {
+                    workflowError = it.message ?: "O processamento não foi concluído."
+                },
+            )
         }
     }
 
-    val textOutputPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("text/plain"),
-    ) { outputUri ->
-        val sourceUri = pendingPdfTextUri
-        pendingPdfTextUri = null
-        if (sourceUri != null && outputUri != null) {
-            processing = true
-            scope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    runCatching {
-                        DocumentTools.extractPdfTextToTextFile(context.contentResolver, sourceUri, outputUri)
-                    }
+    fun processTextResult(outputName: String, action: () -> String) {
+        if (processing) return
+        processing = true
+        workflowError = null
+        scope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                runCatching {
+                    val extracted = action()
+                    require(extracted.isNotBlank()) { "Não foi encontrado texto para apresentar." }
+                    CachedTextResult(extracted, outputName)
                 }
-                processing = false
-                snackbar.showSnackbar(
-                    result.fold(
-                        { "Texto exportado • " + formatBytes(it) },
-                        { "Não foi possível extrair texto: " + (it.message ?: "erro desconhecido") },
-                    ),
-                )
             }
+            processing = false
+            outcome.fold(
+                onSuccess = {
+                    resultText = it
+                    activeUtility = null
+                },
+                onFailure = {
+                    workflowError = it.message ?: "O processamento do texto falhou."
+                },
+            )
         }
     }
 
@@ -201,7 +205,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     ) { uri ->
         if (uri != null) {
             pendingPdfTextUri = uri
-            textOutputPicker.launch("docpilot-text.txt")
+            activeUtility = Action.PDF_TEXT
         }
     }
 
@@ -209,39 +213,19 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
         ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris ->
         pendingImageUris = uris
-        if (uris.isNotEmpty()) {
-            pendingOutputAction = { output -> DocumentTools.imagesToPdf(context.contentResolver, uris, output) }
-            outputPicker.launch("docpilot-images.pdf")
-        }
+        if (uris.isNotEmpty()) activeUtility = Action.IMAGE_TO_PDF
     }
 
     val ocrPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
-            processing = true
-            runCatching {
-                val image = InputImage.fromFilePath(context, uri)
-                val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-                recognizer.process(image)
-                    .addOnSuccessListener { result ->
-                        ocrResult = result.text.ifBlank { "Nenhum texto foi identificado nesta imagem." }
-                    }
-                    .addOnFailureListener { error ->
-                        scope.launch { snackbar.showSnackbar("OCR falhou: " + (error.message ?: "erro desconhecido")) }
-                    }
-                    .addOnCompleteListener {
-                        recognizer.close()
-                        processing = false
-                    }
-            }.onFailure {
-                processing = false
-                scope.launch { snackbar.showSnackbar("Não foi possível abrir a imagem.") }
-            }
+            pendingImageUris = listOf(uri)
+            activeUtility = Action.OCR
         }
     }
 
-    val scannerOptions = remember {
+    val scannerOptions = remember {    val scannerOptions = remember {
         GmsDocumentScannerOptions.Builder()
             .setGalleryImportAllowed(true)
             .setPageLimit(30)
@@ -261,30 +245,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             val pdfUri = scanResult?.getPdf()?.getUri()
             if (pdfUri != null) {
                 pendingScannerUri = pdfUri
-                pendingOutputAction = { output -> DocumentTools.scanResultPdf(context.contentResolver, pdfUri, output) }
-                outputPicker.launch("docpilot-scan.pdf")
-            }
-            scanResult?.getPages()?.firstOrNull()?.let { page ->
-                val imageUri = page.getImageUri()
-                if (imageUri != null) {
-                    processing = true
-                    runCatching {
-                        val image = InputImage.fromFilePath(context, imageUri)
-                        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-                        recognizer.process(image)
-                            .addOnSuccessListener { text ->
-                                if (text.text.isNotBlank()) {
-                                    ocrResult = text.text
-                                }
-                            }
-                            .addOnCompleteListener {
-                                recognizer.close()
-                                processing = false
-                            }
-                    }.onFailure {
-                        processing = false
-                    }
-                }
+                activeUtility = Action.SCAN
             }
         }
     }
@@ -303,8 +264,38 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             }
     }
 
+    if (workflowError != null) {
+        AlertDialog(
+            onDismissRequest = { workflowError = null },
+            title = { Text("Não foi possível concluir") },
+            text = { Text(workflowError.orEmpty()) },
+            confirmButton = {
+                Button(onClick = { workflowError = null }) { Text("OK") }
+            },
+        )
+    }
+
+    resultPdf?.let { result ->
+        PdfResultWorkspace(
+            result = result,
+            onBack = { resultPdf = null },
+            onSaved = onOutputSaved,
+        )
+        return
+    }
+
+    resultText?.let { result ->
+        TextResultWorkspace(result = result, onBack = { resultText = null })
+        return
+    }
+
     if (selectedPdfTool != null) {
-        ToolWorkspace(tool = selectedPdfTool!!, onBack = { selectedPdfTool = null }, onOutputSaved = onOutputSaved)
+        ToolWorkspace(
+            tool = selectedPdfTool!!,
+            onBack = { selectedPdfTool = null },
+            processing = processing,
+            onProcessPdf = { name, action -> processPdfResult(name, action) },
+        )
         return
     }
 
@@ -312,31 +303,24 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
         SecurityWorkspace(
             tool = selectedSecurityTool!!,
             onBack = { selectedSecurityTool = null },
-            onOutputSaved = onOutputSaved,
+            processing = processing,
+            onProcessPdf = { name, action -> processPdfResult(name, action) },
         )
         return
     }
 
-    if (ocrResult != null) {
-        AlertDialog(
-            onDismissRequest = { ocrResult = null },
-            title = { Text("Texto reconhecido") },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(420.dp)
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    Text(ocrResult.orEmpty())
-                }
-            },
-            confirmButton = {
-                Button(onClick = { ocrResult = null }) {
-                    Text("Fechar")
-                }
-            },
+    if (activeUtility != null) {
+        UtilityWorkspace(
+            action = activeUtility!!,
+            imageUris = pendingImageUris,
+            pdfUri = pendingPdfTextUri,
+            scanUri = pendingScannerUri,
+            processing = processing,
+            onBack = { activeUtility = null },
+            onProcessPdf = { name, action -> processPdfResult(name, action) },
+            onProcessText = { name, action -> processTextResult(name, action) },
         )
+        return
     }
 
     Scaffold(
@@ -469,6 +453,253 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     }
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UtilityWorkspace(
+    action: Action,
+    imageUris: List<Uri>,
+    pdfUri: Uri?,
+    scanUri: Uri?,
+    processing: Boolean,
+    onBack: () -> Unit,
+    onProcessPdf: (String, (Uri) -> Long) -> Unit,
+    onProcessText: (String, () -> String) -> Unit,
+) {
+    val context = LocalContext.current
+    val resolver = context.contentResolver
+    var paperSize by remember(action) { mutableStateOf("A4") }
+    var landscape by remember(action) { mutableStateOf(false) }
+    var removeBlankLines by remember(action) { mutableStateOf(false) }
+
+    val title = when (action) {
+        Action.SCAN -> "Scanner"
+        Action.IMAGE_TO_PDF -> "Imagem para PDF"
+        Action.OCR -> "Reconhecer texto (OCR)"
+        Action.PDF_TEXT -> "Extrair texto do PDF"
+        Action.NONE -> "Ferramenta"
+    }
+    val subtitle = when (action) {
+        Action.SCAN -> "Revê a digitalização antes de guardar."
+        Action.IMAGE_TO_PDF -> "Configura a página antes de converter as imagens."
+        Action.OCR -> "Reconhece texto localmente e mostra-o antes de guardar."
+        Action.PDF_TEXT -> "Extrai o texto, revê o conteúdo e só depois guarda."
+        Action.NONE -> ""
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Spacer(Modifier.height(6.dp))
+            WorkspaceHero(
+                title = title,
+                subtitle = subtitle,
+                icon = when (action) {
+                    Action.SCAN -> Icons.Outlined.CameraAlt
+                    Action.IMAGE_TO_PDF -> Icons.Outlined.PhotoLibrary
+                    Action.OCR -> Icons.Outlined.Description
+                    Action.PDF_TEXT -> Icons.Outlined.ContentCopy
+                    Action.NONE -> Icons.Outlined.Description
+                },
+                accent = when (action) {
+                    Action.SCAN -> Color(0xFF387D4A)
+                    Action.IMAGE_TO_PDF -> Color(0xFF7C4DFF)
+                    Action.OCR -> Color(0xFF356AE6)
+                    Action.PDF_TEXT -> Color(0xFF008C95)
+                    Action.NONE -> MaterialTheme.colorScheme.primary
+                },
+            )
+
+            when (action) {
+                Action.IMAGE_TO_PDF -> {
+                    Text("Imagens selecionadas: ${imageUris.size}", style = MaterialTheme.typography.titleSmall)
+                    Card(shape = RoundedCornerShape(18.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            imageUris.take(8).forEachIndexed { index, uri ->
+                                Text(
+                                    "${index + 1}. ${uri.lastPathSegment ?: "Imagem"}",
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            if (imageUris.size > 8) Text("+ ${imageUris.size - 8} imagem(ns)")
+                        }
+                    }
+                    Text("Tamanho da página", style = MaterialTheme.typography.titleSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("A4", "Carta", "A3").forEach { option ->
+                            FilterChip(
+                                selected = paperSize == option,
+                                onClick = { paperSize = option },
+                                label = { Text(option) },
+                            )
+                        }
+                    }
+                    Text("Orientação", style = MaterialTheme.typography.titleSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = !landscape, onClick = { landscape = false }, label = { Text("Retrato") })
+                        FilterChip(selected = landscape, onClick = { landscape = true }, label = { Text("Paisagem") })
+                    }
+                    Text(
+                        "Cada imagem será ajustada à página escolhida sem alterar o ficheiro de origem.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Action.OCR -> {
+                    Text("Imagem selecionada", style = MaterialTheme.typography.titleSmall)
+                    Text(imageUris.firstOrNull()?.lastPathSegment ?: "Imagem", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Depois do reconhecimento, poderás rever o texto, copiá-lo ou guardá-lo como TXT.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Action.PDF_TEXT -> {
+                    Text("PDF selecionado", style = MaterialTheme.typography.titleSmall)
+                    Text(pdfUri?.lastPathSegment ?: "Documento PDF", style = MaterialTheme.typography.bodyMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = removeBlankLines, onCheckedChange = { removeBlankLines = it })
+                        Column(Modifier.weight(1f)) {
+                            Text("Remover linhas vazias")
+                            Text(
+                                "Útil para limpar texto exportado de alguns documentos.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
+                Action.SCAN -> {
+                    Text("Digitalização pronta para processar", style = MaterialTheme.typography.titleSmall)
+                    Text(scanUri?.lastPathSegment ?: "Documento digitalizado", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "O DocPilot vai preparar uma pré-visualização. O PDF só será guardado no destino escolhido depois de reveres o resultado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Action.NONE -> Unit
+            }
+
+            if (processing) {
+                ProcessingPanel(
+                    title = when (action) {
+                        Action.SCAN -> "A preparar digitalização"
+                        Action.IMAGE_TO_PDF -> "A converter imagens"
+                        Action.OCR -> "A reconhecer texto"
+                        Action.PDF_TEXT -> "A extrair texto"
+                        Action.NONE -> "A processar"
+                    },
+                    detail = "O trabalho é feito no dispositivo. Mantém o DocPilot aberto.",
+                    accent = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            Button(
+                enabled = !processing && when (action) {
+                    Action.SCAN -> scanUri != null
+                    Action.IMAGE_TO_PDF -> imageUris.isNotEmpty()
+                    Action.OCR -> imageUris.isNotEmpty()
+                    Action.PDF_TEXT -> pdfUri != null
+                    Action.NONE -> false
+                },
+                onClick = {
+                    when (action) {
+                        Action.SCAN -> {
+                            val source = scanUri ?: return@Button
+                            onProcessPdf("docpilot-scan.pdf") { outputUri ->
+                                DocumentTools.scanResultPdf(resolver, source, outputUri)
+                            }
+                        }
+
+                        Action.IMAGE_TO_PDF -> {
+                            val dimensions = when (paperSize) {
+                                "Carta" -> 612 to 792
+                                "A3" -> 842 to 1191
+                                else -> 595 to 842
+                            }
+                            val width = if (landscape) dimensions.second else dimensions.first
+                            val height = if (landscape) dimensions.first else dimensions.second
+                            onProcessPdf("docpilot-images.pdf") { outputUri ->
+                                DocumentTools.imagesToPdf(resolver, imageUris, outputUri, width, height)
+                            }
+                        }
+
+                        Action.OCR -> {
+                            val source = imageUris.firstOrNull() ?: return@Button
+                            onProcessText("docpilot-ocr.txt") {
+                                val image = InputImage.fromFilePath(context, source)
+                                val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                                try {
+                                    val recognized = Tasks.await(recognizer.process(image)).text.trim()
+                                    recognized.ifBlank { "Nenhum texto foi identificado nesta imagem." }
+                                } finally {
+                                    recognizer.close()
+                                }
+                            }
+                        }
+
+                        Action.PDF_TEXT -> {
+                            val source = pdfUri ?: return@Button
+                            onProcessText("docpilot-text.txt") {
+                                val extracted = DocumentTools.extractPdfText(resolver, source)
+                                if (removeBlankLines) {
+                                    extracted.lineSequence().filter { it.isNotBlank() }.joinToString("\n")
+                                } else {
+                                    extracted
+                                }
+                            }
+                        }
+
+                        Action.NONE -> Unit
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+            ) {
+                if (processing) {
+                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("A processar…")
+                } else {
+                    Text(
+                        when (action) {
+                            Action.SCAN -> "Pré-visualizar PDF"
+                            Action.IMAGE_TO_PDF -> "Converter e pré-visualizar"
+                            Action.OCR -> "Reconhecer texto"
+                            Action.PDF_TEXT -> "Extrair e pré-visualizar"
+                            Action.NONE -> "Continuar"
+                        },
+                    )
+                }
+            }
+
+            OutlinedButton(onClick = onBack, enabled = !processing, modifier = Modifier.fillMaxWidth()) {
+                Text("Cancelar")
+            }
+            Spacer(Modifier.height(18.dp))
+        }
+    }
+}
+
 private fun toolAccent(index: Int): Color {
     val colors = listOf(
         Color(0xFF356AE6),
@@ -572,37 +803,16 @@ private fun ProcessingPanel(
 private fun SecurityWorkspace(
     tool: SecurityTool,
     onBack: () -> Unit,
-    onOutputSaved: (String) -> Unit,
+    processing: Boolean,
+    onProcessPdf: (String, (Uri) -> Long) -> Unit,
 ) {
     val context = LocalContext.current
     val resolver = context.contentResolver
-    val scope = rememberCoroutineScope()
-    val snackbar = remember { SnackbarHostState() }
     var inputUri by remember { mutableStateOf<Uri?>(null) }
     var value by remember { mutableStateOf("") }
-    var processing by remember { mutableStateOf(false) }
-    var pendingAction by remember { mutableStateOf<((Uri) -> Long)?>(null) }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         inputUri = uri
-    }
-    val output = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
-        val action = pendingAction
-        pendingAction = null
-        if (uri != null && action != null) {
-            processing = true
-            scope.launch {
-                val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
-                processing = false
-                result.onSuccess { onOutputSaved(uri.toString()) }
-                snackbar.showSnackbar(
-                    result.fold(
-                        { "PDF criado • " + formatBytes(it) },
-                        { "Erro: " + (it.message ?: "processamento falhou") },
-                    ),
-                )
-            }
-        }
     }
 
     Scaffold(
@@ -616,7 +826,6 @@ private fun SecurityWorkspace(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -689,15 +898,13 @@ private fun SecurityWorkspace(
                 onClick = {
                     val source = inputUri ?: return@Button
                     if (tool == SecurityTool.PROTECT) {
-                        pendingAction = { outputUri ->
+                        onProcessPdf("docpilot-protected.pdf") { outputUri ->
                             DocumentTools.protectPdf(resolver, source, outputUri, value)
                         }
-                        output.launch("docpilot-protected.pdf")
                     } else {
-                        pendingAction = { outputUri ->
+                        onProcessPdf("docpilot-signed.pdf") { outputUri ->
                             DocumentTools.addVisualSignature(resolver, source, outputUri, value)
                         }
-                        output.launch("docpilot-signed.pdf")
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
@@ -725,7 +932,8 @@ private fun SecurityWorkspace(
 private fun ToolWorkspace(
     tool: PdfTool,
     onBack: () -> Unit,
-    onOutputSaved: (String) -> Unit,
+    processing: Boolean,
+    onProcessPdf: (String, (Uri) -> Long) -> Unit,
 ) {
     val context = LocalContext.current
     val resolver = context.contentResolver
@@ -735,8 +943,6 @@ private fun ToolWorkspace(
     var startPage by remember { mutableStateOf("1") }
     var endPage by remember { mutableStateOf("1") }
     var orderText by remember { mutableStateOf("1,2,3") }
-    var processing by remember { mutableStateOf(false) }
-    var pendingSave by remember { mutableStateOf<((Uri) -> Long)?>(null) }
 
     val multiPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -750,33 +956,12 @@ private fun ToolWorkspace(
         if (uri != null) selectedUris = listOf(uri)
     }
 
-    val outputPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/pdf")
-    ) { uri ->
-        val action = pendingSave
-        pendingSave = null
-        if (uri != null && action != null) {
-            processing = true
-            scope.launch {
-                val result = withContext(Dispatchers.IO) { runCatching { action(uri) } }
-                processing = false
-                result.onSuccess { onOutputSaved(uri.toString()) }
-                snackbar.showSnackbar(
-                    result.fold(
-                        { "PDF criado • " + formatBytes(it) },
-                        { "Erro: " + (it.message ?: "processamento falhou") },
-                    )
-                )
-            }
-        }
-    }
-
     fun createOutput(name: String, action: (Uri) -> Long) {
-        pendingSave = action
-        outputPicker.launch(name)
+        onProcessPdf(name, action)
     }
 
     Scaffold(
+        topBar = {    Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(tool.title) },
