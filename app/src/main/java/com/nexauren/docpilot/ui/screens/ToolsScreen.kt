@@ -181,13 +181,17 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var workflowError by remember { mutableStateOf<String?>(null) }
 
-    fun processPdfResult(outputName: String, action: (Uri) -> Long) {
+    fun processPdfResult(
+        outputName: String,
+        action: (Uri) -> Long,
+        previewPage: Int = 1,
+    ) {
         if (processing) return
         processing = true
         workflowError = null
         scope.launch {
             val outcome = withContext(Dispatchers.IO) {
-                runCatching { createCachedPdfResult(context, outputName, action) }
+                runCatching { createCachedPdfResult(context, outputName, action, previewPage) }
             }
             processing = false
             outcome.fold(
@@ -349,6 +353,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             onBack = { selectedPdfTool = null },
             processing = processing,
             onProcessPdf = { name, action -> processPdfResult(name, action) },
+            onProcessPdfPage = { name, page, action -> processPdfResult(name, action, page) },
             onProcessImage = { name, action -> processImageResult(name, action) },
         )
         return
@@ -1047,6 +1052,7 @@ private fun ToolWorkspace(
     onBack: () -> Unit,
     processing: Boolean,
     onProcessPdf: (String, (Uri) -> Long) -> Unit,
+    onProcessPdfPage: (String, Int, (Uri) -> Long) -> Unit,
     onProcessImage: (String, (Uri) -> Long) -> Unit,
 ) {
     val context = LocalContext.current
@@ -1099,6 +1105,10 @@ private fun ToolWorkspace(
 
     fun createOutput(name: String, action: (Uri) -> Long) {
         onProcessPdf(name, action)
+    }
+
+    fun createPageOutput(name: String, page: Int, action: (Uri) -> Long) {
+        onProcessPdfPage(name, page, action)
     }
 
     Scaffold(
@@ -1410,7 +1420,7 @@ private fun ToolWorkspace(
                             if (selectedUris.size != 1 || number == null || count == null || number !in 1..count) {
                                 scope.launch { snackbar.showSnackbar("Seleciona um PDF e uma página válida.") }
                             } else {
-                                createOutput("docpilot-page-rotated.pdf") { uri ->
+                                createPageOutput("docpilot-page-rotated.pdf", number) { uri ->
                                     PdfProcessor.rotatePage(
                                         resolver, selectedUris.single(), uri, number, rotationDegrees,
                                     )
@@ -1424,7 +1434,7 @@ private fun ToolWorkspace(
                             if (selectedUris.size != 1 || number == null || count == null || number !in 1..count) {
                                 scope.launch { snackbar.showSnackbar("Seleciona um PDF e uma página válida.") }
                             } else {
-                                createOutput("docpilot-page-cropped.pdf") { uri ->
+                                createPageOutput("docpilot-page-cropped.pdf", number) { uri ->
                                     PdfProcessor.cropPage(
                                         resolver, selectedUris.single(), uri, number, cropMarginPercent / 100f,
                                     )
