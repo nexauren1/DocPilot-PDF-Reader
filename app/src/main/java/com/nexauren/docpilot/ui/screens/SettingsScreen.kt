@@ -40,6 +40,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +56,17 @@ import com.google.firebase.FirebaseException
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.GoogleAuthProvider
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+import com.nexauren.docpilot.R
+import kotlinx.coroutines.launch
 import com.nexauren.docpilot.BuildConfig
 import com.nexauren.docpilot.analytics.DocPilotAnalytics
 
@@ -67,6 +79,8 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val auth = remember { FirebaseAuth.getInstance() }
+    val credentialManager = remember { CredentialManager.create(context) }
+    val scope = rememberCoroutineScope()
     var currentUser by remember { mutableStateOf(auth.currentUser) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -74,6 +88,56 @@ fun SettingsScreen(
     var authBusy by remember { mutableStateOf(false) }
     var authMessage by remember { mutableStateOf<String?>(null) }
     var analyticsEnabled by remember { mutableStateOf(DocPilotAnalytics.isEnabled(context)) }
+
+    fun signInWithGoogle() {
+        authBusy = true
+        authMessage = null
+        scope.launch {
+            try {
+                val googleOption = GetGoogleIdOption.Builder()
+                    .setServerClientId(context.getString(R.string.default_web_client_id))
+                    .setFilterByAuthorizedAccounts(false)
+                    .setAutoSelectEnabled(false)
+                    .build()
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleOption)
+                    .build()
+                val result = credentialManager.getCredential(
+                    context = context,
+                    request = request,
+                )
+                val credential = result.credential
+                if (credential is CustomCredential &&
+                    credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                ) {
+                    val googleToken = GoogleIdTokenCredential.createFrom(credential.data)
+                    val firebaseCredential = GoogleAuthProvider.getCredential(googleToken.idToken, null)
+                    auth.signInWithCredential(firebaseCredential).addOnCompleteListener { task ->
+                        authBusy = false
+                        if (task.isSuccessful) {
+                            currentUser = auth.currentUser
+                            authMessage = "Sessão iniciada com Google."
+                            val parameters = Bundle().apply {
+                                putString(FirebaseAnalytics.Param.METHOD, "google")
+                            }
+                            DocPilotAnalytics.logEvent(context, "account_signed_in", parameters)
+                        } else {
+                            authMessage = authErrorMessage(task.exception)
+                        }
+                    }
+                } else {
+                    authBusy = false
+                    authMessage = "Não foi possível validar a conta Google. Tenta novamente."
+                }
+            } catch (e: GetCredentialException) {
+                authBusy = false
+                authMessage = "O início de sessão com Google foi cancelado ou não ficou disponível. Tenta novamente."
+            } catch (e: Exception) {
+                authBusy = false
+                authMessage = "Não foi possível iniciar sessão com Google. Verifica a configuração OAuth e tenta novamente."
+            }
+        }
+    }
 
     DisposableEffect(auth) {
         val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
@@ -145,6 +209,11 @@ fun SettingsScreen(
                             onClick = {
                                 DocPilotAnalytics.logEvent(context, "account_signed_out")
                                 auth.signOut()
+                                scope.launch {
+                                    runCatching {
+                                        credentialManager.clearCredentialState(ClearCredentialStateRequest())
+                                    }
+                                }
                                 password = ""
                                 authMessage = "Sessão terminada."
                             },
@@ -153,6 +222,18 @@ fun SettingsScreen(
                             Text("Terminar sessão")
                         }
                     } else {
+                        OutlinedButton(
+                            onClick = { signInWithGoogle() },
+                            enabled = !authBusy,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Continuar com Google")
+                        }
+                        Text(
+                            "ou utiliza o e-mail e a palavra-passe",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it; authMessage = null },
