@@ -225,7 +225,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
         }
     }
 
-    val scannerOptions = remember {    val scannerOptions = remember {
+    val scannerOptions = remember {
         GmsDocumentScannerOptions.Builder()
             .setGalleryImportAllowed(true)
             .setPageLimit(30)
