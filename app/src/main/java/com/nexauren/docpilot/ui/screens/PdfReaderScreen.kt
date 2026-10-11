@@ -99,7 +99,7 @@ private enum class ReaderAppearance(val title: String) {
 private fun ReaderAppearance.pageColor(): Color = when (this) {
     ReaderAppearance.LIGHT -> Color.White
     ReaderAppearance.SEPIA -> Color(0xFFF4ECD8)
-    ReaderAppearance.DARK -> Color(0xFF17191F)
+    ReaderAppearance.DARK -> Color.Black
 }
 
 private fun ReaderAppearance.textColor(): Color = when (this) {
@@ -113,9 +113,9 @@ private fun ReaderAppearance.colorFilter(): ColorFilter? = when (this) {
     ReaderAppearance.SEPIA -> ColorFilter.colorMatrix(
         ColorMatrix(
             floatArrayOf(
-                0.393f, 0.769f, 0.189f, 0f, 0f,
-                0.349f, 0.686f, 0.168f, 0f, 0f,
-                0.272f, 0.534f, 0.131f, 0f, 0f,
+                0.300f, 0.550f, 0.107f, 0f, 0f,
+                0.240f, 0.550f, 0.135f, 0f, 0f,
+                0.180f, 0.450f, 0.217f, 0f, 0f,
                 0f, 0f, 0f, 1f, 0f,
             ),
         ),
