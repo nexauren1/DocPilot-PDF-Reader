@@ -961,7 +961,6 @@ private fun ToolWorkspace(
     }
 
     Scaffold(
-        topBar = {    Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(tool.title) },
