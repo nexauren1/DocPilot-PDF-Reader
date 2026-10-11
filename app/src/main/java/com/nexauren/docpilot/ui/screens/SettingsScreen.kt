@@ -52,7 +52,7 @@ fun SettingsScreen(hasDocumentAccess: Boolean, onRequestDocumentAccess: () -> Un
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(
-                "O DocPilot, à tua maneira.",
+                "DocPilot - PDF Reader, à tua maneira.",
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(top = 8.dp),
             )
@@ -71,7 +71,7 @@ fun SettingsScreen(hasDocumentAccess: Boolean, onRequestDocumentAccess: () -> Un
                         headlineContent = { Text("Biblioteca do dispositivo") },
                         supportingContent = {
                             Text(
-                                if (hasDocumentAccess) "Acesso ativo. O DocPilot pode localizar PDFs no armazenamento partilhado."
+                                if (hasDocumentAccess) "Acesso ativo. A aplicação pode localizar PDFs no armazenamento partilhado."
                                 else "Ativa o acesso para encontrar PDFs automaticamente no dispositivo."
                             )
                         },
@@ -101,8 +101,8 @@ fun SettingsScreen(hasDocumentAccess: Boolean, onRequestDocumentAccess: () -> Un
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 ListItem(
-                    headlineContent = { Text("Sobre o DocPilot") },
-                    supportingContent = { Text("DocPilot • versão ${BuildConfig.VERSION_NAME}") },
+                    headlineContent = { Text("Sobre o DocPilot - PDF Reader") },
+                    supportingContent = { Text("DocPilot - PDF Reader • versão ${BuildConfig.VERSION_NAME}") },
                     leadingContent = { Icon(Icons.Outlined.Info, contentDescription = null) },
                 )
             }
