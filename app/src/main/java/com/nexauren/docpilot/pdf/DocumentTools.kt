@@ -128,6 +128,40 @@ object DocumentTools {
         return resolver.openAssetFileDescriptor(outputUri, "r")?.use { it.length } ?: -1L
     }
 
+    fun inspectPdf(
+        resolver: ContentResolver,
+        inputUri: Uri,
+    ): String {
+        val fileSize = runCatching {
+            resolver.openAssetFileDescriptor(inputUri, "r")?.use { it.length } ?: -1L
+        }.getOrDefault(-1L)
+
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                val info = document.documentInformation
+                val firstPageSize = if (document.numberOfPages > 0) document.getPage(0).mediaBox else null
+                return buildString {
+                    appendLine("Informações do PDF")
+                    appendLine()
+                    appendLine("Páginas: ${document.numberOfPages}")
+                    appendLine("Tamanho do ficheiro: ${formatBytes(fileSize)}")
+                    firstPageSize?.let {
+                        appendLine("Primeira página: ${it.width.toInt()} × ${it.height.toInt()} pt")
+                    }
+                    appendLine("Encriptação: ${if (document.isEncrypted) "detetada" else "não detetada"}")
+                    appendLine()
+                    appendLine("Metadados")
+                    appendLine("Título: ${info.title?.takeIf { it.isNotBlank() } ?: "Não indicado"}")
+                    appendLine("Autor: ${info.author?.takeIf { it.isNotBlank() } ?: "Não indicado"}")
+                    appendLine("Assunto: ${info.subject?.takeIf { it.isNotBlank() } ?: "Não indicado"}")
+                    appendLine("Criador: ${info.creator?.takeIf { it.isNotBlank() } ?: "Não indicado"}")
+                    appendLine("Aplicação de origem: ${info.producer?.takeIf { it.isNotBlank() } ?: "Não indicado"}")
+                }
+            }
+        }
+    }
+
     fun extractPdfText(
         resolver: ContentResolver,
         inputUri: Uri,
