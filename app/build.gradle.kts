@@ -1,5 +1,17 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+// Values are provided only by protected GitHub Actions repository secrets.
+val releaseStoreFile = System.getenv("ANDROID_KEYSTORE_PATH")
+val releaseStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+val hasProductionSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { !it.isNullOrBlank() }
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -13,12 +25,23 @@ android {
         applicationId = "com.nexauren.docpilot"
         minSdk = 24
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.1.6"
+        versionCode = 8
+        versionName = "0.1.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        create("production") {
+            if (hasProductionSigning) {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
@@ -28,9 +51,13 @@ android {
             versionNameSuffix = "-debug"
         }
         release {
-            // Installable preview build: uses the default Android debug signing identity.
-            // Replace this with a protected production keystore before a store launch.
-            signingConfig = signingConfigs.getByName("debug")
+            // Production signing is activated only when all four protected values are present.
+            // CI can build a debug-signed validation APK while secrets are being configured.
+            signingConfig = if (hasProductionSigning) {
+                signingConfigs.getByName("production")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = false
             isShrinkResources = false
             proguardFiles(
