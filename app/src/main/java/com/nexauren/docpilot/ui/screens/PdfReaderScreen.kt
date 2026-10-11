@@ -750,10 +750,19 @@ private fun renderPdfPage(
             }
 
             renderer.openPage(pageIndex).use { page ->
-                val width = targetWidth.coerceAtLeast(240)
-                val height = (width.toFloat() * page.height / page.width.toFloat())
-                    .toInt()
-                    .coerceAtLeast(1)
+                val sourceWidth = page.width.coerceAtLeast(1)
+                val sourceHeight = page.height.coerceAtLeast(1)
+                val requestedWidth = targetWidth.coerceAtLeast(240).toFloat()
+                // Avoid exceptionally tall or wide pages creating oversized bitmaps on devices
+                // with limited RAM while retaining the page's exact aspect ratio.
+                val maxDimension = 2800f
+                val scale = minOf(
+                    requestedWidth / sourceWidth.toFloat(),
+                    maxDimension / sourceWidth.toFloat(),
+                    maxDimension / sourceHeight.toFloat(),
+                )
+                val width = (sourceWidth * scale).toInt().coerceAtLeast(1)
+                val height = (sourceHeight * scale).toInt().coerceAtLeast(1)
 
                 val bitmap = Bitmap.createBitmap(
                     width,
