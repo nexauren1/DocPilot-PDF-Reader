@@ -1,5 +1,7 @@
 package com.nexauren.docpilot.ui.screens
 
+import com.nexauren.docpilot.ui.localization.localized
+
 import android.content.Context
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -93,7 +95,7 @@ fun LibraryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Biblioteca") },
+                title = { Text(localized("Biblioteca")) },
                 navigationIcon = {
                     IconButton(onClick = onOpenMenu) {
                         Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
@@ -108,14 +110,12 @@ fun LibraryScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp),
         ) {
-            Text(
-                "Os teus ficheiros",
+            Text(localized("Os teus ficheiros"),
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(top = 8.dp),
             )
             Spacer(Modifier.height(4.dp))
-            Text(
-                "Pesquisa, organiza e marca os PDFs importantes.",
+            Text(localized("Pesquisa, organiza e marca os PDFs importantes."),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -139,18 +139,15 @@ fun LibraryScreen(
                         modifier = Modifier.padding(start = 10.dp).weight(1f),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        Text(
-                            "${documents.size} documentos",
+                        Text(localized("${documents.size} documentos"),
                             style = MaterialTheme.typography.titleSmall,
                         )
-                        Text(
-                            "${favoriteUris.count { uri -> documents.any { it.uri == uri } }} favoritos",
+                        Text(localized("${favoriteUris.count { uri -> documents.any { it.uri == uri } }} favoritos"),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Text(
-                        "Neste dispositivo",
+                    Text(localized("Neste dispositivo"),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -171,11 +168,10 @@ fun LibraryScreen(
                         }
                     }
                 },
-                placeholder = { Text("Pesquisar documentos") },
+                placeholder = { Text(localized("Pesquisar documentos")) },
             )
 
-            Text(
-                "${filtered.size} resultados",
+            Text(localized("${filtered.size} resultados"),
                 modifier = Modifier.padding(bottom = 6.dp),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -188,12 +184,12 @@ fun LibraryScreen(
                 FilterChip(
                     selected = !sortByName,
                     onClick = { sortByName = false },
-                    label = { Text("Recentes") },
+                    label = { Text(localized("Recentes")) },
                 )
                 FilterChip(
                     selected = sortByName,
                     onClick = { sortByName = true },
-                    label = { Text("Nome A–Z") },
+                    label = { Text(localized("Nome A–Z")) },
                 )
                 FilterChip(
                     selected = favoritesOnly,
@@ -204,7 +200,7 @@ fun LibraryScreen(
                             contentDescription = null,
                         )
                     },
-                    label = { Text("Favoritos") },
+                    label = { Text(localized("Favoritos")) },
                 )
             }
 
