@@ -6,7 +6,7 @@ DocPilot is a free Android PDF reader and document toolkit from Nexauren. It is 
 
 - PDF reading with page navigation, selectable-text search, saved reading position, bookmarks, zoom and light/sepia/dark appearance.
 - Library with filename search, recent order, alphabetical sorting and persistent favourites.
-- PDF tools including merge, page-range split, page reordering, rotation, cropping, image-focused compression, image-to-PDF conversion, text export, metadata inspection, password protection, and visual text signatures.
+- PDF tools including merge, page-range split, page reordering, rotation, cropping, text watermarks on every page, page numbering, image-focused compression, image-to-PDF conversion, text export, metadata inspection, password protection, and visual text signatures.
 - Document scanning and image OCR where the device supports the required services.
 - Interface language options: Portuguese, English, French, Spanish and German.
 - Optional account sign-in. Local reading and document tools do not require an account.

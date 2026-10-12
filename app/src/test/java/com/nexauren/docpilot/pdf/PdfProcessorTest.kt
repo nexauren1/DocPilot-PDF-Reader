@@ -69,6 +69,23 @@ class PdfProcessorTest {
     }
 
     @Test
+    fun normalizes_watermark_text() {
+        assertEquals("DRAFT COPY", normalizeWatermarkText("  DRAFT   COPY  "))
+    }
+
+    @Test
+    fun rejects_empty_watermark_text() {
+        runCatching { normalizeWatermarkText("   ") }
+            .onSuccess { error("Expected empty watermark text to be rejected") }
+    }
+
+    @Test
+    fun rejects_watermark_text_that_is_too_long() {
+        runCatching { normalizeWatermarkText("A".repeat(81)) }
+            .onSuccess { error("Expected watermark text over 80 characters to be rejected") }
+    }
+
+    @Test
     fun formats_bytes_for_ui() {
         assertEquals("1.0 KB", formatBytes(1024))
     }
