@@ -1,49 +1,31 @@
 # DocPilot pre-release audit
 
-## Scope
+## Candidate
+DocPilot Free 0.1.14 (versionCode 15), subject to CI and real-device validation.
 
-Source-level review and first release-polish pass for DocPilot Free. Candidate version: 0.1.11, versionCode 12.
+## Changes in this release candidate
 
-## Changes in this pass
+- Added five selectable interface languages: Portuguese, English, French, Spanish and German.
+- Removed the Analytics consent card and the Analytics SDK from the app.
+- Removed internal authentication-provider wording from user-facing copy.
+- Improved reader startup so page count and first-page layout become available before full page-geometry measurement finishes.
+- Added a memory-bounded page bitmap cache, reduced the main-page render target width and added retry/error states instead of indefinite spinners when page rendering fails.
+- Added a public multilingual privacy-policy page.
+- Kept document processing on-device and account sign-in optional.
 
-- PDF pages use their measured page dimensions before a rendered bitmap appears. This should remove vertical jumps caused by replacing a fixed-height loading placeholder with a page of another size.
-- Saved reading position is restored before the current page can overwrite it.
-- Search stores text-position bounds and paints a translucent yellow highlight with an underline over matching words.
-- The Tools landing page has a clearer blue/violet hero and an accurate tool count.
-- Added a local PDF information tool for page count, file size, first-page dimensions, an encryption indicator, and available metadata.
-- Replaced the misleading “more” icon that actually opened files with a clear open-document arrow.
-- Made the main app label “DocPilot” and strengthened typography hierarchy.
-- Replaced stale and duplicated README entries with a clearer current feature list and known limitations.
+## Existing capabilities
 
-## Current feature inventory
+Reader: multi-page rendering, page navigation, selectable-text search, zoom/pan, saved position, bookmarks and light/sepia/dark appearance.
 
-Reader: multi-page rendering, thumbnails, page navigation, page bookmark, saved position, progress, text search, pinch-to-zoom/pan/reset, reflow reading mode.
+Tools: PDF merge/split/reorder/rotate/crop, image-to-PDF conversion, image OCR, document scanning, PDF text export, metadata inspection, image-focused compression, password protection, page-image export and visual text signature.
 
-Free tools: merge PDF, split page range, reorder pages, rotate all pages, image-oriented compression, images-to-PDF, scanner, image OCR, PDF text export, PDF metadata inspection, password protection, visual text signature.
+Library: filename search, recent order, alphabetical sorting and persistent favourites.
 
-Account/privacy: optional Firebase email/password and Google sign-in; Analytics collection defaults off and is enabled only by explicit user choice. PDF content is processed locally.
+## Required before store submission
 
-## Must validate before store submission
-
-- Confirm highlight alignment on portrait, landscape, cropped, rotated, and multi-column PDFs. Text geometry varies by document, so device tests are required.
-- Test mixed page sizes and very large PDFs for open latency, scroll stability, memory use, thumbnail scrolling, and zoom.
-- Verify saved reading position when reopening long PDFs and switching between documents.
-- Run unit tests and CI builds; inspect the production signature and install the signed APK on a physical Android device.
-- Test Google sign-in after confirming that correct SHA-1 and SHA-256 fingerprints are registered in Firebase. Source review cannot prove OAuth end-to-end.
-- Test account create/sign-in/password reset/sign-out and Analytics opt-in/opt-out on-device.
-- Test scanner availability with and without compatible Google Play services.
-- Test password-protected, malformed, rotated, vector-heavy, and image-heavy PDFs, including compression and metadata behavior.
-- Test save/share flows for each result type and verify output filenames.
-- Review broad storage permission and each distribution channel's requirements while preserving the system document picker flow.
-
-## Research-backed future candidates
-
-Official Jetpack PDF APIs remain in alpha as of this research pass, so the current renderer is retained while reader behavior is stabilized. Feature ideas from established mobile readers include:
-
-1. Export selected pages as image files.
-2. Page-specific rotation/crop and drag-to-reorder thumbnails.
-3. Favourites and user-created folders.
-4. Annotation and highlighter tools.
-5. Print/share polish, night/page-appearance settings, and OCR for multipage scanned PDFs.
-
-These are candidates, not implemented features. Reader accuracy and reliable saving take priority over expanding the catalogue.
+- CI unit tests, debug build, production release build and APK signature verification must pass.
+- Install the exact signed APK on a physical Android device.
+- Test short and very long PDFs, scanned and password-protected files, mixed page sizes, thumbnails, search, saved position and page-render retries.
+- Verify account creation, sign-in, sign-out and password reset on-device.
+- Review storage access and ensure each save/share flow produces the expected file.
+- Confirm the hosted privacy policy is publicly reachable before placing the URL in a store listing.
