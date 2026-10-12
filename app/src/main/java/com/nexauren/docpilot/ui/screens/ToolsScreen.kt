@@ -511,9 +511,9 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                                             modifier = Modifier.size(25.dp),
                                         )
                                     }
-                                    Text(card.title, style = MaterialTheme.typography.titleSmall)
+                                    Text(localized(card.title), style = MaterialTheme.typography.titleSmall)
                                     Text(
-                                        card.subtitle,
+                                        localized(card.subtitle),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -931,7 +931,7 @@ private fun SecurityWorkspace(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(tool.title) },
+                title = { Text(localized(tool.title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
