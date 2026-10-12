@@ -26,7 +26,7 @@ main{padding:25px 0 42px}.toolbar,.policy{background:#fff;border:1px solid var(-
 <h2>3. Conta opcional e autenticação</h2>
 <p>A leitura e as ferramentas locais não exigem uma conta. Se optares por iniciar sessão com e-mail e palavra-passe ou com Google, o serviço de autenticação processa os identificadores necessários para iniciar sessão, proteger a conta e permitir a recuperação da palavra-passe. A autenticação é disponibilizada pelo Firebase Authentication; o início de sessão Google envolve também os serviços Google. Não precisas de iniciar sessão para abrir ou tratar PDFs localmente.</p>
 <h2>4. Análise de utilização e publicidade</h2>
-<p>Esta versão não inclui Google Analytics, não pede autorização para recolher estatísticas de utilização e não integra anúncios. Não recolhemos deliberadamente eventos de utilização através de uma ferramenta de análise. O Android ou serviços de terceiros podem tratar dados técnicos segundo as suas próprias políticas.</p>
+<p>Esta versão não inclui a biblioteca Google Analytics como ferramenta separada de análise e não integra anúncios. A aplicação não pede uma permissão Android específica para Google Analytics. No entanto, as bibliotecas Google ML Kit usadas para digitalização e reconhecimento de texto podem enviar à Google métricas técnicas de desempenho, utilização e diagnóstico, conforme a documentação do ML Kit. O Google Play services também pode descarregar componentes do scanner. Consulte as políticas dos fornecedores para mais detalhes.</p>
 <h2>5. Armazenamento e conservação</h2>
 <p>A lista de documentos recentes, os favoritos e as preferências são guardados localmente no dispositivo. Os ficheiros que guardares noutras pastas permanecem aí até os moveres ou eliminares. Ao desinstalar a aplicação, o Android pode remover os dados privados da aplicação; os ficheiros guardados fora dessa área têm de ser eliminados separadamente.</p>
 <h2>6. Partilha e terceiros</h2>
@@ -37,7 +37,7 @@ main{padding:25px 0 42px}.toolbar,.policy{background:#fff;border:1px solid var(-
 <p>Dependendo do país onde resides, podes ter direitos de acesso, correção, eliminação, oposição ou portabilidade relativos a dados pessoais associados à autenticação. Para pedidos de privacidade ou perguntas, abre uma questão no repositório público do projeto: <a href="https://github.com/nexauren1/DocPilot-PDF-Reader/issues">contactar a equipa DocPilot</a>. Não incluas palavras-passe nem dados pessoais desnecessários.</p>
 <h2>9. Alterações</h2>
 <p>Esta página pode ser atualizada quando a aplicação ou as leis aplicáveis mudarem. A data acima identifica a última revisão publicada.</p>
-<p class="note">Em resumo: processamento de documentos no dispositivo, conta opcional, sem anúncios e sem Google Analytics nesta versão.</p>
+<p class="note">Em resumo: os documentos são processados no dispositivo; a conta é opcional; não há anúncios nem biblioteca Google Analytics separada. O ML Kit pode enviar métricas técnicas de diagnóstico à Google.</p>
 </section>
 
 <section class="policy" data-lang="en" lang="en" hidden>
@@ -50,7 +50,7 @@ main{padding:25px 0 42px}.toolbar,.policy{background:#fff;border:1px solid var(-
 <h2>3. Optional account and authentication</h2>
 <p>Reading and local tools do not require an account. If you choose email/password or Google sign-in, the authentication service processes identifiers needed to sign in, protect the account and support password recovery. Authentication is provided by Firebase Authentication; Google sign-in also involves Google services. Sign-in is not required to open or process PDFs locally.</p>
 <h2>4. Usage analytics and advertising</h2>
-<p>This version does not include Google Analytics, does not ask permission to collect usage statistics, and has no integrated ads. We do not deliberately collect usage events through an analytics tool. Android or third-party services may process technical data under their own policies.</p>
+<p>This version does not include the Google Analytics library as a separate analytics product and has no integrated ads. The app does not request a dedicated Android permission for Google Analytics. However, the Google ML Kit libraries used for document scanning and text recognition may send technical performance, usage and diagnostic metrics to Google, as described in ML Kit documentation. Google Play services may also download scanner components. See the providers’ policies for details.</p>
 <h2>5. Storage and retention</h2>
 <p>Your recent-document list, favourites and preferences are stored locally on your device. Files saved elsewhere remain there until you move or delete them. When you uninstall the app, Android may remove private app data; files saved outside that private area need to be deleted separately.</p>
 <h2>6. Sharing and third parties</h2>
@@ -61,7 +61,7 @@ main{padding:25px 0 42px}.toolbar,.policy{background:#fff;border:1px solid var(-
 <p>Depending on your country, you may have rights to access, correct, delete, object to or transfer personal data associated with authentication. For privacy requests or questions, open an issue in the public project repository: <a href="https://github.com/nexauren1/DocPilot-PDF-Reader/issues">contact the DocPilot team</a>. Do not include passwords or unnecessary personal information.</p>
 <h2>9. Changes</h2>
 <p>This page may be updated when the app or applicable laws change. The date above identifies the latest published revision.</p>
-<p class="note">In brief: documents are processed on-device, accounts are optional, and this version has no ads or Google Analytics.</p>
+<p class="note">In brief: documents are processed on-device, accounts are optional, and there are no ads or separate Google Analytics library. ML Kit may send technical diagnostic metrics to Google.</p>
 </section>
 
 <section class="policy" data-lang="fr" lang="fr" hidden>
@@ -74,7 +74,7 @@ main{padding:25px 0 42px}.toolbar,.policy{background:#fff;border:1px solid var(-
 <h2>3. Compte facultatif et authentification</h2>
 <p>La lecture et les outils locaux ne nécessitent pas de compte. Si vous choisissez une connexion par e-mail/mot de passe ou par Google, le service d’authentification traite les identifiants nécessaires à la connexion, à la protection du compte et à la récupération du mot de passe. L’authentification est fournie par Firebase Authentication et la connexion Google implique également les services Google. La connexion n’est pas nécessaire pour traiter des PDF localement.</p>
 <h2>4. Analyse d’utilisation et publicité</h2>
-<p>Cette version n’intègre pas Google Analytics, ne demande pas l’autorisation de collecter des statistiques d’utilisation et ne contient pas de publicité intégrée. Nous ne collectons pas délibérément d’événements d’utilisation au moyen d’un outil d’analyse. Android ou des services tiers peuvent traiter des données techniques selon leurs propres politiques.</p>
+<p>Cette version n’intègre pas la bibliothèque Google Analytics comme outil d’analyse distinct et ne contient pas de publicité intégrée. L’application ne demande pas d’autorisation Android spécifique pour Google Analytics. Toutefois, les bibliothèques Google ML Kit utilisées pour la numérisation et la reconnaissance de texte peuvent envoyer à Google des métriques techniques de performance, d’utilisation et de diagnostic, conformément à la documentation ML Kit. Google Play services peut également télécharger des composants du scanner. Consultez les politiques des fournisseurs pour plus de détails.</p>
 <h2>5. Stockage et conservation</h2>
 <p>La liste des documents récents, les favoris et les préférences sont conservés localement sur votre appareil. Les fichiers enregistrés ailleurs y restent jusqu’à ce que vous les déplaciez ou les supprimiez. Lors de la désinstallation, Android peut supprimer les données privées de l’application ; les fichiers enregistrés en dehors de cet espace doivent être supprimés séparément.</p>
 <h2>6. Partage et services tiers</h2>
@@ -85,7 +85,7 @@ main{padding:25px 0 42px}.toolbar,.policy{background:#fff;border:1px solid var(-
 <p>Selon votre pays, vous pouvez disposer de droits d’accès, de rectification, d’effacement, d’opposition ou de portabilité concernant les données liées à l’authentification. Pour toute demande de confidentialité, ouvrez un ticket dans le dépôt public : <a href="https://github.com/nexauren1/DocPilot-PDF-Reader/issues">contacter l’équipe DocPilot</a>. Ne partagez pas de mots de passe ni de données personnelles inutiles.</p>
 <h2>9. Modifications</h2>
 <p>Cette page peut être mise à jour lorsque l’application ou la législation évolue. La date ci-dessus indique la dernière révision publiée.</p>
-<p class="note">En bref : traitement local des documents, compte facultatif, aucune publicité et aucun Google Analytics dans cette version.</p>
+<p class="note">En bref : traitement local des documents, compte facultatif, aucune publicité ni bibliothèque Google Analytics distincte. ML Kit peut envoyer des métriques techniques de diagnostic à Google.</p>
 </section>
 
 <section class="policy" data-lang="es" lang="es" hidden>
@@ -98,7 +98,7 @@ main{padding:25px 0 42px}.toolbar,.policy{background:#fff;border:1px solid var(-
 <h2>3. Cuenta opcional y autenticación</h2>
 <p>La lectura y las herramientas locales no requieren una cuenta. Si eliges iniciar sesión con correo y contraseña o con Google, el servicio de autenticación procesa los identificadores necesarios para iniciar sesión, proteger la cuenta y recuperar la contraseña. La autenticación la proporciona Firebase Authentication; el inicio de sesión con Google también implica servicios de Google. No necesitas iniciar sesión para procesar PDF localmente.</p>
 <h2>4. Analítica de uso y publicidad</h2>
-<p>Esta versión no incluye Google Analytics, no pide permiso para recopilar estadísticas de uso y no integra anuncios. No recopilamos deliberadamente eventos de uso mediante una herramienta de análisis. Android o servicios de terceros pueden procesar datos técnicos según sus propias políticas.</p>
+<p>Esta versión no incluye la biblioteca Google Analytics como herramienta de análisis independiente y no integra anuncios. La aplicación no solicita un permiso específico de Android para Google Analytics. Sin embargo, las bibliotecas Google ML Kit utilizadas para escanear documentos y reconocer texto pueden enviar a Google métricas técnicas de rendimiento, uso y diagnóstico, según la documentación de ML Kit. Google Play services también puede descargar componentes del escáner. Consulte las políticas de los proveedores para obtener más información.</p>
 <h2>5. Almacenamiento y conservación</h2>
 <p>La lista de documentos recientes, los favoritos y las preferencias se guardan localmente en tu dispositivo. Los archivos guardados en otras carpetas permanecen allí hasta que los muevas o elimines. Al desinstalar la aplicación, Android puede borrar los datos privados de la app; los archivos guardados fuera de esa área deben eliminarse por separado.</p>
 <h2>6. Compartir y servicios de terceros</h2>
@@ -109,7 +109,7 @@ main{padding:25px 0 42px}.toolbar,.policy{background:#fff;border:1px solid var(-
 <p>Según tu país, puedes tener derechos de acceso, rectificación, eliminación, oposición o portabilidad sobre datos personales asociados a la autenticación. Para solicitudes de privacidad, abre una incidencia en el repositorio público: <a href="https://github.com/nexauren1/DocPilot-PDF-Reader/issues">contactar con el equipo de DocPilot</a>. No incluyas contraseñas ni información personal innecesaria.</p>
 <h2>9. Cambios</h2>
 <p>Esta página puede actualizarse cuando cambie la aplicación o la legislación aplicable. La fecha indicada identifica la última revisión publicada.</p>
-<p class="note">En resumen: documentos procesados localmente, cuenta opcional, sin anuncios y sin Google Analytics en esta versión.</p>
+<p class="note">En resumen: documentos procesados localmente, cuenta opcional, sin anuncios ni biblioteca independiente de Google Analytics. ML Kit puede enviar métricas técnicas de diagnóstico a Google.</p>
 </section>
 
 <section class="policy" data-lang="de" lang="de" hidden>
@@ -122,7 +122,7 @@ main{padding:25px 0 42px}.toolbar,.policy{background:#fff;border:1px solid var(-
 <h2>3. Optionales Konto und Anmeldung</h2>
 <p>Lesen und lokale Werkzeuge benötigen kein Konto. Wenn du dich mit E-Mail/Passwort oder Google anmeldest, verarbeitet der Authentifizierungsdienst Kennungen, die für Anmeldung, Kontoschutz und Passwortwiederherstellung erforderlich sind. Die Anmeldung wird durch Firebase Authentication bereitgestellt; Google-Anmeldung nutzt zusätzlich Google-Dienste. Für lokale PDF-Verarbeitung ist keine Anmeldung nötig.</p>
 <h2>4. Nutzungsanalyse und Werbung</h2>
-<p>Diese Version enthält kein Google Analytics, fragt nicht nach einer Erlaubnis zur Erfassung von Nutzungsstatistiken und enthält keine integrierte Werbung. Wir erfassen nicht bewusst Nutzungsereignisse über ein Analysewerkzeug. Android oder Drittanbieter können technische Daten gemäß ihren eigenen Richtlinien verarbeiten.</p>
+<p>Diese Version enthält die Google-Analytics-Bibliothek nicht als separates Analyseprodukt und enthält keine integrierte Werbung. Die App fordert keine spezielle Android-Berechtigung für Google Analytics an. Die verwendeten Google-ML-Kit-Bibliotheken für Dokumentenscan und Texterkennung können jedoch technische Leistungs-, Nutzungs- und Diagnosemetriken an Google senden, wie in der ML-Kit-Dokumentation beschrieben. Google Play-Dienste können außerdem Scanner-Komponenten herunterladen. Weitere Informationen finden Sie in den Datenschutzrichtlinien der Anbieter.</p>
 <h2>5. Speicherung und Aufbewahrung</h2>
 <p>Die Liste zuletzt geöffneter Dokumente, Favoriten und Einstellungen werden lokal auf deinem Gerät gespeichert. Anderswo gespeicherte Dateien bleiben dort, bis du sie verschiebst oder löschst. Bei der Deinstallation kann Android private App-Daten entfernen; außerhalb dieses Bereichs gespeicherte Dateien müssen separat gelöscht werden.</p>
 <h2>6. Teilen und Dienste Dritter</h2>
@@ -133,7 +133,7 @@ main{padding:25px 0 42px}.toolbar,.policy{background:#fff;border:1px solid var(-
 <p>Je nach Land hast du möglicherweise Rechte auf Auskunft, Berichtigung, Löschung, Widerspruch oder Übertragbarkeit personenbezogener Daten zur Anmeldung. Für Datenschutzanfragen öffne ein Ticket im öffentlichen Projektarchiv: <a href="https://github.com/nexauren1/DocPilot-PDF-Reader/issues">DocPilot-Team kontaktieren</a>. Gib keine Passwörter oder unnötigen persönlichen Daten an.</p>
 <h2>9. Änderungen</h2>
 <p>Diese Seite kann bei Änderungen der App oder des geltenden Rechts aktualisiert werden. Das Datum oben zeigt die letzte veröffentlichte Überarbeitung.</p>
-<p class="note">Kurz gesagt: Dokumente werden lokal verarbeitet, Konten sind optional, und diese Version enthält weder Werbung noch Google Analytics.</p>
+<p class="note">Kurz gesagt: Dokumente werden lokal verarbeitet, Konten sind optional, es gibt keine Werbung und keine separate Google-Analytics-Bibliothek. ML Kit kann technische Diagnosemetriken an Google senden.</p>
 </section>
 </main>
 <footer class="footer wrap">DocPilot · Nexauren · <a href="https://github.com/nexauren1/DocPilot-PDF-Reader">Projektseite auf GitHub</a></footer>
