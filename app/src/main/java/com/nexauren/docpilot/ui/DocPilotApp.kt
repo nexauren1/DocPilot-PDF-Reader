@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import com.nexauren.docpilot.ui.localization.LText
+import com.nexauren.docpilot.ui.localization.DocPilotLocalization
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -76,6 +77,7 @@ private enum class Destination(val label: String, val icon: androidx.compose.ui.
 fun DocPilotApp() {
     val context = LocalContext.current
     var destination by remember { mutableStateOf(Destination.HOME) }
+    var language by remember { mutableStateOf(DocPilotLocalization.language(context)) }
     var documents by remember { mutableStateOf(loadDocuments(context)) }
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
     var hasDocumentAccess by remember { mutableStateOf(DocumentAccess.hasAccess(context)) }
@@ -276,6 +278,11 @@ fun DocPilotApp() {
 
                     Destination.SETTINGS -> SettingsScreen(
                         hasDocumentAccess = hasDocumentAccess,
+                        selectedLanguage = language,
+                        onLanguageChanged = { newLanguage ->
+                            DocPilotLocalization.setLanguage(context, newLanguage)
+                            language = newLanguage
+                        },
                         onRequestDocumentAccess = { requestDocumentAccess() },
                         onOpenMenu = { scope.launch { drawerState.open() } },
                     )
