@@ -227,7 +227,7 @@ fun DocPilotApp() {
                             selected = destination == item,
                             onClick = { destination = item },
                             icon = { Icon(item.icon, contentDescription = localized(item.label)) },
-                            label = { Text(item.label) },
+                            label = { Text(localized(item.label)) },
                         )
                     }
                 }
