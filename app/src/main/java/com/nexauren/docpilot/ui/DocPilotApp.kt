@@ -1,5 +1,7 @@
 package com.nexauren.docpilot.ui
 
+import com.nexauren.docpilot.ui.localization.localized
+
 import android.content.Context
 import android.content.Intent
 import android.Manifest
@@ -181,14 +183,12 @@ fun DocPilotApp() {
                         .fillMaxWidth()
                         .padding(vertical = 20.dp),
                 ) {
-                    Text(
-                        "DocPilot",
+                    Text(localized("DocPilot"),
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
                     )
                     Spacer(androidx.compose.ui.Modifier.height(4.dp))
-                    Text(
-                        "Leitor e gestor de PDFs",
+                    Text(localized("Leitor e gestor de PDFs"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
