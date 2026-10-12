@@ -852,53 +852,54 @@ private fun renderPdfPage(
 ): Bitmap {
     val cacheKey = "$uriString#$pageIndex@$targetWidth"
     PAGE_BITMAP_CACHE.get(cacheKey)?.let { return it }
-    synchronized(PDF_RENDER_LOCK) {
-        PAGE_BITMAP_CACHE.get(cacheKey)?.let { return it }
-        val uri = android.net.Uri.parse(uriString)
-        context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
-            requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
 
-            PdfRenderer(descriptor).use { renderer ->
-            require(pageIndex in 0 until renderer.pageCount) {
-                "Página fora do intervalo."
-            }
+    return synchronized(PDF_RENDER_LOCK) {
+        PAGE_BITMAP_CACHE.get(cacheKey) ?: run {
+            val uri = android.net.Uri.parse(uriString)
+            context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
+                requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
 
-            renderer.openPage(pageIndex).use { page ->
-                val sourceWidth = page.width.coerceAtLeast(1)
-                val sourceHeight = page.height.coerceAtLeast(1)
-                PAGE_ASPECT_RATIOS["$uriString#$pageIndex"] =
-                    sourceWidth.toFloat() / sourceHeight.toFloat()
-                val requestedWidth = targetWidth.coerceAtLeast(180).toFloat()
-                // Smaller render targets and a bounded cache keep scrolling responsive on
-                // entry-level devices while preserving enough detail for normal reading.
-                val maxDimension = 1800f
-                val scale = minOf(
-                    requestedWidth / sourceWidth.toFloat(),
-                    maxDimension / sourceWidth.toFloat(),
-                    maxDimension / sourceHeight.toFloat(),
-                )
-                val width = (sourceWidth * scale).toInt().coerceAtLeast(1)
-                val height = (sourceHeight * scale).toInt().coerceAtLeast(1)
+                PdfRenderer(descriptor).use { renderer ->
+                    require(pageIndex in 0 until renderer.pageCount) {
+                        "Página fora do intervalo."
+                    }
 
-                val bitmap = Bitmap.createBitmap(
-                    width,
-                    height,
-                    Bitmap.Config.ARGB_8888,
-                )
-                bitmap.eraseColor(android.graphics.Color.WHITE)
+                    renderer.openPage(pageIndex).use { page ->
+                        val sourceWidth = page.width.coerceAtLeast(1)
+                        val sourceHeight = page.height.coerceAtLeast(1)
+                        PAGE_ASPECT_RATIOS["$uriString#$pageIndex"] =
+                            sourceWidth.toFloat() / sourceHeight.toFloat()
+                        val requestedWidth = targetWidth.coerceAtLeast(180).toFloat()
+                        // Bound page dimensions to reduce memory pressure on entry-level devices.
+                        val maxDimension = 1800f
+                        val scale = minOf(
+                            requestedWidth / sourceWidth.toFloat(),
+                            maxDimension / sourceWidth.toFloat(),
+                            maxDimension / sourceHeight.toFloat(),
+                        )
+                        val width = (sourceWidth * scale).toInt().coerceAtLeast(1)
+                        val height = (sourceHeight * scale).toInt().coerceAtLeast(1)
+                        val bitmap = Bitmap.createBitmap(
+                            width,
+                            height,
+                            Bitmap.Config.ARGB_8888,
+                        )
+                        bitmap.eraseColor(android.graphics.Color.WHITE)
 
-                try {
-                    page.render(
-                        bitmap,
-                        null,
-                        null,
-                        PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY,
-                    )
-                    PAGE_BITMAP_CACHE.put(cacheKey, bitmap)
-                    return bitmap
-                } catch (error: Exception) {
-                    bitmap.recycle()
-                    throw error
+                        try {
+                            page.render(
+                                bitmap,
+                                null,
+                                null,
+                                PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY,
+                            )
+                            PAGE_BITMAP_CACHE.put(cacheKey, bitmap)
+                            bitmap
+                        } catch (error: Exception) {
+                            bitmap.recycle()
+                            throw error
+                        }
+                    }
                 }
             }
         }
