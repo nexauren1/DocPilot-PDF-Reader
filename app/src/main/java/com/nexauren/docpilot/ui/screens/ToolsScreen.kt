@@ -1252,7 +1252,7 @@ private fun ToolWorkspace(
                         onValueChange = { pageNumber = it.filter(Char::isDigit) },
                         label = { Text(localized("Número da página")) },
                         supportingText = {
-                            Text("Escolhe um valor entre 1 e ${detectedPageCount ?: \"…\"}")
+                            Text("Escolhe um valor entre 1 e ${detectedPageCount ?: "…"}")
                         },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
