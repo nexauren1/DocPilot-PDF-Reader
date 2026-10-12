@@ -6,8 +6,8 @@ DocPilot is a free, Android-first PDF reader and document toolkit from Nexauren.
 
 - **Free first:** the reader and current document tools stay available without a subscription.
 - **Private by default:** PDF files are opened and processed on the device; document contents and filenames are not sent to DocPilot analytics.
-- **Account optional:** Firebase Authentication supports email/password and Google sign-in from Settings, but reading does not require an account.
-- **Analytics by consent:** Google Analytics collection is off until the user enables it in Settings.
+- **Account optional:** Optional account sign-in supports email/password and Google sign-in from Settings, but reading does not require an account.
+- **No usage analytics:** Google Analytics is not included in the app build.
 - **Clear result flow:** choose a document, configure a tool, process a copy, review the result, and save it.
 
 ## Reader
@@ -49,7 +49,7 @@ The visual signature is not a certificate-backed digital signature. Compression 
 
 ## Privacy and storage
 
-The app uses Android's system document picker as a private, per-file access option. Users may also grant wider storage access to discover PDFs throughout the device. Selected PDFs and images are not uploaded to a DocPilot server. Firebase is used for optional authentication, and analytics collection is limited to cases where the user explicitly opts in.
+The app uses Android's system document picker as a per-file access option. Users may also grant wider storage access to discover PDFs throughout the device. Selected PDFs and images are processed locally by DocPilot and are not uploaded to a DocPilot document server. Optional account sign-in is handled by the authentication provider. Usage analytics are not included.
 
 ## Build and release
 
@@ -57,14 +57,7 @@ The app uses Android's system document picker as a private, per-file access opti
 - Application ID: `com.nexauren.docpilot`
 - GitHub Actions runs JVM tests and builds the debug APK; it validates a production-signed release when signing secrets are present.
 
-Every production release must use these four GitHub Actions secrets:
-
-- `SIGNING_KEYSTORE_BASE64`
-- `SIGNING_KEYSTORE_PASSWORD`
-- `SIGNING_KEY_ALIAS`
-- `SIGNING_KEY_PASSWORD`
-
-The release workflow blocks publishing if the four secrets are missing or incomplete. Keep the persistent signing key and its passwords backed up privately. Never commit the keystore or expose secret values in source code, Issues, or chat.
+Production builds are signed in the automated release pipeline using protected repository configuration. Signing material is kept outside the source code and must never be committed or shared publicly.
 
 ## Candidates for a future iteration
 
