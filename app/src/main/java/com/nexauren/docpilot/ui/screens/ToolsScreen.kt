@@ -584,7 +584,7 @@ private fun UtilityWorkspace(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(title) },
+                title = { Text(localized(title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
@@ -868,8 +868,8 @@ private fun WorkspaceHero(
                     Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(29.dp))
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(title, style = MaterialTheme.typography.titleLarge)
-                    Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(localized(title), style = MaterialTheme.typography.titleLarge)
+                    Text(localized(subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -903,7 +903,7 @@ private fun ProcessingPanel(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(7.dp),
             ) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(localized(title), style = MaterialTheme.typography.titleMedium)
                 Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LinearProgressIndicator(color = accent, modifier = Modifier.fillMaxWidth())
             }
@@ -1107,7 +1107,7 @@ private fun ToolWorkspace(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(tool.title) },
+                title = { Text(localized(tool.title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
