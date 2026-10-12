@@ -59,7 +59,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import com.nexauren.docpilot.ui.localization.LText
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TopAppBar
@@ -268,9 +268,9 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
             TopAppBar(
                 title = {
                     Column {
-                        Text(document.name, maxLines = 1, style = MaterialTheme.typography.titleMedium)
+                        LText(document.name, maxLines = 1, style = MaterialTheme.typography.titleMedium)
                         if (pageCount > 0) {
-                            Text(
+                            LText(
                                 text = "${currentPage} / ${pageCount}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -385,7 +385,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         jumpPageText = currentPage.toString()
                         jumpDialog = true
                     }) {
-                        Text("Página ${currentPage} de ${pageCount}")
+                        LText("Página ${currentPage} de ${pageCount}")
                     }
 
                     IconButton(
@@ -408,7 +408,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxSize().padding(padding),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(error!!, modifier = Modifier.padding(28.dp))
+                    LText(error!!, modifier = Modifier.padding(28.dp))
                 }
             }
 
@@ -440,7 +440,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
+                        LText(
                             "Página",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -449,7 +449,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                             FilterChip(
                                 selected = appearance == option,
                                 onClick = { appearance = option },
-                                label = { Text(option.title) },
+                                label = { LText(option.title) },
                             )
                         }
                     }
@@ -473,8 +473,8 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
                                         shape = RoundedCornerShape(14.dp),
-                                        label = { Text("Pesquisar neste PDF") },
-                                        placeholder = { Text("Escreve uma palavra ou frase") },
+                                        label = { LText("Pesquisar neste PDF") },
+                                        placeholder = { LText("Escreve uma palavra ou frase") },
                                         trailingIcon = {
                                             if (searchQuery.isNotEmpty()) {
                                                 IconButton(onClick = { searchQuery = ""; searchMessage = null }) {
@@ -493,7 +493,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                     }
                                 }
                                 if (searchQuery.isNotBlank()) {
-                                    Text(
+                                    LText(
                                         "Termo pesquisado: “${searchQuery.trim()}”",
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.primary,
@@ -506,9 +506,9 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                 ) {
                                     if (searching) {
                                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                        Text("A procurar enquanto escreves…", style = MaterialTheme.typography.bodySmall)
+                                        LText("A procurar enquanto escreves…", style = MaterialTheme.typography.bodySmall)
                                     } else if (searchResults.isNotEmpty()) {
-                                        Text(
+                                        LText(
                                             "Página ${searchResults[searchResultIndex]} • ${searchResultIndex + 1}/${searchResults.size}",
                                             modifier = Modifier.weight(1f),
                                             style = MaterialTheme.typography.bodySmall,
@@ -527,7 +527,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                             Icon(Icons.Outlined.ChevronRight, contentDescription = "Resultado seguinte")
                                         }
                                     } else {
-                                        Text(
+                                        LText(
                                             "Os resultados aparecem automaticamente.",
                                             modifier = Modifier.weight(1f),
                                             style = MaterialTheme.typography.bodySmall,
@@ -536,7 +536,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                     }
                                 }
                                 searchMessage?.let {
-                                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    LText(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
@@ -550,17 +550,17 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                 .padding(horizontal = 20.dp, vertical = 18.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Text(
+                            LText(
                                 "MODO DE LEITURA",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
-                            Text(
+                            LText(
                                 document.name,
                                 style = MaterialTheme.typography.headlineSmall,
                             )
                             SelectionContainer {
-                                Text(
+                                LText(
                                     readingText,
                                     style = MaterialTheme.typography.bodyLarge.copy(
                                         lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.25f,
@@ -609,13 +609,13 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     if (jumpDialog) {
         AlertDialog(
             onDismissRequest = { jumpDialog = false },
-            title = { Text("Ir para página") },
+            title = { LText("Ir para página") },
             text = {
                 OutlinedTextField(
                     value = jumpPageText,
                     onValueChange = { jumpPageText = it.filter(Char::isDigit) },
-                    label = { Text("Número da página") },
-                    supportingText = { Text("Este PDF tem ${pageCount} páginas.") },
+                    label = { LText("Número da página") },
+                    supportingText = { LText("Este PDF tem ${pageCount} páginas.") },
                     singleLine = true,
                 )
             },
@@ -626,10 +626,10 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         scope.launch { pageListState.animateScrollToItem(target - 1) }
                         jumpDialog = false
                     }
-                }) { Text("Ir") }
+                }) { LText("Ir") }
             },
             dismissButton = {
-                TextButton(onClick = { jumpDialog = false }) { Text("Cancelar") }
+                TextButton(onClick = { jumpDialog = false }) { LText("Cancelar") }
             },
         )
     }
