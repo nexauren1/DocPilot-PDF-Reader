@@ -17,7 +17,7 @@ DocPilot Free 0.1.15 (versionCode 16), subject to CI and real-device validation.
 
 Reader: multi-page rendering, page navigation, selectable-text search, zoom/pan, saved position, bookmarks and light/sepia/dark appearance.
 
-Tools: PDF merge/split/reorder/rotate/crop/watermark, image-to-PDF conversion, image OCR, document scanning, PDF text export, metadata inspection, image-focused compression, password protection, page-image export and visual text signature.
+Tools: PDF merge/split/reorder/rotate/crop/watermark/page numbering, image-to-PDF conversion, image OCR, document scanning, PDF text export, metadata inspection, image-focused compression, password protection, page-image export and visual text signature.
 
 Library: filename search, recent order, alphabetical sorting and persistent favourites.
 
