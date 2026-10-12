@@ -485,7 +485,7 @@ private fun QuickActionCard(
             ) {
                 Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(23.dp))
             }
-            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(localized(title), style = MaterialTheme.typography.titleSmall)
             Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
