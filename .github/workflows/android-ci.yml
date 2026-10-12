@@ -2,7 +2,7 @@ name: Android CI - DocPilot PDF Reader
 
 on:
   push:
-    branches: ["main", "foundation"]
+    branches: ["main", "foundation", "release/**"]
   pull_request:
     branches: ["main"]
 
@@ -65,7 +65,7 @@ jobs:
             echo "production=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Production signing secrets are not configured. CI will build only the debug APK; it will not publish a misleading release APK."
           else
-            echo "::error::Configure all four signing secrets together: SIGNING_KEYSTORE_BASE64, SIGNING_KEYSTORE_PASSWORD, SIGNING_KEY_ALIAS and SIGNING_KEY_PASSWORD."
+            echo "::error::Configure all production signing values together in repository Actions settings."
             exit 1
           fi
 
