@@ -2,6 +2,7 @@ package com.nexauren.docpilot.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
+import android.util.LruCache
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.text.TextPosition
@@ -738,7 +739,7 @@ private fun PdfPage(
     LaunchedEffect(uri, pageIndex) {
         bitmap = withContext(Dispatchers.IO) {
             runCatching {
-                renderPdfPage(context, uri, pageIndex, 1400)
+                renderPdfPage(context, uri, pageIndex, 1000)
             }.getOrNull()
         }
     }
@@ -825,12 +826,20 @@ private fun openPdfPageAspectRatios(
     }
 }
 
+private val renderedPageCache = object : LruCache<String, Bitmap>(
+    (Runtime.getRuntime().maxMemory() / 1024 / 12).toInt().coerceAtLeast(4 * 1024),
+) {
+    override fun sizeOf(key: String, value: Bitmap): Int = (value.byteCount / 1024).coerceAtLeast(1)
+}
+
 private fun renderPdfPage(
     context: android.content.Context,
     uriString: String,
     pageIndex: Int,
     targetWidth: Int,
 ): Bitmap {
+    val cacheKey = "$uriString|$pageIndex|$targetWidth"
+    renderedPageCache.get(cacheKey)?.let { return it }
     val uri = android.net.Uri.parse(uriString)
     context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
         requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
@@ -846,7 +855,7 @@ private fun renderPdfPage(
                 val requestedWidth = targetWidth.coerceAtLeast(240).toFloat()
                 // Avoid exceptionally tall or wide pages creating oversized bitmaps on devices
                 // with limited RAM while retaining the page's exact aspect ratio.
-                val maxDimension = 2800f
+                val maxDimension = 1800f
                 val scale = minOf(
                     requestedWidth / sourceWidth.toFloat(),
                     maxDimension / sourceWidth.toFloat(),
@@ -868,6 +877,7 @@ private fun renderPdfPage(
                     null,
                     PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY,
                 )
+                renderedPageCache.put(cacheKey, bitmap)
                 return bitmap
             }
         }
