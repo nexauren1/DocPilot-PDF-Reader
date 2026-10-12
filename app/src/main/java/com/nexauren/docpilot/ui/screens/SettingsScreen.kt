@@ -3,6 +3,9 @@ package com.nexauren.docpilot.ui.screens
 import com.nexauren.docpilot.ui.localization.localized
 
 import android.util.Patterns
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -424,6 +427,27 @@ fun SettingsScreen(
                         leadingContent = { Icon(Icons.Outlined.Security, contentDescription = null) },
                     )
                 }
+            }
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                ListItem(
+                    modifier = Modifier.clickable {
+                        runCatching {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://nexauren1.github.io/DocPilot-PDF-Reader/privacy-policy.html"),
+                                ),
+                            )
+                        }
+                    },
+                    headlineContent = { Text(localized("Política de privacidade")) },
+                    supportingContent = { Text(localized("Consulta como a aplicação trata os teus dados.")) },
+                    leadingContent = { Icon(Icons.Outlined.Security, contentDescription = null) },
+                )
             }
 
             Card(
