@@ -1,6 +1,7 @@
 package com.nexauren.docpilot.ui.screens
 
 import android.graphics.Bitmap
+import android.util.LruCache
 import android.graphics.pdf.PdfRenderer
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
@@ -85,10 +86,18 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.nexauren.docpilot.model.DocumentItem
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private const val DEFAULT_PAGE_ASPECT_RATIO = 0.707f
+private val PDF_RENDER_LOCK = Any()
+private val PAGE_ASPECT_RATIOS = java.util.concurrent.ConcurrentHashMap<String, Float>()
+private val PAGE_BITMAP_CACHE = object : LruCache<String, Bitmap>(12 * 1024 * 1024) {
+    override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount.coerceAtLeast(1)
+}
 
 private enum class ReaderAppearance(val title: String) {
     LIGHT("Claro"),
@@ -198,11 +207,11 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
         isBookmarked = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
             .getInt(bookmarkKey, -1) > 0
         runCatching {
-            val ratios = withContext(Dispatchers.IO) {
-                openPdfPageAspectRatios(context, document.uri)
+            val count = withContext(Dispatchers.IO) {
+                openPdfPageCount(context, document.uri)
             }
-            pageAspectRatios = ratios
-            pageCount = ratios.size
+            pageAspectRatios = List(count) { DEFAULT_PAGE_ASPECT_RATIO }
+            pageCount = count
         }.onFailure {
             error = "Não foi possível abrir este PDF."
         }
@@ -417,7 +426,10 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxSize().padding(padding),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Text("A preparar o PDF…", modifier = Modifier.padding(top = 12.dp))
+                    }
                 }
             }
 
@@ -725,6 +737,8 @@ private fun PdfPage(
     val pageColor = appearance.pageColor()
     val imageColorFilter = remember(appearance) { appearance.colorFilter() }
     var bitmap by remember(uri, pageIndex) { mutableStateOf<Bitmap?>(null) }
+    var renderError by remember(uri, pageIndex) { mutableStateOf(false) }
+    var currentAspectRatio by remember(uri, pageIndex, pageAspectRatio) { mutableStateOf(pageAspectRatio) }
     var scale by remember(uri, pageIndex, resetZoomToken) { mutableStateOf(1f) }
     var offsetX by remember(uri, pageIndex, resetZoomToken) { mutableStateOf(0f) }
     var offsetY by remember(uri, pageIndex, resetZoomToken) { mutableStateOf(0f) }
@@ -736,15 +750,22 @@ private fun PdfPage(
     }
 
     LaunchedEffect(uri, pageIndex) {
-        bitmap = withContext(Dispatchers.IO) {
-            runCatching {
-                renderPdfPage(context, uri, pageIndex, 1400)
-            }.getOrNull()
+        renderError = false
+        try {
+            bitmap = withContext(Dispatchers.IO) {
+                renderPdfPage(context, uri, pageIndex, 1100)
+            }
+            currentAspectRatio = PAGE_ASPECT_RATIOS["$uri#$pageIndex"] ?: pageAspectRatio
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            bitmap = null
+            renderError = true
         }
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().aspectRatio(pageAspectRatio.coerceIn(0.25f, 3f)),
+        modifier = Modifier.fillMaxWidth().aspectRatio(currentAspectRatio.coerceIn(0.25f, 3f)),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = pageColor),
     ) {
@@ -799,29 +820,27 @@ private fun PdfPage(
                     }
                 }
             } ?: Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(12.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator()
+                if (renderError) {
+                    Text("Não foi possível carregar esta página.")
+                } else {
+                    CircularProgressIndicator()
+                }
             }
         }
     }
 }
 
-private fun openPdfPageAspectRatios(
+private fun openPdfPageCount(
     context: android.content.Context,
     uriString: String,
-): List<Float> {
+): Int {
     val uri = android.net.Uri.parse(uriString)
     context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
         requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
-        PdfRenderer(descriptor).use { renderer ->
-            return (0 until renderer.pageCount).map { pageIndex ->
-                renderer.openPage(pageIndex).use { page ->
-                    page.width.toFloat() / page.height.coerceAtLeast(1).toFloat()
-                }
-            }
-        }
+        PdfRenderer(descriptor).use { renderer -> return renderer.pageCount }
     }
 }
 
@@ -831,11 +850,15 @@ private fun renderPdfPage(
     pageIndex: Int,
     targetWidth: Int,
 ): Bitmap {
-    val uri = android.net.Uri.parse(uriString)
-    context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
-        requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
+    val cacheKey = "$uriString#$pageIndex@$targetWidth"
+    PAGE_BITMAP_CACHE.get(cacheKey)?.let { return it }
+    synchronized(PDF_RENDER_LOCK) {
+        PAGE_BITMAP_CACHE.get(cacheKey)?.let { return it }
+        val uri = android.net.Uri.parse(uriString)
+        context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
+            requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
 
-        PdfRenderer(descriptor).use { renderer ->
+            PdfRenderer(descriptor).use { renderer ->
             require(pageIndex in 0 until renderer.pageCount) {
                 "Página fora do intervalo."
             }
@@ -843,10 +866,12 @@ private fun renderPdfPage(
             renderer.openPage(pageIndex).use { page ->
                 val sourceWidth = page.width.coerceAtLeast(1)
                 val sourceHeight = page.height.coerceAtLeast(1)
-                val requestedWidth = targetWidth.coerceAtLeast(240).toFloat()
-                // Avoid exceptionally tall or wide pages creating oversized bitmaps on devices
-                // with limited RAM while retaining the page's exact aspect ratio.
-                val maxDimension = 2800f
+                PAGE_ASPECT_RATIOS["$uriString#$pageIndex"] =
+                    sourceWidth.toFloat() / sourceHeight.toFloat()
+                val requestedWidth = targetWidth.coerceAtLeast(180).toFloat()
+                // Smaller render targets and a bounded cache keep scrolling responsive on
+                // entry-level devices while preserving enough detail for normal reading.
+                val maxDimension = 1800f
                 val scale = minOf(
                     requestedWidth / sourceWidth.toFloat(),
                     maxDimension / sourceWidth.toFloat(),
@@ -862,13 +887,19 @@ private fun renderPdfPage(
                 )
                 bitmap.eraseColor(android.graphics.Color.WHITE)
 
-                page.render(
-                    bitmap,
-                    null,
-                    null,
-                    PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY,
-                )
-                return bitmap
+                try {
+                    page.render(
+                        bitmap,
+                        null,
+                        null,
+                        PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY,
+                    )
+                    PAGE_BITMAP_CACHE.put(cacheKey, bitmap)
+                    return bitmap
+                } catch (error: Exception) {
+                    bitmap.recycle()
+                    throw error
+                }
             }
         }
     }
