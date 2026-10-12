@@ -59,7 +59,7 @@ private val translations = mapOf(
         "Informações do PDF" to "PDF information", "Pesquisar no PDF" to "Search in PDF", "Ir para página" to "Go to page",
         "Número da página" to "Page number", "Claro" to "Light", "Sépia" to "Sepia", "Escuro" to "Dark",
         "Voltar" to "Back", "Guardar marcador" to "Save bookmark", "Remover marcador" to "Remove bookmark",
-        "Abrir menu" to "Open menu", "Idioma" to "Language",
+        "Abrir menu" to "Open menu", "Idioma" to "Language", "Política de privacidade" to "Privacy policy", "Consulta como a aplicação trata os teus dados." to "Learn how the app handles your data.",
     ),
     "fr" to mapOf(
         "Início" to "Accueil", "Biblioteca" to "Bibliothèque", "Ferramentas" to "Outils", "Definições" to "Paramètres",
@@ -89,7 +89,7 @@ private val translations = mapOf(
         "Ir para página" to "Aller à la page", "Número da página" to "Numéro de page",
         "Claro" to "Clair", "Sépia" to "Sépia", "Escuro" to "Sombre", "Voltar" to "Retour",
         "Guardar marcador" to "Enregistrer le signet", "Remover marcador" to "Supprimer le signet",
-        "Abrir menu" to "Ouvrir le menu", "Idioma" to "Langue",
+        "Abrir menu" to "Ouvrir le menu", "Idioma" to "Langue", "Política de privacidade" to "Politique de confidentialité", "Consulta como a aplicação trata os teus dados." to "Découvrez comment l’application traite vos données.",
     ),
     "es" to mapOf(
         "Início" to "Inicio", "Biblioteca" to "Biblioteca", "Ferramentas" to "Herramientas", "Definições" to "Ajustes",
@@ -119,7 +119,7 @@ private val translations = mapOf(
         "Ir para página" to "Ir a la página", "Número da página" to "Número de página",
         "Claro" to "Claro", "Sépia" to "Sepia", "Escuro" to "Oscuro", "Voltar" to "Volver",
         "Guardar marcador" to "Guardar marcador", "Remover marcador" to "Quitar marcador",
-        "Abrir menu" to "Abrir menú", "Idioma" to "Idioma",
+        "Abrir menu" to "Abrir menú", "Idioma" to "Idioma", "Política de privacidade" to "Política de privacidad", "Consulta como a aplicação trata os teus dados." to "Consulta cómo la aplicación trata tus datos.",
     ),
     "de" to mapOf(
         "Início" to "Start", "Biblioteca" to "Bibliothek", "Ferramentas" to "Werkzeuge", "Definições" to "Einstellungen",
@@ -149,7 +149,7 @@ private val translations = mapOf(
         "Ir para página" to "Zu Seite", "Número da página" to "Seitennummer",
         "Claro" to "Hell", "Sépia" to "Sepia", "Escuro" to "Dunkel", "Voltar" to "Zurück",
         "Guardar marcador" to "Lesezeichen speichern", "Remover marcador" to "Lesezeichen entfernen",
-        "Abrir menu" to "Menü öffnen", "Idioma" to "Sprache",
+        "Abrir menu" to "Menü öffnen", "Idioma" to "Sprache", "Política de privacidade" to "Datenschutzerklärung", "Consulta como a aplicação trata os teus dados." to "Erfahre, wie die App mit deinen Daten umgeht.",
     ),
 )
 
