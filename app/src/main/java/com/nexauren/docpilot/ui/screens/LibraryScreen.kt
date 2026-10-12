@@ -30,7 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import com.nexauren.docpilot.ui.localization.LText
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -93,7 +93,7 @@ fun LibraryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Biblioteca") },
+                title = { LText("Biblioteca") },
                 navigationIcon = {
                     IconButton(onClick = onOpenMenu) {
                         Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
@@ -108,13 +108,13 @@ fun LibraryScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp),
         ) {
-            Text(
+            LText(
                 "Os teus ficheiros",
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(top = 8.dp),
             )
             Spacer(Modifier.height(4.dp))
-            Text(
+            LText(
                 "Pesquisa, organiza e marca os PDFs importantes.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -139,17 +139,17 @@ fun LibraryScreen(
                         modifier = Modifier.padding(start = 10.dp).weight(1f),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        Text(
+                        LText(
                             "${documents.size} documentos",
                             style = MaterialTheme.typography.titleSmall,
                         )
-                        Text(
+                        LText(
                             "${favoriteUris.count { uri -> documents.any { it.uri == uri } }} favoritos",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Text(
+                    LText(
                         "Neste dispositivo",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -171,10 +171,10 @@ fun LibraryScreen(
                         }
                     }
                 },
-                placeholder = { Text("Pesquisar documentos") },
+                placeholder = { LText("Pesquisar documentos") },
             )
 
-            Text(
+            LText(
                 "${filtered.size} resultados",
                 modifier = Modifier.padding(bottom = 6.dp),
                 style = MaterialTheme.typography.labelMedium,
@@ -188,12 +188,12 @@ fun LibraryScreen(
                 FilterChip(
                     selected = !sortByName,
                     onClick = { sortByName = false },
-                    label = { Text("Recentes") },
+                    label = { LText("Recentes") },
                 )
                 FilterChip(
                     selected = sortByName,
                     onClick = { sortByName = true },
-                    label = { Text("Nome A–Z") },
+                    label = { LText("Nome A–Z") },
                 )
                 FilterChip(
                     selected = favoritesOnly,
@@ -204,7 +204,7 @@ fun LibraryScreen(
                             contentDescription = null,
                         )
                     },
-                    label = { Text("Favoritos") },
+                    label = { LText("Favoritos") },
                 )
             }
 
@@ -229,7 +229,7 @@ fun LibraryScreen(
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
-                                Text(
+                                LText(
                                     when {
                                         documents.isEmpty() -> "A biblioteca está pronta para os teus PDFs"
                                         favoritesOnly -> "Ainda não tens favoritos"
@@ -237,7 +237,7 @@ fun LibraryScreen(
                                     },
                                     style = MaterialTheme.typography.titleMedium,
                                 )
-                                Text(
+                                LText(
                                     when {
                                         documents.isEmpty() -> "Quando abrires um PDF, ele ficará listado aqui."
                                         favoritesOnly -> "Toca na estrela de um documento para o guardar nesta lista."
