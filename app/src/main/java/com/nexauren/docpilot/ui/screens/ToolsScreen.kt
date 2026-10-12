@@ -626,7 +626,7 @@ private fun UtilityWorkspace(
                     Card(shape = RoundedCornerShape(18.dp)) {
                         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                             imageUris.take(8).forEachIndexed { index, uri ->
-                                Text(localized("${index + 1}. ${displayName(context, uri, ")Imagem")}",
+                                Text("${index + 1}. ${displayName(context, uri, "Imagem")}",
                                     maxLines = 1,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
