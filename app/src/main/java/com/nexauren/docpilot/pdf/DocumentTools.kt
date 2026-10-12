@@ -222,6 +222,41 @@ object DocumentTools {
         return resolver.openAssetFileDescriptor(outputUri, "r")?.use { it.length } ?: -1L
     }
 
+
+    fun addPageNumbers(
+        resolver: ContentResolver,
+        inputUri: Uri,
+        outputUri: Uri,
+    ): Long {
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                require(document.numberOfPages > 0) { "O PDF não contém páginas." }
+                document.pages.forEachIndexed { index, page ->
+                    PDPageContentStream(
+                        document,
+                        page,
+                        PDPageContentStream.AppendMode.APPEND,
+                        true,
+                    ).use { stream ->
+                        stream.beginText()
+                        stream.setFont(PDType1Font.HELVETICA_BOLD, 9f)
+                        stream.setNonStrokingColor(0.28f, 0.31f, 0.42f)
+                        stream.newLineAtOffset((page.mediaBox.width - 40f).coerceAtLeast(18f), 18f)
+                        stream.showText((index + 1).toString())
+                        stream.endText()
+                    }
+                }
+
+                resolver.openOutputStream(outputUri).use { output ->
+                    requireNotNull(output) { "Não foi possível criar o PDF numerado." }
+                    document.save(output)
+                }
+            }
+        }
+        return resolver.openAssetFileDescriptor(outputUri, "r")?.use { it.length } ?: -1L
+    }
+
     fun inspectPdf(
         resolver: ContentResolver,
         inputUri: Uri,

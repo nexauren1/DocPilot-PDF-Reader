@@ -35,7 +35,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Text
+import androidx.compose.material3.Text as MaterialText
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -54,7 +54,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CancellationException
-import com.nexauren.docpilot.analytics.DocPilotAnalytics
 import com.nexauren.docpilot.model.DocumentItem
 import com.nexauren.docpilot.ui.screens.HomeScreen
 import com.nexauren.docpilot.ui.screens.LibraryScreen
@@ -85,10 +84,6 @@ fun DocPilotApp() {
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
-    LaunchedEffect(destination) {
-        DocPilotAnalytics.logScreenView(context, destination.label)
-    }
 
     fun refreshDeviceDocuments() {
         hasDocumentAccess = DocumentAccess.hasAccess(context)
@@ -145,7 +140,6 @@ fun DocPilotApp() {
     }
 
     fun openDocument(document: DocumentItem) {
-        DocPilotAnalytics.logEvent(context, "pdf_opened")
         documents = listOf(document) + documents.filterNot { it.uri == document.uri }
         saveDocuments(context, documents)
         selectedDocument = document
