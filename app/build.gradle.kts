@@ -26,8 +26,8 @@ android {
         applicationId = "com.nexauren.docpilot"
         minSdk = 24
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.1.13"
+        versionCode = 15
+        versionName = "0.1.14"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -99,7 +99,6 @@ dependencies {
     // Firebase products use a shared BoM to keep SDK versions compatible.
     implementation(platform("com.google.firebase:firebase-bom:35.0.0"))
     implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-analytics")
 
     // Google sign-in through Android Credential Manager (current Firebase flow).
     implementation("androidx.credentials:credentials:1.3.0")
