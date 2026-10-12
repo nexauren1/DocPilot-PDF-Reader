@@ -90,6 +90,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 private enum class ReaderAppearance(val title: String) {
     LIGHT("Claro"),
@@ -201,8 +202,10 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
         isBookmarked = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
             .getInt(bookmarkKey, -1) > 0
         runCatching {
-            val info = withContext(Dispatchers.IO) {
-                openPdfPageInfo(context, requestedUri)
+            val info = withTimeout(20_000) {
+                withContext(Dispatchers.IO) {
+                    openPdfPageInfo(context, requestedUri)
+                }
             }
             pageCount = info.pageCount
             pageAspectRatios = List(info.pageCount) { info.firstPageAspectRatio }
