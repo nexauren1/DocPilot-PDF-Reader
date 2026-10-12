@@ -1,5 +1,7 @@
 package com.nexauren.docpilot.ui.screens
 
+import android.content.Context
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,12 +12,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Card
@@ -34,9 +39,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.nexauren.docpilot.model.DocumentItem
 import com.nexauren.docpilot.ui.components.DocumentCard
+
+private const val LIBRARY_PREFERENCES = "docpilot_library"
+private const val KEY_FAVORITE_URIS = "favorite_uris"
+
+internal fun filterLibraryDocuments(
+    documents: List<DocumentItem>,
+    query: String,
+    sortByName: Boolean,
+    favoriteUris: Set<String>,
+    favoritesOnly: Boolean,
+): List<DocumentItem> {
+    val matching = documents.filter { document ->
+        document.name.contains(query.trim(), ignoreCase = true) &&
+            (!favoritesOnly || document.uri in favoriteUris)
+    }
+    return if (sortByName) matching.sortedBy { it.name.lowercase() } else matching
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,11 +68,26 @@ fun LibraryScreen(
     onOpenDocument: (DocumentItem) -> Unit,
     onOpenMenu: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val libraryPreferences = remember(context) {
+        context.getSharedPreferences(LIBRARY_PREFERENCES, Context.MODE_PRIVATE)
+    }
     var query by remember { mutableStateOf("") }
     var sortByName by remember { mutableStateOf(false) }
-    val filtered = remember(documents, query, sortByName) {
-        val matching = documents.filter { it.name.contains(query, ignoreCase = true) }
-        if (sortByName) matching.sortedBy { it.name.lowercase() } else matching
+    var favoritesOnly by remember { mutableStateOf(false) }
+    var favoriteUris by remember {
+        mutableStateOf(libraryPreferences.getStringSet(KEY_FAVORITE_URIS, emptySet()).orEmpty().toSet())
+    }
+    val filtered = remember(documents, query, sortByName, favoriteUris, favoritesOnly) {
+        filterLibraryDocuments(documents, query, sortByName, favoriteUris, favoritesOnly)
+    }
+
+    fun toggleFavorite(document: DocumentItem) {
+        val updated = favoriteUris.toMutableSet().apply {
+            if (document.uri in this) remove(document.uri) else add(document.uri)
+        }
+        favoriteUris = updated
+        libraryPreferences.edit().putStringSet(KEY_FAVORITE_URIS, updated).apply()
     }
 
     Scaffold(
@@ -77,7 +115,7 @@ fun LibraryScreen(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Pesquisa e abre os documentos que guardaste no DocPilot.",
+                "Pesquisa, organiza e marca os PDFs importantes.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -89,7 +127,7 @@ fun LibraryScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
@@ -97,11 +135,20 @@ fun LibraryScreen(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                     )
-                    Text(
-                        "${documents.size} documentos",
-                        style = MaterialTheme.typography.titleSmall,
+                    Column(
                         modifier = Modifier.padding(start = 10.dp).weight(1f),
-                    )
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            "${documents.size} documentos",
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            "${favoriteUris.count { uri -> documents.any { it.uri == uri } }} favoritos",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Text(
                         "Neste dispositivo",
                         style = MaterialTheme.typography.labelSmall,
@@ -127,17 +174,17 @@ fun LibraryScreen(
                 placeholder = { Text("Pesquisar documentos") },
             )
 
+            Text(
+                "${filtered.size} resultados",
+                modifier = Modifier.padding(bottom = 6.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    "${filtered.size} resultados",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 FilterChip(
                     selected = !sortByName,
                     onClick = { sortByName = false },
@@ -147,6 +194,17 @@ fun LibraryScreen(
                     selected = sortByName,
                     onClick = { sortByName = true },
                     label = { Text("Nome A–Z") },
+                )
+                FilterChip(
+                    selected = favoritesOnly,
+                    onClick = { favoritesOnly = !favoritesOnly },
+                    leadingIcon = {
+                        Icon(
+                            if (favoritesOnly) Icons.Outlined.Star else Icons.Outlined.StarBorder,
+                            contentDescription = null,
+                        )
+                    },
+                    label = { Text("Favoritos") },
                 )
             }
 
@@ -167,19 +225,23 @@ fun LibraryScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 Icon(
-                                    Icons.Outlined.Folder,
+                                    if (favoritesOnly) Icons.Outlined.StarBorder else Icons.Outlined.Folder,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                                 Text(
-                                    if (documents.isEmpty()) "A biblioteca está pronta para os teus PDFs" else "Não encontrámos esse documento",
+                                    when {
+                                        documents.isEmpty() -> "A biblioteca está pronta para os teus PDFs"
+                                        favoritesOnly -> "Ainda não tens favoritos"
+                                        else -> "Não encontrámos esse documento"
+                                    },
                                     style = MaterialTheme.typography.titleMedium,
                                 )
                                 Text(
-                                    if (documents.isEmpty()) {
-                                        "Quando abrires um PDF, ele ficará listado aqui."
-                                    } else {
-                                        "Experimenta pesquisar com outro nome."
+                                    when {
+                                        documents.isEmpty() -> "Quando abrires um PDF, ele ficará listado aqui."
+                                        favoritesOnly -> "Toca na estrela de um documento para o guardar nesta lista."
+                                        else -> "Experimenta pesquisar com outro nome."
                                     },
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -189,7 +251,31 @@ fun LibraryScreen(
                     }
                 } else {
                     items(filtered, key = { it.uri }) { document ->
-                        DocumentCard(document) { onOpenDocument(document) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.foundation.layout.Box(
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                DocumentCard(document) { onOpenDocument(document) }
+                            }
+                            IconButton(onClick = { toggleFavorite(document) }) {
+                                Icon(
+                                    if (document.uri in favoriteUris) Icons.Outlined.Star else Icons.Outlined.StarBorder,
+                                    contentDescription = if (document.uri in favoriteUris) {
+                                        "Remover dos favoritos"
+                                    } else {
+                                        "Adicionar aos favoritos"
+                                    },
+                                    tint = if (document.uri in favoriteUris) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
             }
