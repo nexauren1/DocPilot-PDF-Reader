@@ -51,7 +51,7 @@ The visual signature is not a certificate-backed digital signature. Compression 
 
 The public privacy policy is published from [`docs/privacy-policy.html`](docs/privacy-policy.html) and is linked from the app's Settings screen. After enabling GitHub Pages with the Actions source, the public URL is `https://nexauren1.github.io/DocPilot-PDF-Reader/privacy-policy.html`.
 
-The app uses Android's system document picker as a per-file access option. Users may also grant wider storage access to discover PDFs throughout the device. Selected PDFs and images are processed locally by DocPilot and are not uploaded to a DocPilot document server. Optional account sign-in is handled by the authentication provider. Usage analytics are not included.
+The app uses Android's system document picker as a per-file access option. Users may also grant wider storage access to discover PDFs throughout the device. Selected PDFs and images are processed locally by DocPilot and are not uploaded to a DocPilot document server. Optional account sign-in is handled by the authentication provider.
 
 ## Build and release
 
