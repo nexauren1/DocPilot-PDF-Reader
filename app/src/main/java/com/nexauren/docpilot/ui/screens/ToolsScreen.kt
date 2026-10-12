@@ -1069,7 +1069,7 @@ private fun ToolWorkspace(
     var pageNumber by remember { mutableStateOf("1") }
     var rotationDegrees by remember { mutableStateOf(90) }
     var cropMarginPercent by remember { mutableStateOf(5) }
-    var watermarkText by remember { mutableStateOf("CONFIDENCIAL") }
+    var watermarkText by remember { mutableStateOf("") }
     var detectedPageCount by remember { mutableStateOf<Int?>(null) }
 
     val multiPicker = rememberLauncherForActivityResult(
