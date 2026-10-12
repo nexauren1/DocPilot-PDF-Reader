@@ -748,7 +748,7 @@ private fun UtilityWorkspace(
 
                         Action.OCR -> {
                             val source = imageUris.firstOrNull() ?: return@Button
-                            onProcessText(localized("docpilot-ocr.txt")) {
+                            onProcessText("docpilot-ocr.txt") {
                                 val image = InputImage.fromFilePath(context, source)
                                 val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
                                 try {
@@ -762,7 +762,7 @@ private fun UtilityWorkspace(
 
                         Action.PDF_TEXT -> {
                             val source = pdfUri ?: return@Button
-                            onProcessText(localized("docpilot-text.txt")) {
+                            onProcessText("docpilot-text.txt") {
                                 val extracted = DocumentTools.extractPdfText(resolver, source)
                                 if (removeBlankLines) {
                                     extracted.lineSequence().filter { it.isNotBlank() }.joinToString("\n")
@@ -774,7 +774,7 @@ private fun UtilityWorkspace(
 
                         Action.PDF_INFO -> {
                             val source = pdfUri ?: return@Button
-                            onProcessText(localized("docpilot-info.txt")) {
+                            onProcessText("docpilot-info.txt") {
                                 DocumentTools.inspectPdf(resolver, source)
                             }
                         }
@@ -1252,7 +1252,7 @@ private fun ToolWorkspace(
                         onValueChange = { pageNumber = it.filter(Char::isDigit) },
                         label = { Text(localized("Número da página")) },
                         supportingText = {
-                            Text(localized("Escolhe um valor entre 1 e ${detectedPageCount ?: ")…"}")
+                            Text("Escolhe um valor entre 1 e ${detectedPageCount ?: \"…\"}")
                         },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
