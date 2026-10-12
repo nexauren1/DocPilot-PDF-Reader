@@ -68,7 +68,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
+import com.nexauren.docpilot.ui.localization.LText
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -320,10 +320,10 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     if (workflowError != null) {
         AlertDialog(
             onDismissRequest = { workflowError = null },
-            title = { Text("Não foi possível concluir") },
-            text = { Text(workflowError.orEmpty()) },
+            title = { LText("Não foi possível concluir") },
+            text = { LText(workflowError.orEmpty()) },
             confirmButton = {
-                Button(onClick = { workflowError = null }) { Text("OK") }
+                Button(onClick = { workflowError = null }) { LText("OK") }
             },
         )
     }
@@ -386,7 +386,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ferramentas") },
+                title = { LText("Ferramentas") },
                 navigationIcon = {
                     IconButton(onClick = onOpenMenu) {
                         Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
@@ -424,8 +424,8 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                                 Icon(Icons.Outlined.Description, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text("Os teus PDFs, mais simples.", style = MaterialTheme.typography.titleLarge, color = Color.White)
-                                Text(
+                                LText("Os teus PDFs, mais simples.", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                                LText(
                                     toolCards.size.toString() + " ferramentas gratuitas para organizar, proteger e transformar documentos no dispositivo.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(alpha = 0.88f),
@@ -448,9 +448,9 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                             }
                         }
                     },
-                    placeholder = { Text("Pesquisar ferramentas") },
+                    placeholder = { LText("Pesquisar ferramentas") },
                 )
-                Text(
+                LText(
                     if (toolQuery.isBlank()) "Ferramentas para o teu fluxo de trabalho"
                     else "${filteredTools.size} resultado(s)",
                     style = MaterialTheme.typography.labelLarge,
@@ -509,14 +509,14 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                                             modifier = Modifier.size(25.dp),
                                         )
                                     }
-                                    Text(card.title, style = MaterialTheme.typography.titleSmall)
-                                    Text(
+                                    LText(card.title, style = MaterialTheme.typography.titleSmall)
+                                    LText(
                                         card.subtitle,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     if (!enabled) {
-                                        Text(
+                                        LText(
                                             "Em breve",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -583,7 +583,7 @@ private fun UtilityWorkspace(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(title) },
+                title = { LText(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
@@ -621,35 +621,35 @@ private fun UtilityWorkspace(
 
             when (action) {
                 Action.IMAGE_TO_PDF -> {
-                    Text("Imagens selecionadas: ${imageUris.size}", style = MaterialTheme.typography.titleSmall)
+                    LText("Imagens selecionadas: ${imageUris.size}", style = MaterialTheme.typography.titleSmall)
                     Card(shape = RoundedCornerShape(18.dp)) {
                         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                             imageUris.take(8).forEachIndexed { index, uri ->
-                                Text(
+                                LText(
                                     "${index + 1}. ${displayName(context, uri, "Imagem")}",
                                     maxLines = 1,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
-                            if (imageUris.size > 8) Text("+ ${imageUris.size - 8} imagem(ns)")
+                            if (imageUris.size > 8) LText("+ ${imageUris.size - 8} imagem(ns)")
                         }
                     }
-                    Text("Tamanho da página", style = MaterialTheme.typography.titleSmall)
+                    LText("Tamanho da página", style = MaterialTheme.typography.titleSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("A4", "Carta", "A3").forEach { option ->
                             FilterChip(
                                 selected = paperSize == option,
                                 onClick = { paperSize = option },
-                                label = { Text(option) },
+                                label = { LText(option) },
                             )
                         }
                     }
-                    Text("Orientação", style = MaterialTheme.typography.titleSmall)
+                    LText("Orientação", style = MaterialTheme.typography.titleSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = !landscape, onClick = { landscape = false }, label = { Text("Retrato") })
-                        FilterChip(selected = landscape, onClick = { landscape = true }, label = { Text("Paisagem") })
+                        FilterChip(selected = !landscape, onClick = { landscape = false }, label = { LText("Retrato") })
+                        FilterChip(selected = landscape, onClick = { landscape = true }, label = { LText("Paisagem") })
                     }
-                    Text(
+                    LText(
                         "Cada imagem será ajustada à página escolhida sem alterar o ficheiro de origem.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -657,9 +657,9 @@ private fun UtilityWorkspace(
                 }
 
                 Action.OCR -> {
-                    Text("Imagem selecionada", style = MaterialTheme.typography.titleSmall)
-                    Text(imageUris.firstOrNull()?.let { displayName(context, it, "Imagem") } ?: "Imagem", style = MaterialTheme.typography.bodyMedium)
-                    Text(
+                    LText("Imagem selecionada", style = MaterialTheme.typography.titleSmall)
+                    LText(imageUris.firstOrNull()?.let { displayName(context, it, "Imagem") } ?: "Imagem", style = MaterialTheme.typography.bodyMedium)
+                    LText(
                         "Depois do reconhecimento, poderás rever o texto, copiá-lo ou guardá-lo como TXT.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -667,13 +667,13 @@ private fun UtilityWorkspace(
                 }
 
                 Action.PDF_TEXT -> {
-                    Text("PDF selecionado", style = MaterialTheme.typography.titleSmall)
-                    Text(pdfUri?.let { displayName(context, it, "Documento PDF") } ?: "Documento PDF", style = MaterialTheme.typography.bodyMedium)
+                    LText("PDF selecionado", style = MaterialTheme.typography.titleSmall)
+                    LText(pdfUri?.let { displayName(context, it, "Documento PDF") } ?: "Documento PDF", style = MaterialTheme.typography.bodyMedium)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = removeBlankLines, onCheckedChange = { removeBlankLines = it })
                         Column(Modifier.weight(1f)) {
-                            Text("Remover linhas vazias")
-                            Text(
+                            LText("Remover linhas vazias")
+                            LText(
                                 "Útil para limpar texto exportado de alguns documentos.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -683,9 +683,9 @@ private fun UtilityWorkspace(
                 }
 
                 Action.SCAN -> {
-                    Text("Digitalização pronta para processar", style = MaterialTheme.typography.titleSmall)
-                    Text(scanUri?.let { displayName(context, it, "Documento digitalizado") } ?: "Documento digitalizado", style = MaterialTheme.typography.bodyMedium)
-                    Text(
+                    LText("Digitalização pronta para processar", style = MaterialTheme.typography.titleSmall)
+                    LText(scanUri?.let { displayName(context, it, "Documento digitalizado") } ?: "Documento digitalizado", style = MaterialTheme.typography.bodyMedium)
+                    LText(
                         "O DocPilot vai preparar uma pré-visualização. O PDF só será guardado no destino escolhido depois de reveres o resultado.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -693,9 +693,9 @@ private fun UtilityWorkspace(
                 }
 
                 Action.PDF_INFO -> {
-                    Text("PDF selecionado", style = MaterialTheme.typography.titleSmall)
-                    Text(pdfUri?.let { displayName(context, it, "Documento PDF") } ?: "Documento PDF", style = MaterialTheme.typography.bodyMedium)
-                    Text(
+                    LText("PDF selecionado", style = MaterialTheme.typography.titleSmall)
+                    LText(pdfUri?.let { displayName(context, it, "Documento PDF") } ?: "Documento PDF", style = MaterialTheme.typography.bodyMedium)
+                    LText(
                         "Consulta o número de páginas, o tamanho do ficheiro, as dimensões da primeira página e os metadados. O original não será alterado.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -792,9 +792,9 @@ private fun UtilityWorkspace(
                 if (processing) {
                     CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("A processar…")
+                    LText("A processar…")
                 } else {
-                    Text(
+                    LText(
                         when (action) {
                             Action.SCAN -> "Pré-visualizar PDF"
                             Action.IMAGE_TO_PDF -> "Converter e pré-visualizar"
@@ -808,7 +808,7 @@ private fun UtilityWorkspace(
             }
 
             OutlinedButton(onClick = onBack, enabled = !processing, modifier = Modifier.fillMaxWidth()) {
-                Text("Cancelar")
+                LText("Cancelar")
             }
             Spacer(Modifier.height(18.dp))
         }
@@ -873,8 +873,8 @@ private fun WorkspaceHero(
                     Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(29.dp))
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(title, style = MaterialTheme.typography.titleLarge)
-                    Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    LText(title, style = MaterialTheme.typography.titleLarge)
+                    LText(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -908,8 +908,8 @@ private fun ProcessingPanel(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(7.dp),
             ) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LText(title, style = MaterialTheme.typography.titleMedium)
+                LText(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LinearProgressIndicator(color = accent, modifier = Modifier.fillMaxWidth())
             }
         }
@@ -936,7 +936,7 @@ private fun SecurityWorkspace(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(tool.title) },
+                title = { LText(tool.title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
@@ -963,7 +963,7 @@ private fun SecurityWorkspace(
                 icon = tool.icon,
                 accent = if (tool == SecurityTool.PROTECT) Color(0xFFB45309) else Color(0xFF7C4DFF),
             )
-            Text(
+            LText(
                 text = if (tool == SecurityTool.PROTECT) {
                     "Crie uma cópia do PDF protegida por palavra-passe."
                 } else {
@@ -978,11 +978,11 @@ private fun SecurityWorkspace(
             ) {
                 Icon(Icons.Outlined.Folder, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Selecionar PDF")
+                LText("Selecionar PDF")
             }
 
             inputUri?.let {
-                Text(
+                LText(
                     "PDF selecionado: " + (displayName(context, it, "documento.pdf")),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -995,7 +995,7 @@ private fun SecurityWorkspace(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 label = {
-                    Text(if (tool == SecurityTool.PROTECT) "Palavra-passe" else "Texto da assinatura")
+                    LText(if (tool == SecurityTool.PROTECT) "Palavra-passe" else "Texto da assinatura")
                 },
             )
 
@@ -1030,13 +1030,13 @@ private fun SecurityWorkspace(
                 if (processing) {
                     CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("A processar…")
+                    LText("A processar…")
                 } else {
-                    Text(if (tool == SecurityTool.PROTECT) "Proteger PDF" else "Aplicar assinatura")
+                    LText(if (tool == SecurityTool.PROTECT) "Proteger PDF" else "Aplicar assinatura")
                 }
             }
 
-            Text(
+            LText(
                 "O processamento acontece localmente no dispositivo.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1114,7 +1114,7 @@ private fun ToolWorkspace(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(tool.title) },
+                title = { LText(tool.title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
@@ -1149,7 +1149,7 @@ private fun ToolWorkspace(
                 accent = pdfToolAccent(tool),
             )
 
-            Text(
+            LText(
                 text = when (tool) {
                     PdfTool.MERGE -> "Selecione dois ou mais PDFs para criar um único documento."
                     PdfTool.SPLIT -> "Selecione um PDF e indique o intervalo de páginas."
@@ -1170,7 +1170,7 @@ private fun ToolWorkspace(
                 ) {
                     Icon(Icons.Outlined.Folder, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Selecionar PDFs")
+                    LText("Selecionar PDFs")
                 }
             } else {
                 OutlinedButton(
@@ -1179,7 +1179,7 @@ private fun ToolWorkspace(
                 ) {
                     Icon(Icons.Outlined.Folder, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Selecionar PDF")
+                    LText("Selecionar PDF")
                 }
             }
 
@@ -1193,9 +1193,9 @@ private fun ToolWorkspace(
                         Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text("Ficheiros selecionados", style = MaterialTheme.typography.titleSmall)
+                        LText("Ficheiros selecionados", style = MaterialTheme.typography.titleSmall)
                         selectedUris.forEachIndexed { index, uri ->
-                            Text(
+                            LText(
                                 (index + 1).toString() + ". " +
                                     (displayName(context, uri, "PDF")),
                                 maxLines = 1,
@@ -1208,7 +1208,7 @@ private fun ToolWorkspace(
             when (tool) {
                 PdfTool.SPLIT -> {
                     detectedPageCount?.let { count ->
-                        Text(
+                        LText(
                             "Documento com $count página(s).",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1218,14 +1218,14 @@ private fun ToolWorkspace(
                         OutlinedTextField(
                             value = startPage,
                             onValueChange = { startPage = it.filter(Char::isDigit) },
-                            label = { Text("De") },
+                            label = { LText("De") },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                         )
                         OutlinedTextField(
                             value = endPage,
                             onValueChange = { endPage = it.filter(Char::isDigit) },
-                            label = { Text("Até") },
+                            label = { LText("Até") },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                         )
@@ -1234,7 +1234,7 @@ private fun ToolWorkspace(
 
                 PdfTool.REORDER -> {
                     detectedPageCount?.let { count ->
-                        Text(
+                        LText(
                             "Páginas disponíveis: 1 a $count. A ordem é preenchida automaticamente ao selecionar o PDF.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1243,15 +1243,15 @@ private fun ToolWorkspace(
                     OutlinedTextField(
                         value = orderText,
                         onValueChange = { orderText = it },
-                        label = { Text("Nova ordem") },
-                        supportingText = { Text("Ex.: 3,1,2,4") },
+                        label = { LText("Nova ordem") },
+                        supportingText = { LText("Ex.: 3,1,2,4") },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
 
                 PdfTool.ROTATE_ONE, PdfTool.CROP_ONE, PdfTool.EXPORT_PAGE_IMAGE -> {
                     detectedPageCount?.let { count ->
-                        Text(
+                        LText(
                             "O documento tem $count página(s).",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1260,37 +1260,37 @@ private fun ToolWorkspace(
                     OutlinedTextField(
                         value = pageNumber,
                         onValueChange = { pageNumber = it.filter(Char::isDigit) },
-                        label = { Text("Número da página") },
+                        label = { LText("Número da página") },
                         supportingText = {
-                            Text("Escolhe um valor entre 1 e ${detectedPageCount ?: "…"}")
+                            LText("Escolhe um valor entre 1 e ${detectedPageCount ?: "…"}")
                         },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     if (tool == PdfTool.ROTATE_ONE) {
-                        Text("Rotação", style = MaterialTheme.typography.titleSmall)
+                        LText("Rotação", style = MaterialTheme.typography.titleSmall)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf(90, 180, 270).forEach { angle ->
                                 FilterChip(
                                     selected = rotationDegrees == angle,
                                     onClick = { rotationDegrees = angle },
-                                    label = { Text("$angle°") },
+                                    label = { LText("$angle°") },
                                 )
                             }
                         }
                     }
                     if (tool == PdfTool.CROP_ONE) {
-                        Text("Margem do recorte por lado", style = MaterialTheme.typography.titleSmall)
+                        LText("Margem do recorte por lado", style = MaterialTheme.typography.titleSmall)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf(5, 10, 15).forEach { margin ->
                                 FilterChip(
                                     selected = cropMarginPercent == margin,
                                     onClick = { cropMarginPercent = margin },
-                                    label = { Text("$margin%") },
+                                    label = { LText("$margin%") },
                                 )
                             }
                         }
-                        Text(
+                        LText(
                             "O recorte altera a área visível. O conteúdo fora da área recortada não é apagado permanentemente.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1466,13 +1466,13 @@ private fun ToolWorkspace(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text("A processar…")
+                    LText("A processar…")
                 } else {
-                    Text(if (tool == PdfTool.EXPORT_PAGE_IMAGE) "Exportar PNG" else "Criar PDF")
+                    LText(if (tool == PdfTool.EXPORT_PAGE_IMAGE) "Exportar PNG" else "Criar PDF")
                 }
             }
 
-            Text(
+            LText(
                 if (tool == PdfTool.COMPRESS) {
                     "A compressão tenta reduzir imagens raster grandes. O resultado pode não ficar menor em PDFs já otimizados; compara o tamanho antes de substituir o original."
                 } else {
