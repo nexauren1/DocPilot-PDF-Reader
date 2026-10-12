@@ -21,6 +21,12 @@ DocPilot is a free, Android-first PDF reader and document toolkit from Nexauren.
 - Page placeholders use each page's measured aspect ratio to reduce scroll jumps while rendering
 - Scanned or image-only PDFs without a text layer cannot currently be searched in the reader. Image OCR is available for individual image files; whole-PDF OCR remains future work.
 
+## Library
+
+- Search PDFs by filename and sort by recent activity or name
+- Persistent favourites stored locally on the device, with a one-tap favourites filter
+- Opening a document brings it to the top of the recent list
+
 ## Free document tools
 
 - Merge multiple PDFs
@@ -62,4 +68,4 @@ The release workflow blocks publishing if the four secrets are missing or incomp
 
 ## Candidates for a future iteration
 
-After real-device validation, useful additions to evaluate include persistent highlights and underlines saved into the PDF, sticky-note annotations, fillable AcroForm fields and safe export of completed forms, visual page drag-and-drop ordering, favourites and user-created folders, and print/share improvements. These are roadmap candidates, not features advertised as available today. Reader accuracy and reliable saving take priority over adding more tools.
+After real-device validation, useful additions to evaluate include persistent highlights and underlines saved into the PDF, sticky-note annotations, fillable AcroForm fields and safe export of completed forms, visual page drag-and-drop ordering, user-created folders, and print/share improvements. These are roadmap candidates, not features advertised as available today. Reader accuracy and reliable saving take priority over adding more tools.
