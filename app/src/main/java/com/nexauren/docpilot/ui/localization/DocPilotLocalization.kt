@@ -49,6 +49,22 @@ internal fun translateForLanguage(languageCode: String, text: String): String {
         else -> 0
     }
     phrases[text]?.let { return it[index] }
+    Regex("^Documento com (\\d+) página\\(s\\)\\.$").matchEntire(text)?.let {
+        val n = it.groupValues[1]
+        return listOf("Documento com $n página(s).", "Document with $n page(s).", "Document de $n page(s).", "Documento con $n página(s).", "Dokument mit $n Seite(n).")[index]
+    }
+    Regex("^O documento tem (\\d+) página\\(s\\)\\.$").matchEntire(text)?.let {
+        val n = it.groupValues[1]
+        return listOf("O documento tem $n página(s).", "The document has $n page(s).", "Le document contient $n page(s).", "El documento tiene $n página(s).", "Das Dokument hat $n Seite(n).")[index]
+    }
+    Regex("^Páginas disponíveis: 1 a (\\d+)\\. A ordem é preenchida automaticamente ao selecionar o PDF\\.$").matchEntire(text)?.let {
+        val n = it.groupValues[1]
+        return listOf("Páginas disponíveis: 1 a $n. A ordem é preenchida automaticamente ao selecionar o PDF.", "Available pages: 1 to $n. The order is filled automatically when you select the PDF.", "Pages disponibles : 1 à $n. L’ordre est rempli automatiquement après sélection du PDF.", "Páginas disponibles: 1 a $n. El orden se completa automáticamente al seleccionar el PDF.", "Verfügbare Seiten: 1 bis $n. Die Reihenfolge wird beim Auswählen der PDF-Datei automatisch ausgefüllt.")[index]
+    }
+    if (text.startsWith("PDF selecionado: ")) {
+        val name = text.removePrefix("PDF selecionado: ")
+        return listOf("PDF selecionado: $name", "PDF selected: $name", "PDF sélectionné : $name", "PDF seleccionado: $name", "PDF ausgewählt: $name")[index]
+    }
     Regex("^(\\d+) documentos$").matchEntire(text)?.let {
         val n = it.groupValues[1]
         return listOf("$n documentos", "$n documents", "$n documents", "$n documentos", "$n Dokumente")[index]
@@ -203,6 +219,17 @@ private val phrases: Map<String, List<String>> = mapOf(
     "Margem do recorte por lado" to listOf("Margem do recorte por lado", "Crop margin per side", "Marge de recadrage par côté", "Margen de recorte por lado", "Zuschnittrand pro Seite"),
     "Selecionar imagem" to listOf("Selecionar imagem", "Select image", "Sélectionner une image", "Seleccionar imagen", "Bild auswählen"),
     "Selecionar imagens" to listOf("Selecionar imagens", "Select images", "Sélectionner des images", "Seleccionar imágenes", "Bilder auswählen"),
+    "Página" to listOf("Página", "Page", "Page", "Página", "Seite"),
+    "A guardar…" to listOf("A guardar…", "Saving…", "Enregistrement…", "Guardando…", "Wird gespeichert…"),
+    "Revê a imagem antes de a guardar. O PDF original não foi alterado." to listOf("Revê a imagem antes de a guardar. O PDF original não foi alterado.", "Review the image before saving. The original PDF has not been changed.", "Vérifiez l’image avant de l’enregistrer. Le PDF original n’a pas été modifié.", "Revisa la imagen antes de guardarla. El PDF original no se ha modificado.", "Prüfe das Bild vor dem Speichern. Die Original-PDF wurde nicht verändert."),
+    "Cada imagem será ajustada à página escolhida sem alterar o ficheiro de origem." to listOf("Cada imagem será ajustada à página escolhida sem alterar o ficheiro de origem.", "Each image will be fitted to the chosen page without changing the source file.", "Chaque image sera adaptée à la page choisie sans modifier le fichier source.", "Cada imagen se ajustará a la página elegida sin modificar el archivo original.", "Jedes Bild wird an die ausgewählte Seite angepasst, ohne die Quelldatei zu ändern."),
+    "Depois do reconhecimento, poderás rever o texto, copiá-lo ou guardá-lo como TXT." to listOf("Depois do reconhecimento, poderás rever o texto, copiá-lo ou guardá-lo como TXT.", "After recognition, you can review the text, copy it or save it as TXT.", "Après reconnaissance, vous pouvez relire le texte, le copier ou l’enregistrer en TXT.", "Después del reconocimiento, puedes revisar el texto, copiarlo o guardarlo como TXT.", "Nach der Erkennung kannst du den Text prüfen, kopieren oder als TXT speichern."),
+    "Remover linhas vazias" to listOf("Remover linhas vazias", "Remove blank lines", "Supprimer les lignes vides", "Eliminar líneas vacías", "Leere Zeilen entfernen"),
+    "Útil para limpar texto exportado de alguns documentos." to listOf("Útil para limpar texto exportado de alguns documentos.", "Useful for cleaning exported text from some documents.", "Utile pour nettoyer le texte exporté de certains documents.", "Útil para limpiar el texto exportado de algunos documentos.", "Nützlich, um exportierten Text aus manchen Dokumenten zu bereinigen."),
+    "Digitalização pronta para processar" to listOf("Digitalização pronta para processar", "Scan ready to process", "Numérisation prête à traiter", "Escaneo listo para procesar", "Scan bereit zur Verarbeitung"),
+    "O DocPilot vai preparar uma pré-visualização. O PDF só será guardado no destino escolhido depois de reveres o resultado." to listOf("O DocPilot vai preparar uma pré-visualização. O PDF só será guardado no destino escolhido depois de reveres o resultado.", "DocPilot will prepare a preview. The PDF is saved to your chosen destination only after you review the result.", "DocPilot va préparer un aperçu. Le PDF ne sera enregistré à l’emplacement choisi qu’après vérification du résultat.", "DocPilot preparará una vista previa. El PDF solo se guardará en el destino elegido después de revisar el resultado.", "DocPilot erstellt eine Vorschau. Die PDF wird erst nach deiner Prüfung am gewählten Speicherort gespeichert."),
+    "Consulta o número de páginas, o tamanho do ficheiro, as dimensões da primeira página e os metadados. O original não será alterado." to listOf("Consulta o número de páginas, o tamanho do ficheiro, as dimensões da primeira página e os metadados. O original não será alterado.", "Check page count, file size, first-page dimensions and metadata. The original will not be changed.", "Consultez le nombre de pages, la taille du fichier, les dimensions de la première page et les métadonnées. L’original ne sera pas modifié.", "Consulta el número de páginas, el tamaño, las dimensiones de la primera página y los metadatos. El original no cambiará.", "Sieh Seitenzahl, Dateigröße, Abmessungen der ersten Seite und Metadaten nach. Das Original wird nicht verändert."),
+    "O recorte altera a área visível. O conteúdo fora da área recortada não é apagado permanentemente." to listOf("O recorte altera a área visível. O conteúdo fora da área recortada não é apagado permanentemente.", "Cropping changes the visible area. Content outside the crop is not permanently deleted.", "Le recadrage modifie la zone visible. Le contenu hors cadre n’est pas supprimé définitivement.", "El recorte cambia el área visible. El contenido fuera del recorte no se elimina permanentemente.", "Der Zuschnitt verändert den sichtbaren Bereich. Inhalte außerhalb des Ausschnitts werden nicht dauerhaft gelöscht."),
     "Juntar PDFs" to listOf("Juntar PDFs", "Merge PDFs", "Fusionner des PDF", "Unir PDF", "PDFs zusammenführen"),
     "Combinar documentos" to listOf("Combinar documentos", "Combine documents", "Combiner des documents", "Combinar documentos", "Dokumente zusammenführen"),
     "Extrair páginas" to listOf("Extrair páginas", "Extract pages", "Extraire des pages", "Extraer páginas", "Seiten extrahieren"),
