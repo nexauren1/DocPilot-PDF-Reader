@@ -99,7 +99,6 @@ dependencies {
     // Firebase products use a shared BoM to keep SDK versions compatible.
     implementation(platform("com.google.firebase:firebase-bom:35.0.0"))
     implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-analytics")
 
     // Google sign-in through Android Credential Manager (current Firebase flow).
     implementation("androidx.credentials:credentials:1.3.0")
