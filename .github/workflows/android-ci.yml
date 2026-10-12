@@ -65,32 +65,9 @@ jobs:
             echo "production=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Production signing secrets are not configured. CI will build only the debug APK; it will not publish a misleading release APK."
           else
-            echo "::error::Configure all four signing secrets together: SIGNING_KEYSTORE_BASE64, SIGNING_KEYSTORE_PASSWORD, SIGNING_KEY_ALIAS and SIGNING_KEY_PASSWORD."
+            echo "::error::Production signing is incomplete. Check the protected signing configuration in repository settings."
             exit 1
           fi
-
-      - name: Report production certificate fingerprints for Firebase
-        if: steps.signing.outputs.production == 'true'
-        shell: bash
-        env:
-          KEYSTORE_PATH: ${{ runner.temp }}/docpilot-release.jks
-          KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-        run: |
-          set -euo pipefail
-          keytool -list -v -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > "$RUNNER_TEMP/docpilot-certificate.txt"
-          SHA1="$(awk -F': ' '/SHA1:/{print $2; exit}' "$RUNNER_TEMP/docpilot-certificate.txt")"
-          SHA256="$(awk -F': ' '/SHA256:/{print $2; exit}' "$RUNNER_TEMP/docpilot-certificate.txt")"
-          test -n "$SHA1"
-          test -n "$SHA256"
-          {
-            echo "### DocPilot Firebase Android certificate fingerprints"
-            echo "- Application ID: `com.nexauren.docpilot`"
-            echo "- SHA-1: `$SHA1`"
-            echo "- SHA-256: `$SHA256`"
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "DocPilot release SHA-1: $SHA1"
-          echo "DocPilot release SHA-256: $SHA256"
 
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
