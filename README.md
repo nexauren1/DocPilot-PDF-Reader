@@ -5,10 +5,13 @@ DocPilot is a free, Android-first PDF reader and document toolkit from Nexauren.
 ## Product principles
 
 - **Free first:** the reader and current document tools stay available without a subscription.
-- **Private by default:** PDF files are opened and processed on the device; document contents and filenames are not sent to DocPilot analytics.
-- **Account optional:** Firebase Authentication supports email/password and Google sign-in from Settings, but reading does not require an account.
-- **Analytics by consent:** Google Analytics collection is off until the user enables it in Settings.
+- **Private by default:** PDF files are opened and processed on the device. The app does not include Google Analytics.
+- **Account optional:** email/password and Google sign-in are optional; reading does not require an account.
 - **Clear result flow:** choose a document, configure a tool, process a copy, review the result, and save it.
+
+## Languages
+
+The interface includes Portuguese, English, Spanish, French, and German options.
 
 ## Reader
 
@@ -49,22 +52,13 @@ The visual signature is not a certificate-backed digital signature. Compression 
 
 ## Privacy and storage
 
-The app uses Android's system document picker as a private, per-file access option. Users may also grant wider storage access to discover PDFs throughout the device. Selected PDFs and images are not uploaded to a DocPilot server. Firebase is used for optional authentication, and analytics collection is limited to cases where the user explicitly opts in.
+The app uses Android's system document picker as a private, per-file access option. Users may also grant wider storage access to discover PDFs throughout the device. Selected PDFs and images are not uploaded to a DocPilot server. Optional account sign-in is available; PDF documents are not uploaded to a DocPilot server, and Google Analytics is not included.
 
 ## Build and release
 
 - JDK 17, Gradle 9.6.0, Android compile SDK 36, minimum Android API 24
 - Application ID: `com.nexauren.docpilot`
-- GitHub Actions runs JVM tests and builds the debug APK; it validates a production-signed release when signing secrets are present.
-
-Every production release must use these four GitHub Actions secrets:
-
-- `SIGNING_KEYSTORE_BASE64`
-- `SIGNING_KEYSTORE_PASSWORD`
-- `SIGNING_KEY_ALIAS`
-- `SIGNING_KEY_PASSWORD`
-
-The release workflow blocks publishing if the four secrets are missing or incomplete. Keep the persistent signing key and its passwords backed up privately. Never commit the keystore or expose secret values in source code, Issues, or chat.
+- GitHub Actions runs JVM tests, builds the debug APK, and validates a production-signed release using protected repository configuration. Keep signing credentials private and never include them in source files or public documentation.
 
 ## Candidates for a future iteration
 
