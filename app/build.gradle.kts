@@ -48,7 +48,7 @@ android {
 
     buildTypes {
         debug {
-            // Keep the registered Firebase application ID across variants. Debug APKs remain
+            // Keep the registered authentication application ID across variants. Debug APKs remain
             // debug-key signed and are never used for a production release.
         }
         release {
@@ -96,11 +96,11 @@ dependencies {
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
-    // Firebase products use a shared BoM to keep SDK versions compatible.
+    // Authentication products use a shared BoM to keep SDK versions compatible.
     implementation(platform("com.google.firebase:firebase-bom:35.0.0"))
     implementation("com.google.firebase:firebase-auth")
 
-    // Google sign-in through Android Credential Manager (current Firebase flow).
+    // Google sign-in through Android Credential Manager.
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
