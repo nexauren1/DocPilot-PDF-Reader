@@ -1,7 +1,6 @@
 package com.nexauren.docpilot.ui.screens
 
 import android.util.Patterns
-import android.os.Bundle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,7 +52,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.FirebaseException
-import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.GoogleAuthProvider
@@ -68,7 +66,6 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Co
 import com.nexauren.docpilot.R
 import kotlinx.coroutines.launch
 import com.nexauren.docpilot.BuildConfig
-import com.nexauren.docpilot.analytics.DocPilotAnalytics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +84,6 @@ fun SettingsScreen(
     var isCreatingAccount by remember { mutableStateOf(true) }
     var authBusy by remember { mutableStateOf(false) }
     var authMessage by remember { mutableStateOf<String?>(null) }
-    var analyticsEnabled by remember { mutableStateOf(DocPilotAnalytics.isEnabled(context)) }
 
     fun signInWithGoogle() {
         authBusy = true
@@ -117,10 +113,6 @@ fun SettingsScreen(
                         if (task.isSuccessful) {
                             currentUser = auth.currentUser
                             authMessage = "Sessão iniciada com Google."
-                            val parameters = Bundle().apply {
-                                putString(FirebaseAnalytics.Param.METHOD, "google")
-                            }
-                            DocPilotAnalytics.logEvent(context, "account_signed_in", parameters)
                         } else {
                             authMessage = authErrorMessage(task.exception)
                         }
@@ -207,7 +199,6 @@ fun SettingsScreen(
                         )
                         OutlinedButton(
                             onClick = {
-                                DocPilotAnalytics.logEvent(context, "account_signed_out")
                                 auth.signOut()
                                 scope.launch {
                                     runCatching {
@@ -288,11 +279,6 @@ fun SettingsScreen(
                                                 } else {
                                                     "Sessão iniciada com sucesso."
                                                 }
-                                                val event = if (isCreatingAccount) "account_created" else "account_signed_in"
-                                                val parameters = Bundle().apply {
-                                                    putString(FirebaseAnalytics.Param.METHOD, "email_password")
-                                                }
-                                                DocPilotAnalytics.logEvent(context, event, parameters)
                                             } else {
                                                 authMessage = authErrorMessage(result.exception)
                                             }
@@ -367,41 +353,6 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Google Analytics", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                if (analyticsEnabled) "Partilha de estatísticas de utilização ativada."
-                                else "Desativado. Não recolhemos eventos do Analytics até ativares esta opção.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(
-                            checked = analyticsEnabled,
-                            onCheckedChange = { enabled ->
-                                analyticsEnabled = enabled
-                                DocPilotAnalytics.setConsent(context, enabled)
-                            },
-                        )
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Quando ativo, o Google Analytics pode receber eventos gerais de utilização para ajudar a melhorar a aplicação. Não enviamos nomes nem conteúdo dos PDFs ou o teu e-mail nesses eventos. Podes alterar esta escolha a qualquer momento.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            ) {
                 Column(modifier = Modifier.padding(bottom = 14.dp)) {
                     ListItem(
                         headlineContent = { Text("Biblioteca do dispositivo") },
@@ -468,8 +419,8 @@ private fun authErrorMessage(error: Exception?): String {
         code.contains("INVALID_LOGIN_CREDENTIALS") ||
             code.contains("WRONG_PASSWORD") ||
             code.contains("USER_NOT_FOUND") -> "E-mail ou palavra-passe incorretos."
-        code.contains("OPERATION_NOT_ALLOWED") -> "O método E-mail/Palavra-passe ainda não está ativado no Firebase."
+        code.contains("OPERATION_NOT_ALLOWED") -> "O início de sessão por e-mail ainda não está disponível."
         code.contains("NETWORK_REQUEST_FAILED") -> "Sem ligação à Internet. Verifica a conexão e tenta novamente."
-        else -> "Não foi possível concluir a operação. Verifica a ligação e as definições de autenticação do Firebase."
+        else -> "Não foi possível concluir a operação. Verifica a ligação à Internet e tenta novamente."
     }
 }
