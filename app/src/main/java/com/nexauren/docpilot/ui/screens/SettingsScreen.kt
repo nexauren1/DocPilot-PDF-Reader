@@ -1,5 +1,7 @@
 package com.nexauren.docpilot.ui.screens
 
+import com.nexauren.docpilot.ui.localization.localized
+
 import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -142,7 +144,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Definições") },
+                title = { Text(localized("Definições")) },
                 navigationIcon = {
                     IconButton(onClick = onOpenMenu) {
                         Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
@@ -159,12 +161,10 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(
-                "DocPilot, à tua maneira.",
+            Text(localized("DocPilot, à tua maneira."),
                 style = MaterialTheme.typography.headlineSmall,
             )
-            Text(
-                "Preferências, conta opcional e privacidade.",
+            Text(localized("Preferências, conta opcional e privacidade."),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -179,20 +179,18 @@ fun SettingsScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Text(
-                            "Conta DocPilot (opcional)",
+                        Text(localized("Conta DocPilot (opcional)"),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(start = 10.dp),
                         )
                     }
-                    Text(
-                        "Podes continuar a ler e tratar PDFs sem criar uma conta. O início de sessão é opcional.",
+                    Text(localized("Podes continuar a ler e tratar PDFs sem criar uma conta. O início de sessão é opcional."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
                     if (currentUser != null) {
-                        Text("Sessão iniciada", style = MaterialTheme.typography.titleSmall)
+                        Text(localized("Sessão iniciada"), style = MaterialTheme.typography.titleSmall)
                         Text(
                             currentUser?.email.orEmpty(),
                             style = MaterialTheme.typography.bodyMedium,
@@ -210,7 +208,7 @@ fun SettingsScreen(
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Terminar sessão")
+                            Text(localized("Terminar sessão"))
                         }
                     } else {
                         OutlinedButton(
@@ -218,17 +216,16 @@ fun SettingsScreen(
                             enabled = !authBusy,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Continuar com Google")
+                            Text(localized("Continuar com Google"))
                         }
-                        Text(
-                            "ou utiliza o e-mail e a palavra-passe",
+                        Text(localized("ou utiliza o e-mail e a palavra-passe"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it; authMessage = null },
-                            label = { Text("E-mail") },
+                            label = { Text(localized("E-mail")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
@@ -239,7 +236,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = password,
                             onValueChange = { password = it; authMessage = null },
-                            label = { Text("Palavra-passe") },
+                            label = { Text(localized("Palavra-passe")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
@@ -334,7 +331,7 @@ fun SettingsScreen(
                                 enabled = !authBusy,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Esqueci a palavra-passe")
+                                Text(localized("Esqueci a palavra-passe"))
                             }
                         }
                     }
@@ -355,7 +352,7 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.padding(bottom = 14.dp)) {
                     ListItem(
-                        headlineContent = { Text("Biblioteca do dispositivo") },
+                        headlineContent = { Text(localized("Biblioteca do dispositivo")) },
                         supportingContent = {
                             Text(
                                 if (hasDocumentAccess) "Acesso ativo. A aplicação pode localizar PDFs no armazenamento partilhado."
@@ -371,14 +368,14 @@ fun SettingsScreen(
                         Text(if (hasDocumentAccess) "Atualizar biblioteca" else "Configurar acesso a documentos")
                     }
                     ListItem(
-                        headlineContent = { Text("Aparência") },
-                        supportingContent = { Text("O tema acompanha as definições do sistema.") },
+                        headlineContent = { Text(localized("Aparência")) },
+                        supportingContent = { Text(localized("O tema acompanha as definições do sistema.")) },
                         leadingContent = { Icon(Icons.Outlined.DarkMode, contentDescription = null) },
                     )
                     ListItem(
-                        headlineContent = { Text("Privacidade dos documentos") },
+                        headlineContent = { Text(localized("Privacidade dos documentos")) },
                         supportingContent = {
-                            Text("Os PDFs são processados localmente. Não precisas de uma conta para usar as ferramentas locais.")
+                            Text(localized("Os PDFs são processados localmente. Não precisas de uma conta para usar as ferramentas locais."))
                         },
                         leadingContent = { Icon(Icons.Outlined.Security, contentDescription = null) },
                     )
@@ -390,8 +387,8 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 ListItem(
-                    headlineContent = { Text("Sobre o DocPilot") },
-                    supportingContent = { Text("DocPilot • versão ${BuildConfig.VERSION_NAME}") },
+                    headlineContent = { Text(localized("Sobre o DocPilot")) },
+                    supportingContent = { Text(localized("DocPilot • versão ${BuildConfig.VERSION_NAME}")) },
                     leadingContent = { Icon(Icons.Outlined.Info, contentDescription = null) },
                 )
             }
@@ -401,8 +398,8 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 ListItem(
-                    headlineContent = { Text("Funcionalidades") },
-                    supportingContent = { Text("Leitor de PDF, biblioteca de documentos, scanner, OCR e ferramentas de organização.") },
+                    headlineContent = { Text(localized("Funcionalidades")) },
+                    supportingContent = { Text(localized("Leitor de PDF, biblioteca de documentos, scanner, OCR e ferramentas de organização.")) },
                     leadingContent = { Icon(Icons.Outlined.Settings, contentDescription = null) },
                 )
             }
