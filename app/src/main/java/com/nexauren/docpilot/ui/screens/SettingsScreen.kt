@@ -134,7 +134,7 @@ fun SettingsScreen(
                 authMessage = "O início de sessão com Google foi cancelado ou não ficou disponível. Tenta novamente."
             } catch (e: Exception) {
                 authBusy = false
-                authMessage = "Não foi possível iniciar sessão com Google. Verifica a configuração OAuth e tenta novamente."
+                authMessage = "Não foi possível iniciar sessão com Google. Verifica a configuração da conta Google e tenta novamente."
             }
         }
     }
@@ -194,7 +194,7 @@ fun SettingsScreen(
                         )
                     }
                     Text(
-                        "Podes continuar a ler e tratar PDFs sem criar uma conta. A conta usa o Firebase Authentication para registo e início de sessão.",
+                        "Podes continuar a ler e tratar PDFs sem criar uma conta. O início de sessão é opcional.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
