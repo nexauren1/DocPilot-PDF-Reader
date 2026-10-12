@@ -5,9 +5,9 @@ DocPilot is a free, Android-first PDF reader and document toolkit from Nexauren.
 ## Product principles
 
 - **Free first:** the reader and current document tools stay available without a subscription.
-- **Private by default:** PDF files are opened and processed on the device; document contents and filenames are not sent to DocPilot analytics.
+- **Private by default:** PDF files are opened and processed on the device; document contents and filenames are not uploaded to a DocPilot server.
 - **Account optional:** Optional account sign-in supports email/password and Google sign-in from Settings, but reading does not require an account.
-- **No usage analytics:** Google Analytics is not included in the app build.
+- **Five interface languages:** Portuguese, English, French, Spanish, and German are available for translated interface labels.
 - **Clear result flow:** choose a document, configure a tool, process a copy, review the result, and save it.
 
 ## Reader
@@ -48,6 +48,8 @@ DocPilot is a free, Android-first PDF reader and document toolkit from Nexauren.
 The visual signature is not a certificate-backed digital signature. Compression primarily optimizes embedded images, so PDFs dominated by text or vector content may show little size reduction.
 
 ## Privacy and storage
+
+The public privacy policy is published from [`docs/privacy-policy.html`](docs/privacy-policy.html) and is linked from the app's Settings screen. After enabling GitHub Pages with the Actions source, the public URL is `https://nexauren1.github.io/DocPilot-PDF-Reader/privacy-policy.html`.
 
 The app uses Android's system document picker as a per-file access option. Users may also grant wider storage access to discover PDFs throughout the device. Selected PDFs and images are processed locally by DocPilot and are not uploaded to a DocPilot document server. Optional account sign-in is handled by the authentication provider. Usage analytics are not included.
 
