@@ -27,6 +27,15 @@ class LocalizationTest {
     }
 
     @Test
+    fun localizes_page_numbering_tool() {
+        assertEquals("Numerar páginas", translateForLanguage("pt", "Numerar páginas"))
+        assertEquals("Number pages", translateForLanguage("en", "Numerar páginas"))
+        assertEquals("Numéroter les pages", translateForLanguage("fr", "Numerar páginas"))
+        assertEquals("Numerar páginas", translateForLanguage("es", "Numerar páginas"))
+        assertEquals("Seiten nummerieren", translateForLanguage("de", "Numerar páginas"))
+    }
+
+    @Test
     fun translates_watermark_tool_into_all_five_languages() {
         assertEquals("Marca de água", translateForLanguage("pt", "Marca de água"))
         assertEquals("Watermark", translateForLanguage("en", "Marca de água"))
