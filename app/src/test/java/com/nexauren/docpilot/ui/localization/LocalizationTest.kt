@@ -27,6 +27,21 @@ class LocalizationTest {
     }
 
     @Test
+    fun translates_watermark_tool_into_all_five_languages() {
+        assertEquals("Marca de água", translateForLanguage("pt", "Marca de água"))
+        assertEquals("Watermark", translateForLanguage("en", "Marca de água"))
+        assertEquals("Filigrane", translateForLanguage("fr", "Marca de água"))
+        assertEquals("Marca de agua", translateForLanguage("es", "Marca de água"))
+        assertEquals("Wasserzeichen", translateForLanguage("de", "Marca de água"))
+    }
+
+    @Test
+    fun localizes_watermark_action_and_validation_text() {
+        assertEquals("Apply watermark", translateForLanguage("en", "Aplicar marca de água"))
+        assertEquals("Gib den Wasserzeichentext ein.", translateForLanguage("de", "Escreve o texto da marca de água."))
+    }
+
+    @Test
     fun localizes_reader_page_counter() {
         assertEquals("Page 2 of 9", translateForLanguage("en", "Página 2 de 9"))
         assertEquals("Seite 2 von 9", translateForLanguage("de", "Página 2 de 9"))
