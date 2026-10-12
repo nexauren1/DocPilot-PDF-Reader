@@ -451,7 +451,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                             FilterChip(
                                 selected = appearance == option,
                                 onClick = { appearance = option },
-                                label = { Text(option.title) },
+                                label = { Text(localized(option.title)) },
                             )
                         }
                     }
