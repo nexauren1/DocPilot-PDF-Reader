@@ -44,6 +44,7 @@ import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.FormatListNumbered
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhotoLibrary
@@ -109,6 +110,7 @@ private enum class PdfTool(val title: String, val subtitle: String, val icon: Im
     ROTATE_ONE("Rodar uma página", "Escolher a página e a rotação", Icons.Outlined.RotateRight),
     CROP_ONE("Recortar uma página", "Ajustar a área visível de uma página", Icons.Outlined.Crop),
     EXPORT_PAGE_IMAGE("Página para PNG", "Exportar uma página como imagem", Icons.Outlined.PhotoLibrary),
+    PAGE_NUMBERS("Numerar páginas", "Adicionar números de página", Icons.Outlined.FormatListNumbered),
 }
 
 private enum class SecurityTool(val title: String, val subtitle: String, val icon: ImageVector) {
@@ -151,6 +153,7 @@ private val toolCards = listOf(
     ToolCard("Rodar uma página", "Rodar só a página escolhida", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE_ONE),
     ToolCard("Recortar página", "Ajustar a área de uma página", Icons.Outlined.Crop, pdfTool = PdfTool.CROP_ONE),
     ToolCard("Página para PNG", "Exportar uma página como imagem", Icons.Outlined.PhotoLibrary, pdfTool = PdfTool.EXPORT_PAGE_IMAGE),
+    ToolCard("Numerar páginas", "Adicionar números em todas as páginas", Icons.Outlined.FormatListNumbered, pdfTool = PdfTool.PAGE_NUMBERS),
     ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, action = Action.SCAN),
     ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF),
     ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN),
@@ -840,6 +843,7 @@ private fun pdfToolAccent(tool: PdfTool): Color = when (tool) {
     PdfTool.ROTATE_ONE -> Color(0xFFDB4B73)
     PdfTool.CROP_ONE -> Color(0xFF7C4DFF)
     PdfTool.EXPORT_PAGE_IMAGE -> Color(0xFF16856B)
+    PdfTool.PAGE_NUMBERS -> Color(0xFF387D4A)
 }
 
 @Composable
@@ -1144,6 +1148,7 @@ private fun ToolWorkspace(
                     PdfTool.ROTATE_ONE -> "Roda apenas a página que escolheres."
                     PdfTool.CROP_ONE -> "Recorta apenas a área visível da página escolhida."
                     PdfTool.EXPORT_PAGE_IMAGE -> "Cria uma imagem PNG de uma página do PDF."
+                    PdfTool.PAGE_NUMBERS -> "Adiciona um número discreto a cada página e cria uma nova cópia."
                 },
                 icon = tool.icon,
                 accent = pdfToolAccent(tool),
@@ -1159,6 +1164,7 @@ private fun ToolWorkspace(
                     PdfTool.ROTATE_ONE -> "Escolhe o número da página e roda-a 90°, 180° ou 270°."
                     PdfTool.CROP_ONE -> "Escolhe uma página e aplica um recorte proporcional. O PDF original não será alterado."
                     PdfTool.EXPORT_PAGE_IMAGE -> "Exporta uma página para PNG, mantendo a proporção original."
+                    PdfTool.PAGE_NUMBERS -> "Numera todas as páginas sem alterar o ficheiro original."
                 },
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -1316,6 +1322,7 @@ private fun ToolWorkspace(
                         PdfTool.ROTATE_ONE -> "A rodar uma página"
                         PdfTool.CROP_ONE -> "A recortar uma página"
                         PdfTool.EXPORT_PAGE_IMAGE -> "A exportar a página como PNG"
+                        PdfTool.PAGE_NUMBERS -> "A numerar páginas"
                     },
                     detail = "O DocPilot - PDF Reader está a criar uma nova cópia do teu PDF.",
                     accent = pdfToolAccent(tool),
@@ -1453,6 +1460,16 @@ private fun ToolWorkspace(
                                 }
                             }
                         }
+
+                        PdfTool.PAGE_NUMBERS -> {
+                            if (selectedUris.size != 1) {
+                                scope.launch { snackbar.showSnackbar("Selecione um PDF.") }
+                            } else {
+                                createOutput("docpilot-numbered.pdf") { uri ->
+                                    DocumentTools.addPageNumbers(resolver, selectedUris.single(), uri)
+                                }
+                            }
+                        }
                     }
                 },
                 enabled = !processing,
@@ -1468,7 +1485,13 @@ private fun ToolWorkspace(
                     Spacer(Modifier.width(10.dp))
                     Text("A processar…")
                 } else {
-                    Text(if (tool == PdfTool.EXPORT_PAGE_IMAGE) "Exportar PNG" else "Criar PDF")
+                    Text(
+                        when (tool) {
+                            PdfTool.EXPORT_PAGE_IMAGE -> "Exportar PNG"
+                            PdfTool.PAGE_NUMBERS -> "Numerar páginas"
+                            else -> "Criar PDF"
+                        },
+                    )
                 }
             }
 
