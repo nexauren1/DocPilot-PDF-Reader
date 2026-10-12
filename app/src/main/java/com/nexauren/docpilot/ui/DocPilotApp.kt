@@ -54,7 +54,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CancellationException
-import com.nexauren.docpilot.analytics.DocPilotAnalytics
 import com.nexauren.docpilot.model.DocumentItem
 import com.nexauren.docpilot.ui.screens.HomeScreen
 import com.nexauren.docpilot.ui.screens.LibraryScreen
@@ -85,10 +84,6 @@ fun DocPilotApp() {
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
-    LaunchedEffect(destination) {
-        DocPilotAnalytics.logScreenView(context, destination.label)
-    }
 
     fun refreshDeviceDocuments() {
         hasDocumentAccess = DocumentAccess.hasAccess(context)
@@ -145,7 +140,6 @@ fun DocPilotApp() {
     }
 
     fun openDocument(document: DocumentItem) {
-        DocPilotAnalytics.logEvent(context, "pdf_opened")
         documents = listOf(document) + documents.filterNot { it.uri == document.uri }
         saveDocuments(context, documents)
         selectedDocument = document
