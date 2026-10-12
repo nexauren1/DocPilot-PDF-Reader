@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,7 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.Text as MaterialText
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -65,6 +67,8 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Co
 import com.nexauren.docpilot.R
 import kotlinx.coroutines.launch
 import com.nexauren.docpilot.BuildConfig
+import com.nexauren.docpilot.ui.AppLanguage
+import com.nexauren.docpilot.ui.DocPilotLanguageManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +87,8 @@ fun SettingsScreen(
     var isCreatingAccount by remember { mutableStateOf(true) }
     var authBusy by remember { mutableStateOf(false) }
     var authMessage by remember { mutableStateOf<String?>(null) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
 
     fun signInWithGoogle() {
         authBusy = true
@@ -389,6 +395,38 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 ListItem(
+                    headlineContent = { Text("Idioma da aplicação") },
+                    supportingContent = { Text("Escolhe o idioma da interface.") },
+                    leadingContent = { Icon(Icons.Outlined.Settings, contentDescription = null) },
+                    trailingContent = {
+                        TextButton(onClick = { showLanguageDialog = true }) {
+                            Text("Alterar")
+                        }
+                    },
+                )
+            }
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                ListItem(
+                    headlineContent = { Text("Política de privacidade") },
+                    supportingContent = { Text("Como os documentos e os dados da conta opcional são tratados.") },
+                    leadingContent = { Icon(Icons.Outlined.Security, contentDescription = null) },
+                    trailingContent = {
+                        TextButton(onClick = { showPrivacyPolicyDialog = true }) {
+                            Text("Ler política")
+                        }
+                    },
+                )
+            }
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                ListItem(
                     headlineContent = { Text("Sobre o DocPilot") },
                     supportingContent = { Text("DocPilot • versão ${BuildConfig.VERSION_NAME}") },
                     leadingContent = { Icon(Icons.Outlined.Info, contentDescription = null) },
@@ -407,6 +445,60 @@ fun SettingsScreen(
             }
         }
     }
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text("Idioma da aplicação") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    AppLanguage.entries.forEach { language ->
+                        TextButton(
+                            onClick = {
+                                DocPilotLanguageManager.setLanguage(context, language)
+                                showLanguageDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                if (DocPilotLanguageManager.currentLanguage == language) {
+                                    "✓  ${language.displayName}"
+                                } else {
+                                    language.displayName
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) { Text("Fechar") }
+            },
+        )
+    }
+
+    if (showPrivacyPolicyDialog) {
+        AlertDialog(
+            onDismissRequest = { showPrivacyPolicyDialog = false },
+            title = { Text("Política de privacidade") },
+            text = {
+                Column(
+                    modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text("Os ficheiros PDF e as imagens são processados localmente quando usas as ferramentas do leitor. O conteúdo dos documentos não é enviado para os nossos servidores.")
+                    Text("A aplicação não inclui Google Analytics nem recolha de eventos para análise de utilização.")
+                    Text("A criação de conta é opcional. Se iniciares sessão, o fornecedor de autenticação recebe os dados necessários para criar e gerir essa conta.")
+                    Text("O acesso à biblioteca do dispositivo só é usado depois de o concederes nas definições do Android. Também podes abrir ficheiros individuais através do seletor de documentos.")
+                    Text("Para pedidos de privacidade ou apoio, consulta a página do projeto DocPilot no GitHub. Não publiques dados pessoais em espaços públicos.")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPrivacyPolicyDialog = false }) { Text("Fechar") }
+            },
+        )
+    }
+
 }
 
 private fun authErrorMessage(error: Exception?): String {
