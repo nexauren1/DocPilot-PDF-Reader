@@ -3,6 +3,8 @@ package com.nexauren.docpilot.pdf
 import android.content.ContentResolver
 import android.net.Uri
 import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
+import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import com.tom_roush.pdfbox.pdmodel.PDResources
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
@@ -144,6 +146,55 @@ object PdfProcessor {
         return fileSize(resolver, outputUri)
     }
 
+    fun addTextWatermark(
+        resolver: ContentResolver,
+        inputUri: Uri,
+        outputUri: Uri,
+        watermarkText: String,
+    ): Long {
+        val text = normalizeWatermarkText(watermarkText)
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { document ->
+                require(document.numberOfPages > 0) { "Este PDF não contém páginas." }
+                val font = PDType1Font.HELVETICA_BOLD
+                document.pages.forEach { page ->
+                    val box = page.mediaBox
+                    val maximumWidth = box.width * 0.84f
+                    val defaultSize = 34f
+                    val defaultTextWidth = font.getStringWidth(text) / 1000f * defaultSize
+                    val fontSize = if (defaultTextWidth > maximumWidth) {
+                        (defaultSize * maximumWidth / defaultTextWidth).coerceAtLeast(8f)
+                    } else {
+                        defaultSize
+                    }
+                    val textWidth = font.getStringWidth(text) / 1000f * fontSize
+                    val x = box.lowerLeftX + (box.width - textWidth) / 2f
+                    val y = box.lowerLeftY + box.height / 2f
+                    PDPageContentStream(
+                        document,
+                        page,
+                        PDPageContentStream.AppendMode.APPEND,
+                        true,
+                        true,
+                    ).use { stream ->
+                        stream.setNonStrokingColor(185, 185, 185)
+                        stream.beginText()
+                        stream.setFont(font, fontSize)
+                        stream.newLineAtOffset(x, y)
+                        stream.showText(text)
+                        stream.endText()
+                    }
+                }
+                resolver.openOutputStream(outputUri).use { output ->
+                    requireNotNull(output) { "Não foi possível criar o PDF com marca de água." }
+                    document.save(output)
+                }
+            }
+        }
+        return fileSize(resolver, outputUri)
+    }
+
     fun compress(resolver: ContentResolver, inputUri: Uri, outputUri: Uri, quality: Float = 0.72f, maxDimension: Int = 1800): Long {
         resolver.openInputStream(inputUri).use { input ->
             requireNotNull(input) { "Não foi possível abrir o PDF." }
@@ -206,6 +257,13 @@ internal fun validatePageOrder(order: List<Int>, pageCount: Int) {
     require(order.distinct().size == pageCount) {
         "Cada página deve aparecer uma única vez na nova ordem."
     }
+}
+
+internal fun normalizeWatermarkText(text: String): String {
+    val normalized = text.trim().replace(Regex("\\s+"), " ")
+    require(normalized.isNotEmpty()) { "Escreve o texto da marca de água." }
+    require(normalized.length <= 80) { "A marca de água pode ter até 80 caracteres." }
+    return normalized
 }
 
 internal fun requireValidPageNumber(pageNumber: Int, pageCount: Int) {
