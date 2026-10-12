@@ -43,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +58,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CancellationException
 import com.nexauren.docpilot.model.DocumentItem
+import com.nexauren.docpilot.ui.localization.DocPilotLanguage
+import com.nexauren.docpilot.ui.localization.LocalAppLanguage
 import com.nexauren.docpilot.ui.screens.HomeScreen
 import com.nexauren.docpilot.ui.screens.LibraryScreen
 import com.nexauren.docpilot.ui.screens.PdfReaderScreen
@@ -78,6 +81,7 @@ private enum class Destination(val label: String, val icon: androidx.compose.ui.
 @Composable
 fun DocPilotApp() {
     val context = LocalContext.current
+    var appLanguage by remember { mutableStateOf(DocPilotLanguage.current(context)) }
     var destination by remember { mutableStateOf(Destination.HOME) }
     var documents by remember { mutableStateOf(loadDocuments(context)) }
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
@@ -167,13 +171,16 @@ fun DocPilotApp() {
     }
 
     if (selectedDocument != null) {
-        PdfReaderScreen(
-            document = selectedDocument!!,
-            onBack = { selectedDocument = null },
-        )
+        CompositionLocalProvider(LocalAppLanguage provides appLanguage) {
+            PdfReaderScreen(
+                document = selectedDocument!!,
+                onBack = { selectedDocument = null },
+            )
+        }
         return
     }
 
+    CompositionLocalProvider(LocalAppLanguage provides appLanguage) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -198,7 +205,7 @@ fun DocPilotApp() {
                 Destination.entries.forEach { item ->
                     NavigationDrawerItem(
                         icon = { Icon(item.icon, contentDescription = null) },
-                        label = { Text(item.label) },
+                        label = { Text(localized(item.label)) },
                         selected = destination == item,
                         onClick = {
                             destination = item
@@ -219,7 +226,7 @@ fun DocPilotApp() {
                         NavigationBarItem(
                             selected = destination == item,
                             onClick = { destination = item },
-                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            icon = { Icon(item.icon, contentDescription = localized(item.label)) },
                             label = { Text(item.label) },
                         )
                     }
@@ -278,10 +285,12 @@ fun DocPilotApp() {
                         hasDocumentAccess = hasDocumentAccess,
                         onRequestDocumentAccess = { requestDocumentAccess() },
                         onOpenMenu = { scope.launch { drawerState.open() } },
+                        onLanguageChanged = { appLanguage = it },
                     )
                 }
             }
         }
+    }
     }
 }
 
