@@ -27,6 +27,15 @@ class LocalizationTest {
     }
 
     @Test
+    fun localizes_page_numbering_tool() {
+        assertEquals("Numerar páginas", translateForLanguage("pt", "Numerar páginas"))
+        assertEquals("Number pages", translateForLanguage("en", "Numerar páginas"))
+        assertEquals("Numéroter les pages", translateForLanguage("fr", "Numerar páginas"))
+        assertEquals("Numerar páginas", translateForLanguage("es", "Numerar páginas"))
+        assertEquals("Seiten nummerieren", translateForLanguage("de", "Numerar páginas"))
+    }
+
+    @Test
     fun localizes_reader_page_counter() {
         assertEquals("Page 2 of 9", translateForLanguage("en", "Página 2 de 9"))
         assertEquals("Seite 2 von 9", translateForLanguage("de", "Página 2 de 9"))
