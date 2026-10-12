@@ -2,6 +2,7 @@ package com.nexauren.docpilot.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
+import android.util.LruCache
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.text.TextPosition
@@ -59,7 +60,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import com.nexauren.docpilot.ui.localization.LText
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TopAppBar
@@ -162,6 +163,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     var pageAspectRatios by remember(document.uri) { mutableStateOf<List<Float>>(emptyList()) }
     var positionRestored by remember(document.uri) { mutableStateOf(false) }
     var error by remember(document.uri) { mutableStateOf<String?>(null) }
+    var loadAttempt by remember(document.uri) { mutableStateOf(0) }
     var resetZoomToken by remember(document.uri) { mutableStateOf(0) }
     var searchOpen by remember(document.uri) { mutableStateOf(false) }
     var searchQuery by remember(document.uri) { mutableStateOf("") }
@@ -189,7 +191,8 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
         }
     }
 
-    LaunchedEffect(document.uri) {
+    LaunchedEffect(document.uri, loadAttempt) {
+        val requestedUri = document.uri
         pageCount = 0
         pageAspectRatios = emptyList()
         positionRestored = false
@@ -198,13 +201,26 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
         isBookmarked = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
             .getInt(bookmarkKey, -1) > 0
         runCatching {
-            val ratios = withContext(Dispatchers.IO) {
-                openPdfPageAspectRatios(context, document.uri)
+            val info = withContext(Dispatchers.IO) {
+                openPdfPageInfo(context, requestedUri)
             }
-            pageAspectRatios = ratios
-            pageCount = ratios.size
+            pageCount = info.pageCount
+            pageAspectRatios = List(info.pageCount) { info.firstPageAspectRatio }
+            // Render can begin as soon as the page count is known. Measuring every page's
+            // proportions is useful but must not block the first paint of a long document.
+            launch {
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        openPdfPageAspectRatios(context, requestedUri)
+                    }
+                }.onSuccess { ratios ->
+                    if (document.uri == requestedUri && ratios.size == pageCount) {
+                        pageAspectRatios = ratios
+                    }
+                }
+            }
         }.onFailure {
-            error = "Não foi possível abrir este PDF."
+            error = "Não foi possível abrir este PDF. Verifica o ficheiro e tenta novamente."
         }
     }
 
@@ -268,9 +284,9 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
             TopAppBar(
                 title = {
                     Column {
-                        Text(document.name, maxLines = 1, style = MaterialTheme.typography.titleMedium)
+                        LText(document.name, maxLines = 1, style = MaterialTheme.typography.titleMedium)
                         if (pageCount > 0) {
-                            Text(
+                            LText(
                                 text = "${currentPage} / ${pageCount}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -385,7 +401,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         jumpPageText = currentPage.toString()
                         jumpDialog = true
                     }) {
-                        Text("Página ${currentPage} de ${pageCount}")
+                        LText("Página ${currentPage} de ${pageCount}")
                     }
 
                     IconButton(
@@ -404,20 +420,31 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     ) { padding ->
         when {
             error != null -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center,
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(padding).padding(28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
-                    Text(error!!, modifier = Modifier.padding(28.dp))
+                    LText(error!!, style = MaterialTheme.typography.bodyLarge)
+                    Button(
+                        onClick = { loadAttempt += 1 },
+                        modifier = Modifier.padding(top = 12.dp),
+                    ) { LText("Tentar novamente") }
                 }
             }
 
             pageCount == 0 -> {
-                Box(
+                Column(
                     modifier = Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
                     CircularProgressIndicator()
+                    LText(
+                        "A abrir documento…",
+                        modifier = Modifier.padding(top = 12.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
@@ -440,7 +467,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
+                        LText(
                             "Página",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -449,7 +476,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                             FilterChip(
                                 selected = appearance == option,
                                 onClick = { appearance = option },
-                                label = { Text(option.title) },
+                                label = { LText(option.title) },
                             )
                         }
                     }
@@ -473,8 +500,8 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
                                         shape = RoundedCornerShape(14.dp),
-                                        label = { Text("Pesquisar neste PDF") },
-                                        placeholder = { Text("Escreve uma palavra ou frase") },
+                                        label = { LText("Pesquisar neste PDF") },
+                                        placeholder = { LText("Escreve uma palavra ou frase") },
                                         trailingIcon = {
                                             if (searchQuery.isNotEmpty()) {
                                                 IconButton(onClick = { searchQuery = ""; searchMessage = null }) {
@@ -493,7 +520,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                     }
                                 }
                                 if (searchQuery.isNotBlank()) {
-                                    Text(
+                                    LText(
                                         "Termo pesquisado: “${searchQuery.trim()}”",
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.primary,
@@ -506,9 +533,9 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                 ) {
                                     if (searching) {
                                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                        Text("A procurar enquanto escreves…", style = MaterialTheme.typography.bodySmall)
+                                        LText("A procurar enquanto escreves…", style = MaterialTheme.typography.bodySmall)
                                     } else if (searchResults.isNotEmpty()) {
-                                        Text(
+                                        LText(
                                             "Página ${searchResults[searchResultIndex]} • ${searchResultIndex + 1}/${searchResults.size}",
                                             modifier = Modifier.weight(1f),
                                             style = MaterialTheme.typography.bodySmall,
@@ -527,7 +554,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                             Icon(Icons.Outlined.ChevronRight, contentDescription = "Resultado seguinte")
                                         }
                                     } else {
-                                        Text(
+                                        LText(
                                             "Os resultados aparecem automaticamente.",
                                             modifier = Modifier.weight(1f),
                                             style = MaterialTheme.typography.bodySmall,
@@ -536,7 +563,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                     }
                                 }
                                 searchMessage?.let {
-                                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    LText(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
@@ -550,17 +577,17 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                                 .padding(horizontal = 20.dp, vertical = 18.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Text(
+                            LText(
                                 "MODO DE LEITURA",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
-                            Text(
+                            LText(
                                 document.name,
                                 style = MaterialTheme.typography.headlineSmall,
                             )
                             SelectionContainer {
-                                Text(
+                                LText(
                                     readingText,
                                     style = MaterialTheme.typography.bodyLarge.copy(
                                         lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.25f,
@@ -609,13 +636,13 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     if (jumpDialog) {
         AlertDialog(
             onDismissRequest = { jumpDialog = false },
-            title = { Text("Ir para página") },
+            title = { LText("Ir para página") },
             text = {
                 OutlinedTextField(
                     value = jumpPageText,
                     onValueChange = { jumpPageText = it.filter(Char::isDigit) },
-                    label = { Text("Número da página") },
-                    supportingText = { Text("Este PDF tem ${pageCount} páginas.") },
+                    label = { LText("Número da página") },
+                    supportingText = { LText("Este PDF tem ${pageCount} páginas.") },
                     singleLine = true,
                 )
             },
@@ -626,10 +653,10 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                         scope.launch { pageListState.animateScrollToItem(target - 1) }
                         jumpDialog = false
                     }
-                }) { Text("Ir") }
+                }) { LText("Ir") }
             },
             dismissButton = {
-                TextButton(onClick = { jumpDialog = false }) { Text("Cancelar") }
+                TextButton(onClick = { jumpDialog = false }) { LText("Cancelar") }
             },
         )
     }
@@ -682,13 +709,14 @@ private fun PdfThumbnail(
     pageIndex: Int,
 ) {
     var bitmap by remember(uri, pageIndex) { mutableStateOf<Bitmap?>(null) }
+    var renderFailed by remember(uri, pageIndex) { mutableStateOf(false) }
 
     LaunchedEffect(uri, pageIndex) {
-        bitmap = withContext(Dispatchers.IO) {
-            runCatching {
-                renderPdfPage(context, uri, pageIndex, 180)
-            }.getOrNull()
+        val result = withContext(Dispatchers.IO) {
+            runCatching { renderPdfPageCached(context, uri, pageIndex, 180) }
         }
+        bitmap = result.getOrNull()
+        renderFailed = bitmap == null
     }
 
     Box(
@@ -705,10 +733,14 @@ private fun PdfThumbnail(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
             )
-        } ?: CircularProgressIndicator(
-            strokeWidth = 1.5.dp,
-            modifier = Modifier.size(18.dp),
-        )
+        } ?: if (renderFailed) {
+            LText("×", color = Color.Gray)
+        } else {
+            CircularProgressIndicator(
+                strokeWidth = 1.5.dp,
+                modifier = Modifier.size(18.dp),
+            )
+        }
     }
 }
 
@@ -725,6 +757,8 @@ private fun PdfPage(
     val pageColor = appearance.pageColor()
     val imageColorFilter = remember(appearance) { appearance.colorFilter() }
     var bitmap by remember(uri, pageIndex) { mutableStateOf<Bitmap?>(null) }
+    var renderFailed by remember(uri, pageIndex) { mutableStateOf(false) }
+    var renderAttempt by remember(uri, pageIndex) { mutableStateOf(0) }
     var scale by remember(uri, pageIndex, resetZoomToken) { mutableStateOf(1f) }
     var offsetX by remember(uri, pageIndex, resetZoomToken) { mutableStateOf(0f) }
     var offsetY by remember(uri, pageIndex, resetZoomToken) { mutableStateOf(0f) }
@@ -735,16 +769,17 @@ private fun PdfPage(
         offsetY += panChange.y
     }
 
-    LaunchedEffect(uri, pageIndex) {
-        bitmap = withContext(Dispatchers.IO) {
-            runCatching {
-                renderPdfPage(context, uri, pageIndex, 1400)
-            }.getOrNull()
+    LaunchedEffect(uri, pageIndex, renderAttempt) {
+        renderFailed = false
+        val result = withContext(Dispatchers.IO) {
+            runCatching { renderPdfPageCached(context, uri, pageIndex, 1100) }
         }
+        bitmap = result.getOrNull()
+        renderFailed = bitmap == null
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().aspectRatio(pageAspectRatio.coerceIn(0.25f, 3f)),
+        modifier = Modifier.fillMaxWidth().aspectRatio((bitmap?.let { it.width.toFloat() / it.height.coerceAtLeast(1) } ?: pageAspectRatio).coerceIn(0.25f, 3f)),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = pageColor),
     ) {
@@ -802,10 +837,66 @@ private fun PdfPage(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator()
+                if (renderFailed) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        LText("Não foi possível mostrar esta página.")
+                        TextButton(onClick = { renderAttempt += 1 }) {
+                            LText("Tentar novamente")
+                        }
+                    }
+                } else {
+                    CircularProgressIndicator()
+                }
             }
         }
     }
+}
+
+private data class PdfPageInfo(val pageCount: Int, val firstPageAspectRatio: Float)
+
+private fun openPdfPageInfo(
+    context: android.content.Context,
+    uriString: String,
+): PdfPageInfo {
+    val uri = android.net.Uri.parse(uriString)
+    context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
+        requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
+        PdfRenderer(descriptor).use { renderer ->
+            require(renderer.pageCount > 0) { "Este PDF não contém páginas." }
+            val ratio = renderer.openPage(0).use { page ->
+                page.width.toFloat() / page.height.coerceAtLeast(1).toFloat()
+            }
+            return PdfPageInfo(renderer.pageCount, ratio)
+        }
+    }
+}
+
+private object PdfPageBitmapCache {
+    private val maxBytes = (Runtime.getRuntime().maxMemory() / 16)
+        .toInt()
+        .coerceIn(8 * 1024 * 1024, 32 * 1024 * 1024)
+    private val cache = object : LruCache<String, Bitmap>(maxBytes) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+    }
+
+    fun get(key: String): Bitmap? = cache.get(key)
+    fun put(key: String, bitmap: Bitmap) { cache.put(key, bitmap) }
+}
+
+private fun renderPdfPageCached(
+    context: android.content.Context,
+    uriString: String,
+    pageIndex: Int,
+    targetWidth: Int,
+): Bitmap {
+    val key = "$uriString|$pageIndex|$targetWidth"
+    PdfPageBitmapCache.get(key)?.let { return it }
+    val rendered = renderPdfPage(context, uriString, pageIndex, targetWidth)
+    PdfPageBitmapCache.put(key, rendered)
+    return rendered
 }
 
 private fun openPdfPageAspectRatios(

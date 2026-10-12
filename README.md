@@ -1,71 +1,37 @@
 # DocPilot
 
-DocPilot is a free, Android-first PDF reader and document toolkit from Nexauren. Reading and the current document tools do not require a paid plan or an account. The project prioritizes reliable reading, predictable page layout, on-device processing, and clear save flows over adding tool buttons that do not work.
+DocPilot is a free Android PDF reader and document toolkit from Nexauren. It is designed around a simple flow: open a document, read or process it on the device, review the result, and save a copy.
 
-## Product principles
+## Features
 
-- **Free first:** the reader and current document tools stay available without a subscription.
-- **Private by default:** PDF files are opened and processed on the device; document contents and filenames are not sent to DocPilot analytics.
-- **Account optional:** Firebase Authentication supports email/password and Google sign-in from Settings, but reading does not require an account.
-- **Analytics by consent:** Google Analytics collection is off until the user enables it in Settings.
-- **Clear result flow:** choose a document, configure a tool, process a copy, review the result, and save it.
+- PDF reading with page navigation, selectable-text search, saved reading position, bookmarks, zoom and light/sepia/dark appearance.
+- Library with filename search, recent order, alphabetical sorting and persistent favourites.
+- PDF tools including merge, page-range split, page reordering, rotation, cropping, image-focused compression, image-to-PDF conversion, text export, metadata inspection, password protection, and visual text signatures.
+- Document scanning and image OCR where the device supports the required services.
+- Interface language options: Portuguese, English, French, Spanish and German.
+- Optional account sign-in. Local reading and document tools do not require an account.
+- No integrated ads or usage analytics in this release.
 
-## Reader
+## Privacy
 
-- Multi-page PDF viewing powered by Android's `PdfRenderer`
-- Text search for selectable PDFs, with matching words highlighted and underlined
-- Horizontal page thumbnails, direct page selection, previous/next navigation, and jump-to-page
-- Saved reading position, a page bookmark, reading progress, pinch-to-zoom, pan, and zoom reset
-- Reflow reading mode for selectable text
-- Persistent light, sepia, and dark reading appearances
-- Page placeholders use each page's measured aspect ratio to reduce scroll jumps while rendering
-- Scanned or image-only PDFs without a text layer cannot currently be searched in the reader. Image OCR is available for individual image files; whole-PDF OCR remains future work.
+Selected PDFs and images are processed on the device. The app does not send document contents, extracted text, filenames or previews to DocPilot servers. Android's document picker allows per-file access; broader storage access is optional for automatic PDF discovery. Optional sign-in is handled by the configured authentication provider.
 
-## Library
+Read the [Privacy Policy](https://nexauren1.github.io/DocPilot-PDF-Reader/privacy-policy.html).
 
-- Search PDFs by filename and sort by recent activity or name
-- Persistent favourites stored locally on the device, with a one-tap favourites filter
-- Opening a document brings it to the top of the recent list
+## Build information
 
-## Free document tools
-
-- Merge multiple PDFs
-- Extract an inclusive page range
-- Reorder every page using a sequence such as `3,1,2,4`; the sequence must include each page exactly once. Use Split PDF when you need only a subset
-- Rotate all pages 90 degrees clockwise
-- Rotate one selected page by 90°, 180°, or 270°
-- Crop the visible area of one selected page using adjustable margins
-- Export a selected page as a PNG image with preview and a save dialog
-- Compress PDFs by downscaling oversized embedded raster images
-- Convert multiple images to a PDF with paper-size and orientation options
-- Scan documents using Google ML Kit Document Scanner
-- Recognize text in images with ML Kit OCR
-- Export selectable PDF text to TXT, with an option to remove blank lines
-- Inspect PDF page count, file size, first-page dimensions, encryption indicator, and available metadata
-- Protect a PDF with a password
-- Add a visual text signature to pages
-
-The visual signature is not a certificate-backed digital signature. Compression primarily optimizes embedded images, so PDFs dominated by text or vector content may show little size reduction.
-
-## Privacy and storage
-
-The app uses Android's system document picker as a private, per-file access option. Users may also grant wider storage access to discover PDFs throughout the device. Selected PDFs and images are not uploaded to a DocPilot server. Firebase is used for optional authentication, and analytics collection is limited to cases where the user explicitly opts in.
-
-## Build and release
-
-- JDK 17, Gradle 9.6.0, Android compile SDK 36, minimum Android API 24
 - Application ID: `com.nexauren.docpilot`
-- GitHub Actions runs JVM tests and builds the debug APK; it validates a production-signed release when signing secrets are present.
+- Minimum Android version: Android 7.0 (API 24)
+- Production APKs are built with GitHub Actions after unit tests, build and APK signature verification succeed.
 
-Every production release must use these four GitHub Actions secrets:
+Production signing is managed through protected repository settings. Do not commit a signing keystore, passwords, tokens, or other private credentials to source control.
 
-- `SIGNING_KEYSTORE_BASE64`
-- `SIGNING_KEYSTORE_PASSWORD`
-- `SIGNING_KEY_ALIAS`
-- `SIGNING_KEY_PASSWORD`
+## Known limitations
 
-The release workflow blocks publishing if the four secrets are missing or incomplete. Keep the persistent signing key and its passwords backed up privately. Never commit the keystore or expose secret values in source code, Issues, or chat.
+- Scanned or image-only PDFs do not provide text for reader search unless a text layer exists; image OCR is available for individual image files.
+- Compression primarily optimizes embedded raster images, so text-heavy or vector-heavy files may show little size reduction.
+- The visual text signature is not a certificate-backed digital signature.
 
-## Candidates for a future iteration
+## Release validation
 
-After real-device validation, useful additions to evaluate include persistent highlights and underlines saved into the PDF, sticky-note annotations, fillable AcroForm fields and safe export of completed forms, visual page drag-and-drop ordering, user-created folders, and print/share improvements. These are roadmap candidates, not features advertised as available today. Reader accuracy and reliable saving take priority over adding more tools.
+Install the exact release APK on a physical Android device before store submission. Check short and very long PDFs, mixed page sizes, search, saved position, zoom, sign-in, permissions and every save/share flow. Passing CI does not replace real-device testing.

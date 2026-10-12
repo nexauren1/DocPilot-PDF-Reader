@@ -39,7 +39,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
+import com.nexauren.docpilot.ui.localization.LText
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -220,20 +220,20 @@ private fun PdfFirstPagePreview(file: File, requestedPage: Int) {
                         modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
                         contentScale = ContentScale.Fit,
                     )
-                    Text(
+                    LText(
                         "Página ${preview!!.displayedPage} de ${preview!!.pageCount}",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                previewError != null -> Text(
+                previewError != null -> LText(
                     previewError.orEmpty(),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 else -> {
                     CircularProgressIndicator()
-                    Text("A preparar pré-visualização…", style = MaterialTheme.typography.bodySmall)
+                    LText("A preparar pré-visualização…", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -283,7 +283,7 @@ internal fun PdfResultWorkspace(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Pré-visualização") },
+                title = { LText("Pré-visualização") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
@@ -299,8 +299,8 @@ internal fun PdfResultWorkspace(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Spacer(Modifier.height(4.dp))
-            Text("O resultado está pronto", style = MaterialTheme.typography.headlineSmall)
-            Text(
+            LText("O resultado está pronto", style = MaterialTheme.typography.headlineSmall)
+            LText(
                 "Revê a página ${result.previewPage}. O ficheiro original não foi alterado. Guarda uma cópia quando estiveres satisfeito.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -308,8 +308,8 @@ internal fun PdfResultWorkspace(
             PdfFirstPagePreview(result.file, result.previewPage)
             Card(shape = RoundedCornerShape(18.dp)) {
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(result.outputName, style = MaterialTheme.typography.titleMedium)
-                    Text(
+                    LText(result.outputName, style = MaterialTheme.typography.titleMedium)
+                    LText(
                         "PDF • ${formatBytes(result.sizeBytes)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -324,15 +324,15 @@ internal fun PdfResultWorkspace(
                 if (saving) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.size(10.dp))
-                    Text("A guardar…")
+                    LText("A guardar…")
                 } else {
                     Icon(Icons.Outlined.SaveAlt, contentDescription = null)
                     Spacer(Modifier.size(8.dp))
-                    Text("Guardar PDF")
+                    LText("Guardar PDF")
                 }
             }
             OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                Text("Voltar às opções")
+                LText("Voltar às opções")
             }
             Spacer(Modifier.height(18.dp))
         }
@@ -396,7 +396,7 @@ private fun PngResultPreview(file: File) {
                     modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
                     contentScale = ContentScale.Fit,
                 )
-                previewError != null -> Text(
+                previewError != null -> LText(
                     previewError.orEmpty(),
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -446,7 +446,7 @@ internal fun ImageResultWorkspace(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Pré-visualização da imagem") },
+                title = { LText("Pré-visualização da imagem") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
@@ -462,8 +462,8 @@ internal fun ImageResultWorkspace(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Spacer(Modifier.height(4.dp))
-            Text("A página foi exportada", style = MaterialTheme.typography.headlineSmall)
-            Text(
+            LText("A página foi exportada", style = MaterialTheme.typography.headlineSmall)
+            LText(
                 "Revê a imagem antes de a guardar. O PDF original não foi alterado.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -474,8 +474,8 @@ internal fun ImageResultWorkspace(
                     Modifier.fillMaxWidth().padding(15.dp),
                     verticalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
-                    Text(result.outputName, style = MaterialTheme.typography.titleMedium)
-                    Text(
+                    LText(result.outputName, style = MaterialTheme.typography.titleMedium)
+                    LText(
                         "PNG • ${formatBytes(result.sizeBytes)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -490,15 +490,15 @@ internal fun ImageResultWorkspace(
                 if (saving) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.size(10.dp))
-                    Text("A guardar…")
+                    LText("A guardar…")
                 } else {
                     Icon(Icons.Outlined.SaveAlt, contentDescription = null)
                     Spacer(Modifier.size(8.dp))
-                    Text("Guardar imagem PNG")
+                    LText("Guardar imagem PNG")
                 }
             }
             OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                Text("Voltar às ferramentas")
+                LText("Voltar às ferramentas")
             }
             Spacer(Modifier.height(18.dp))
         }
@@ -543,7 +543,7 @@ internal fun TextResultWorkspace(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Resultado do texto") },
+                title = { LText("Resultado do texto") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Voltar")
@@ -559,8 +559,8 @@ internal fun TextResultWorkspace(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Spacer(Modifier.height(4.dp))
-            Text("Texto pronto para rever", style = MaterialTheme.typography.headlineSmall)
-            Text(
+            LText("Texto pronto para rever", style = MaterialTheme.typography.headlineSmall)
+            LText(
                 "Confere o conteúdo antes de o copiar ou guardar num ficheiro TXT.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -570,7 +570,7 @@ internal fun TextResultWorkspace(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             ) {
-                Text(
+                LText(
                     result.text,
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium,
@@ -586,7 +586,7 @@ internal fun TextResultWorkspace(
                 ) {
                     Icon(Icons.Outlined.ContentCopy, contentDescription = null)
                     Spacer(Modifier.size(6.dp))
-                    Text("Copiar")
+                    LText("Copiar")
                 }
                 Button(
                     onClick = { savePicker.launch(result.outputName) },
@@ -596,11 +596,11 @@ internal fun TextResultWorkspace(
                     if (saving) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     else Icon(Icons.Outlined.SaveAlt, contentDescription = null)
                     Spacer(Modifier.size(6.dp))
-                    Text(if (saving) "A guardar…" else "Guardar TXT")
+                    LText(if (saving) "A guardar…" else "Guardar TXT")
                 }
             }
             OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                Text("Voltar às ferramentas")
+                LText("Voltar às ferramentas")
             }
             Spacer(Modifier.height(18.dp))
         }

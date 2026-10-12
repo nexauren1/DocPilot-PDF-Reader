@@ -1,8 +1,9 @@
 package com.nexauren.docpilot.ui.screens
 
 import android.util.Patterns
-import android.os.Bundle
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,8 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import com.nexauren.docpilot.ui.localization.LText
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,7 +53,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.FirebaseException
-import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.GoogleAuthProvider
@@ -68,12 +67,17 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Co
 import com.nexauren.docpilot.R
 import kotlinx.coroutines.launch
 import com.nexauren.docpilot.BuildConfig
-import com.nexauren.docpilot.analytics.DocPilotAnalytics
+import com.nexauren.docpilot.ui.localization.DocPilotLocalization
+import androidx.compose.material3.FilterChip
+import android.content.Intent
+import android.net.Uri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     hasDocumentAccess: Boolean,
+    selectedLanguage: String,
+    onLanguageChanged: (String) -> Unit,
     onRequestDocumentAccess: () -> Unit,
     onOpenMenu: () -> Unit,
 ) {
@@ -87,7 +91,6 @@ fun SettingsScreen(
     var isCreatingAccount by remember { mutableStateOf(true) }
     var authBusy by remember { mutableStateOf(false) }
     var authMessage by remember { mutableStateOf<String?>(null) }
-    var analyticsEnabled by remember { mutableStateOf(DocPilotAnalytics.isEnabled(context)) }
 
     fun signInWithGoogle() {
         authBusy = true
@@ -117,10 +120,6 @@ fun SettingsScreen(
                         if (task.isSuccessful) {
                             currentUser = auth.currentUser
                             authMessage = "Sessão iniciada com Google."
-                            val parameters = Bundle().apply {
-                                putString(FirebaseAnalytics.Param.METHOD, "google")
-                            }
-                            DocPilotAnalytics.logEvent(context, "account_signed_in", parameters)
                         } else {
                             authMessage = authErrorMessage(task.exception)
                         }
@@ -150,7 +149,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Definições") },
+                title = { LText("Definições") },
                 navigationIcon = {
                     IconButton(onClick = onOpenMenu) {
                         Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
@@ -167,11 +166,11 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(
+            LText(
                 "DocPilot, à tua maneira.",
                 style = MaterialTheme.typography.headlineSmall,
             )
-            Text(
+            LText(
                 "Preferências, conta opcional e privacidade.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -183,31 +182,65 @@ fun SettingsScreen(
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    LText("Idioma da aplicação", style = MaterialTheme.typography.titleMedium)
+                    LText(
+                        "Escolhe o idioma dos menus e das ferramentas.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        listOf(
+                            "pt" to "Português",
+                            "en" to "English",
+                            "fr" to "Français",
+                            "es" to "Español",
+                            "de" to "Deutsch",
+                        ).forEach { (code, label) ->
+                            FilterChip(
+                                selected = selectedLanguage == code,
+                                onClick = { onLanguageChanged(code) },
+                                label = { LText(label) },
+                            )
+                        }
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Text(
+                        LText(
                             "Conta DocPilot (opcional)",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(start = 10.dp),
                         )
                     }
-                    Text(
-                        "Podes continuar a ler e tratar PDFs sem criar uma conta. A conta usa o Firebase Authentication para registo e início de sessão.",
+                    LText(
+                        "Podes continuar a ler e tratar PDFs sem criar uma conta. A conta é opcional e serve para iniciar sessão.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
                     if (currentUser != null) {
-                        Text("Sessão iniciada", style = MaterialTheme.typography.titleSmall)
-                        Text(
+                        LText("Sessão iniciada", style = MaterialTheme.typography.titleSmall)
+                        LText(
                             currentUser?.email.orEmpty(),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         OutlinedButton(
                             onClick = {
-                                DocPilotAnalytics.logEvent(context, "account_signed_out")
                                 auth.signOut()
                                 scope.launch {
                                     runCatching {
@@ -219,7 +252,7 @@ fun SettingsScreen(
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Terminar sessão")
+                            LText("Terminar sessão")
                         }
                     } else {
                         OutlinedButton(
@@ -227,9 +260,9 @@ fun SettingsScreen(
                             enabled = !authBusy,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Continuar com Google")
+                            LText("Continuar com Google")
                         }
-                        Text(
+                        LText(
                             "ou utiliza o e-mail e a palavra-passe",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -237,7 +270,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it; authMessage = null },
-                            label = { Text("E-mail") },
+                            label = { LText("E-mail") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
@@ -248,7 +281,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = password,
                             onValueChange = { password = it; authMessage = null },
-                            label = { Text("Palavra-passe") },
+                            label = { LText("Palavra-passe") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
@@ -288,11 +321,6 @@ fun SettingsScreen(
                                                 } else {
                                                     "Sessão iniciada com sucesso."
                                                 }
-                                                val event = if (isCreatingAccount) "account_created" else "account_signed_in"
-                                                val parameters = Bundle().apply {
-                                                    putString(FirebaseAnalytics.Param.METHOD, "email_password")
-                                                }
-                                                DocPilotAnalytics.logEvent(context, event, parameters)
                                             } else {
                                                 authMessage = authErrorMessage(result.exception)
                                             }
@@ -309,7 +337,7 @@ fun SettingsScreen(
                                     strokeWidth = 2.dp,
                                 )
                             } else {
-                                Text(if (isCreatingAccount) "Criar conta" else "Entrar")
+                                LText(if (isCreatingAccount) "Criar conta" else "Entrar")
                             }
                         }
 
@@ -320,7 +348,7 @@ fun SettingsScreen(
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(
+                            LText(
                                 if (isCreatingAccount) "Já tenho conta: entrar"
                                 else "Ainda não tenho conta: criar conta",
                             )
@@ -348,13 +376,13 @@ fun SettingsScreen(
                                 enabled = !authBusy,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Esqueci a palavra-passe")
+                                LText("Esqueci a palavra-passe")
                             }
                         }
                     }
 
                     authMessage?.let {
-                        Text(
+                        LText(
                             it,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
@@ -367,46 +395,11 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Google Analytics", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                if (analyticsEnabled) "Partilha de estatísticas de utilização ativada."
-                                else "Desativado. Não recolhemos eventos do Analytics até ativares esta opção.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(
-                            checked = analyticsEnabled,
-                            onCheckedChange = { enabled ->
-                                analyticsEnabled = enabled
-                                DocPilotAnalytics.setConsent(context, enabled)
-                            },
-                        )
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Quando ativo, o Google Analytics pode receber eventos gerais de utilização para ajudar a melhorar a aplicação. Não enviamos nomes nem conteúdo dos PDFs ou o teu e-mail nesses eventos. Podes alterar esta escolha a qualquer momento.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            ) {
                 Column(modifier = Modifier.padding(bottom = 14.dp)) {
                     ListItem(
-                        headlineContent = { Text("Biblioteca do dispositivo") },
+                        headlineContent = { LText("Biblioteca do dispositivo") },
                         supportingContent = {
-                            Text(
+                            LText(
                                 if (hasDocumentAccess) "Acesso ativo. A aplicação pode localizar PDFs no armazenamento partilhado."
                                 else "Ativa o acesso para encontrar PDFs automaticamente no dispositivo."
                             )
@@ -417,17 +410,17 @@ fun SettingsScreen(
                         onClick = onRequestDocumentAccess,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     ) {
-                        Text(if (hasDocumentAccess) "Atualizar biblioteca" else "Configurar acesso a documentos")
+                        LText(if (hasDocumentAccess) "Atualizar biblioteca" else "Configurar acesso a documentos")
                     }
                     ListItem(
-                        headlineContent = { Text("Aparência") },
-                        supportingContent = { Text("O tema acompanha as definições do sistema.") },
+                        headlineContent = { LText("Aparência") },
+                        supportingContent = { LText("O tema acompanha as definições do sistema.") },
                         leadingContent = { Icon(Icons.Outlined.DarkMode, contentDescription = null) },
                     )
                     ListItem(
-                        headlineContent = { Text("Privacidade dos documentos") },
+                        headlineContent = { LText("Privacidade dos documentos") },
                         supportingContent = {
-                            Text("Os PDFs são processados localmente. Não precisas de uma conta para usar as ferramentas locais.")
+                            LText("Os PDFs são processados localmente. Não precisas de uma conta para usar as ferramentas locais.")
                         },
                         leadingContent = { Icon(Icons.Outlined.Security, contentDescription = null) },
                     )
@@ -439,8 +432,29 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 ListItem(
-                    headlineContent = { Text("Sobre o DocPilot") },
-                    supportingContent = { Text("DocPilot • versão ${BuildConfig.VERSION_NAME}") },
+                    headlineContent = { LText("Política de privacidade") },
+                    supportingContent = { LText("Consulta como os teus dados são tratados.") },
+                    leadingContent = { Icon(Icons.Outlined.Security, contentDescription = null) },
+                    modifier = Modifier.clickable {
+                        runCatching {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://nexauren1.github.io/DocPilot-PDF-Reader/privacy-policy.html"),
+                                ),
+                            )
+                        }
+                    },
+                )
+            }
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                ListItem(
+                    headlineContent = { LText("Sobre o DocPilot") },
+                    supportingContent = { LText("DocPilot • versão ${BuildConfig.VERSION_NAME}") },
                     leadingContent = { Icon(Icons.Outlined.Info, contentDescription = null) },
                 )
             }
@@ -450,8 +464,8 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 ListItem(
-                    headlineContent = { Text("Funcionalidades") },
-                    supportingContent = { Text("Leitor de PDF, biblioteca de documentos, scanner, OCR e ferramentas de organização.") },
+                    headlineContent = { LText("Funcionalidades") },
+                    supportingContent = { LText("Leitor de PDF, biblioteca de documentos, scanner, OCR e ferramentas de organização.") },
                     leadingContent = { Icon(Icons.Outlined.Settings, contentDescription = null) },
                 )
             }
@@ -468,8 +482,8 @@ private fun authErrorMessage(error: Exception?): String {
         code.contains("INVALID_LOGIN_CREDENTIALS") ||
             code.contains("WRONG_PASSWORD") ||
             code.contains("USER_NOT_FOUND") -> "E-mail ou palavra-passe incorretos."
-        code.contains("OPERATION_NOT_ALLOWED") -> "O método E-mail/Palavra-passe ainda não está ativado no Firebase."
+        code.contains("OPERATION_NOT_ALLOWED") -> "Este método de início de sessão ainda não está disponível."
         code.contains("NETWORK_REQUEST_FAILED") -> "Sem ligação à Internet. Verifica a conexão e tenta novamente."
-        else -> "Não foi possível concluir a operação. Verifica a ligação e as definições de autenticação do Firebase."
+        else -> "Não foi possível concluir a operação. Verifica a ligação e tenta novamente."
     }
 }

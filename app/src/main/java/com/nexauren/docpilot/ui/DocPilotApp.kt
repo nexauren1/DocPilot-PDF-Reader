@@ -35,13 +35,13 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Text
+import com.nexauren.docpilot.ui.localization.LText
+import com.nexauren.docpilot.ui.localization.DocPilotLocalization
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,7 +54,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CancellationException
-import com.nexauren.docpilot.analytics.DocPilotAnalytics
 import com.nexauren.docpilot.model.DocumentItem
 import com.nexauren.docpilot.ui.screens.HomeScreen
 import com.nexauren.docpilot.ui.screens.LibraryScreen
@@ -78,6 +77,7 @@ private enum class Destination(val label: String, val icon: androidx.compose.ui.
 fun DocPilotApp() {
     val context = LocalContext.current
     var destination by remember { mutableStateOf(Destination.HOME) }
+    var language by remember { mutableStateOf(DocPilotLocalization.language(context)) }
     var documents by remember { mutableStateOf(loadDocuments(context)) }
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
     var hasDocumentAccess by remember { mutableStateOf(DocumentAccess.hasAccess(context)) }
@@ -86,9 +86,6 @@ fun DocPilotApp() {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(destination) {
-        DocPilotAnalytics.logScreenView(context, destination.label)
-    }
 
     fun refreshDeviceDocuments() {
         hasDocumentAccess = DocumentAccess.hasAccess(context)
@@ -145,7 +142,6 @@ fun DocPilotApp() {
     }
 
     fun openDocument(document: DocumentItem) {
-        DocPilotAnalytics.logEvent(context, "pdf_opened")
         documents = listOf(document) + documents.filterNot { it.uri == document.uri }
         saveDocuments(context, documents)
         selectedDocument = document
@@ -187,13 +183,13 @@ fun DocPilotApp() {
                         .fillMaxWidth()
                         .padding(vertical = 20.dp),
                 ) {
-                    Text(
+                    LText(
                         "DocPilot",
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
                     )
                     Spacer(androidx.compose.ui.Modifier.height(4.dp))
-                    Text(
+                    LText(
                         "Leitor e gestor de PDFs",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -204,7 +200,7 @@ fun DocPilotApp() {
                 Destination.entries.forEach { item ->
                     NavigationDrawerItem(
                         icon = { Icon(item.icon, contentDescription = null) },
-                        label = { Text(item.label) },
+                        label = { LText(item.label) },
                         selected = destination == item,
                         onClick = {
                             destination = item
@@ -226,7 +222,7 @@ fun DocPilotApp() {
                             selected = destination == item,
                             onClick = { destination = item },
                             icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
+                            label = { LText(item.label) },
                         )
                     }
                 }
@@ -282,6 +278,11 @@ fun DocPilotApp() {
 
                     Destination.SETTINGS -> SettingsScreen(
                         hasDocumentAccess = hasDocumentAccess,
+                        selectedLanguage = language,
+                        onLanguageChanged = { newLanguage ->
+                            DocPilotLocalization.setLanguage(context, newLanguage)
+                            language = newLanguage
+                        },
                         onRequestDocumentAccess = { requestDocumentAccess() },
                         onOpenMenu = { scope.launch { drawerState.open() } },
                     )

@@ -43,7 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import com.nexauren.docpilot.ui.localization.LText
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -82,18 +82,18 @@ fun HomeScreen(
     if (showAccessDialog) {
         AlertDialog(
             onDismissRequest = { showAccessDialog = false },
-            title = { Text("Aceder aos teus documentos") },
+            title = { LText("Aceder aos teus documentos") },
             text = {
-                Text("O DocPilot pode procurar PDFs no armazenamento partilhado do dispositivo para criar uma biblioteca automática. Os ficheiros são lidos no teu dispositivo e não são enviados para um servidor. Podes continuar a abrir um PDF individualmente se preferires não conceder este acesso.")
+                LText("O DocPilot pode procurar PDFs no armazenamento partilhado do dispositivo para criar uma biblioteca automática. Os ficheiros são lidos no teu dispositivo e não são enviados para um servidor. Podes continuar a abrir um PDF individualmente se preferires não conceder este acesso.")
             },
             confirmButton = {
                 TextButton(onClick = {
                     showAccessDialog = false
                     onRequestDocumentAccess()
-                }) { Text("Continuar") }
+                }) { LText("Continuar") }
             },
             dismissButton = {
-                TextButton(onClick = { showAccessDialog = false }) { Text("Agora não") }
+                TextButton(onClick = { showAccessDialog = false }) { LText("Agora não") }
             },
         )
     }
@@ -121,8 +121,8 @@ fun HomeScreen(
                         }
                         Spacer(Modifier.width(11.dp))
                         Column {
-                            Text("DocPilot", style = MaterialTheme.typography.titleLarge)
-                            Text(
+                            LText("DocPilot", style = MaterialTheme.typography.titleLarge)
+                            LText(
                                 "Espaço de documentos",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -167,7 +167,7 @@ fun HomeScreen(
                                     }
                                 }
                             },
-                            placeholder = { Text("Pesquisar os teus documentos") },
+                            placeholder = { LText("Pesquisar os teus documentos") },
                         )
                     }
                 }
@@ -187,14 +187,14 @@ fun HomeScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                Text("Nenhum documento encontrado", style = MaterialTheme.typography.titleMedium)
-                                Text("Tenta outro nome ou parte do nome do ficheiro.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                LText("Nenhum documento encontrado", style = MaterialTheme.typography.titleMedium)
+                                LText("Tenta outro nome ou parte do nome do ficheiro.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                 } else {
                     item {
-                        Text(
+                        LText(
                             "${homeSearchResults.size} resultado(s)",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -208,13 +208,13 @@ fun HomeScreen(
                 item {
                 Column {
                     Spacer(Modifier.height(4.dp))
-                    Text(
+                    LText(
                         "Os teus documentos, organizados.",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                     Spacer(Modifier.height(5.dp))
-                    Text(
+                    LText(
                         "Lê, gere e transforma PDFs num espaço simples e privado.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -235,10 +235,10 @@ fun HomeScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Text("O TEU ESPAÇO DE TRABALHO", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.88f))
+                            LText("O TEU ESPAÇO DE TRABALHO", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.88f))
                         }
-                        Text("Tudo começa com um PDF.", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                        Text(
+                        LText("Tudo começa com um PDF.", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                        LText(
                             "Abre um documento para ler ou usa as ferramentas para o preparar como precisas.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.90f),
@@ -259,7 +259,7 @@ fun HomeScreen(
                             ) {
                                 Icon(Icons.Outlined.Folder, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))
-                                Text(if (hasDocumentAccess) "Atualizar ficheiros" else "Ativar biblioteca")
+                                LText(if (hasDocumentAccess) "Atualizar ficheiros" else "Ativar biblioteca")
                             }
                             OutlinedButton(
                                 onClick = onViewLibrary,
@@ -270,7 +270,7 @@ fun HomeScreen(
                             ) {
                                 Icon(Icons.Outlined.Folder, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))
-                                Text("Biblioteca")
+                                LText("Biblioteca")
                             }
                         }
                     }
@@ -311,22 +311,22 @@ fun HomeScreen(
                                 modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(5.dp),
                             ) {
-                                Text(
+                                LText(
                                     "ABERTO RECENTEMENTE",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary,
                                 )
-                                Text(
+                                LText(
                                     latestDocument.name,
                                     style = MaterialTheme.typography.titleMedium,
                                     maxLines = 2,
                                 )
-                                Text(
+                                LText(
                                     "Toca para abrir o documento",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                Text(
+                                LText(
                                     "Abrir documento  →",
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.primary,
@@ -339,8 +339,8 @@ fun HomeScreen(
 
             item {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Acesso rápido", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                    Text(
+                    LText("Acesso rápido", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    LText(
                         "${documents.size} documentos",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -391,8 +391,8 @@ fun HomeScreen(
                             )
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("Privacidade por defeito", style = MaterialTheme.typography.titleSmall)
-                            Text(
+                            LText("Privacidade por defeito", style = MaterialTheme.typography.titleSmall)
+                            LText(
                                 "Os teus PDFs são trabalhados localmente. Não precisas de criar uma conta.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -405,10 +405,10 @@ fun HomeScreen(
             item {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Documentos recentes", style = MaterialTheme.typography.titleLarge)
-                        Text("Continua de onde ficaste", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        LText("Documentos recentes", style = MaterialTheme.typography.titleLarge)
+                        LText("Continua de onde ficaste", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Text(
+                    LText(
                         "Ver todos",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
@@ -436,8 +436,8 @@ fun HomeScreen(
                             ) {
                                 Icon(Icons.Outlined.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(27.dp))
                             }
-                            Text("A tua biblioteca começa aqui", style = MaterialTheme.typography.titleMedium)
-                            Text(
+                            LText("A tua biblioteca começa aqui", style = MaterialTheme.typography.titleMedium)
+                            LText(
                                 if (hasDocumentAccess) "Ainda não encontrámos PDFs. Podes voltar a procurar ou abrir um ficheiro individualmente." else "Permite ao DocPilot procurar PDFs no dispositivo ou abre um ficheiro individualmente.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -448,10 +448,10 @@ fun HomeScreen(
                             }) {
                                 Icon(Icons.Outlined.Folder, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))
-                                Text(if (hasDocumentAccess) "Procurar PDFs" else "Dar acesso aos PDFs")
+                                LText(if (hasDocumentAccess) "Procurar PDFs" else "Dar acesso aos PDFs")
                             }
                             OutlinedButton(onClick = onImportPdf) {
-                                Text("Abrir um PDF individual")
+                                LText("Abrir um PDF individual")
                             }
                         }
                     }
@@ -494,8 +494,8 @@ private fun QuickActionCard(
             ) {
                 Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(23.dp))
             }
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LText(title, style = MaterialTheme.typography.titleSmall)
+            LText(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
