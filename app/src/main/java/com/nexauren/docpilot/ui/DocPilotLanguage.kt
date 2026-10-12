@@ -33,8 +33,8 @@ object DocPilotLanguageManager {
         currentLanguage = language
     }
 
-    fun translate(source: String): String {
-        val language = currentLanguage
+    fun translate(source: String, language: AppLanguage = currentLanguage): String {
+        
         if (language == AppLanguage.PORTUGUESE || source.isBlank()) return source
         translations[source]?.let { return it[language.ordinal - 1] }
         return translateDynamic(source, language) ?: source
@@ -212,5 +212,21 @@ object DocPilotLanguageManager {
         "Modo de leitura" to listOf("Reading mode", "Modo de lectura", "Mode lecture", "Lesemodus"),
         "Guardar marcador" to listOf("Save bookmark", "Guardar marcador", "Enregistrer le signet", "Lesezeichen speichern"),
         "Remover marcador" to listOf("Remove bookmark", "Quitar marcador", "Supprimer le signet", "Lesezeichen entfernen"),
+        "Ler política" to listOf("Read policy", "Leer la política", "Lire la politique", "Richtlinie lesen"),
+        "Como os documentos e os dados da conta opcional são tratados." to listOf("How documents and optional account data are handled.", "Cómo se tratan los documentos y los datos opcionales de la cuenta.", "Comment les documents et les données du compte facultatif sont traités.", "Wie Dokumente und optionale Kontodaten verarbeitet werden."),
+        "Os ficheiros PDF e as imagens são processados localmente quando usas as ferramentas do leitor. O conteúdo dos documentos não é enviado para os nossos servidores." to listOf("PDF files and images are processed on your device when you use the tools. Document contents are not sent to our servers.", "Los archivos PDF y las imágenes se procesan en tu dispositivo. El contenido no se envía a nuestros servidores.", "Les fichiers PDF et les images sont traités sur votre appareil. Le contenu des documents n’est pas envoyé à nos serveurs.", "PDF-Dateien und Bilder werden auf deinem Gerät verarbeitet. Dokumentinhalte werden nicht an unsere Server gesendet."),
+        "A aplicação não inclui Google Analytics nem recolha de eventos para análise de utilização." to listOf("The app does not include usage analytics or collect analytics events.", "La aplicación no incluye análisis de uso ni recopila eventos de análisis.", "L’application n’inclut aucun outil d’analyse d’utilisation et ne collecte pas d’événements analytiques.", "Die App enthält keine Nutzungsanalyse und sammelt keine Analyseereignisse."),
+        "A criação de conta é opcional. Se iniciares sessão, o fornecedor de autenticação recebe os dados necessários para criar e gerir essa conta." to listOf("Creating an account is optional. If you sign in, the authentication provider receives the information needed to create and manage the account.", "Crear una cuenta es opcional. Si inicias sesión, el proveedor de autenticación recibe los datos necesarios para crear y gestionar la cuenta.", "La création d’un compte est facultative. Si vous vous connectez, le fournisseur d’authentification reçoit les données nécessaires à la gestion du compte.", "Ein Konto ist optional. Bei der Anmeldung erhält der Authentifizierungsanbieter die für die Kontoverwaltung erforderlichen Daten."),
+        "O acesso à biblioteca do dispositivo só é usado depois de o concederes nas definições do Android. Também podes abrir ficheiros individuais através do seletor de documentos." to listOf("Device-library access is used only after you grant it in Android settings. You can also open individual files through the document picker.", "El acceso a la biblioteca solo se usa después de concederlo en los ajustes de Android. También puedes abrir archivos individuales con el selector de documentos.", "L’accès à la bibliothèque n’est utilisé qu’après autorisation dans les paramètres Android. Vous pouvez aussi ouvrir des fichiers via le sélecteur de documents.", "Der Zugriff auf die Gerätebibliothek erfolgt erst nach deiner Freigabe in den Android-Einstellungen. Einzelne Dateien kannst du auch über die Dateiauswahl öffnen."),
+        "Para pedidos de privacidade ou apoio, consulta a página do projeto DocPilot no GitHub. Não publiques dados pessoais em espaços públicos." to listOf("For privacy or support requests, use the DocPilot project page on GitHub. Do not post personal data publicly.", "Para solicitudes de privacidad o ayuda, visita la página del proyecto DocPilot en GitHub. No publiques datos personales.", "Pour toute demande de confidentialité ou d’assistance, consultez le projet DocPilot sur GitHub. Ne publiez pas de données personnelles.", "Bei Datenschutz- oder Supportanfragen nutze die DocPilot-Projektseite auf GitHub. Veröffentliche keine persönlichen Daten."),
+        "A preparar o PDF…" to listOf("Preparing PDF…", "Preparando el PDF…", "Préparation du PDF…", "PDF wird vorbereitet…"),
+        "Numerar páginas" to listOf("Number pages", "Numerar páginas", "Numéroter les pages", "Seiten nummerieren"),
+        "Adicionar números de página" to listOf("Add page numbers", "Añadir números de página", "Ajouter des numéros de page", "Seitenzahlen hinzufügen"),
+        "Adicionar números em todas as páginas" to listOf("Add numbers to every page", "Añadir números a todas las páginas", "Ajouter des numéros à chaque page", "Alle Seiten nummerieren"),
+        "Adiciona um número discreto a cada página e cria uma nova cópia." to listOf("Adds a subtle number to each page and creates a new copy.", "Añade un número discreto a cada página y crea una copia nueva.", "Ajoute un numéro discret à chaque page et crée une nouvelle copie.", "Fügt jeder Seite eine dezente Nummer hinzu und erstellt eine neue Kopie."),
+        "Numera todas as páginas sem alterar o ficheiro original." to listOf("Numbers every page without changing the original file.", "Numera todas las páginas sin cambiar el archivo original.", "Numérote toutes les pages sans modifier le fichier original.", "Nummeriert alle Seiten, ohne die Originaldatei zu ändern."),
+        "A numerar páginas" to listOf("Numbering pages", "Numerando páginas", "Numérotation des pages", "Seiten werden nummeriert"),
+        "Selecione um PDF." to listOf("Select a PDF.", "Selecciona un PDF.", "Sélectionnez un PDF.", "Wähle eine PDF-Datei aus."),
+        "Seleciona um PDF e uma página válida." to listOf("Select a PDF and a valid page.", "Selecciona un PDF y una página válida.", "Sélectionnez un PDF et une page valide.", "Wähle eine PDF-Datei und eine gültige Seite aus."),
     ).associate { (key, values) -> key to values }
 }
