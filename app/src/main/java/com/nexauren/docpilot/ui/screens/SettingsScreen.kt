@@ -28,6 +28,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -68,6 +70,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Co
 import com.nexauren.docpilot.R
 import kotlinx.coroutines.launch
 import com.nexauren.docpilot.BuildConfig
+import com.nexauren.docpilot.ui.localization.DocPilotLanguage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +78,7 @@ fun SettingsScreen(
     hasDocumentAccess: Boolean,
     onRequestDocumentAccess: () -> Unit,
     onOpenMenu: () -> Unit,
+    onLanguageChanged: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val auth = remember { FirebaseAuth.getInstance() }
@@ -86,6 +90,8 @@ fun SettingsScreen(
     var isCreatingAccount by remember { mutableStateOf(true) }
     var authBusy by remember { mutableStateOf(false) }
     var authMessage by remember { mutableStateOf<String?>(null) }
+    var selectedLanguage by remember { mutableStateOf(DocPilotLanguage.current(context)) }
+    var languageMenuExpanded by remember { mutableStateOf(false) }
 
     fun signInWithGoogle() {
         authBusy = true
@@ -168,6 +174,44 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(localized("Idioma da aplicação"), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        localized("Escolhe o idioma dos menus e das ferramentas compatíveis."),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    androidx.compose.foundation.layout.Box {
+                        OutlinedButton(onClick = { languageMenuExpanded = true }) {
+                            Text(DocPilotLanguage.supported.firstOrNull { it.first == selectedLanguage }?.second ?: "Português")
+                        }
+                        DropdownMenu(
+                            expanded = languageMenuExpanded,
+                            onDismissRequest = { languageMenuExpanded = false },
+                        ) {
+                            DocPilotLanguage.supported.forEach { (code, label) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        selectedLanguage = code
+                                        DocPilotLanguage.save(context, code)
+                                        onLanguageChanged(code)
+                                        languageMenuExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             Card(
                 shape = RoundedCornerShape(20.dp),
