@@ -191,7 +191,7 @@ fun SettingsScreen(
                         )
                     }
                     Text(
-                        "Podes ler e tratar PDFs sem criar uma conta. A conta é opcional e serve apenas para iniciar sessão.",
+                        "Podes ler e tratar PDFs sem criar uma conta. A conta é opcional e serve para sincronizar apenas os dados necessários à autenticação.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -487,7 +487,7 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text("Os ficheiros PDF e as imagens são processados localmente quando usas as ferramentas do leitor. O conteúdo dos documentos não é enviado para os nossos servidores.")
-                    Text("A aplicação não inclui Google Analytics nem recolha de eventos para análise de utilização.")
+                    Text("A aplicação não usa ferramentas de análise de utilização nem apresenta anúncios.")
                     Text("A criação de conta é opcional. Se iniciares sessão, o fornecedor de autenticação recebe os dados necessários para criar e gerir essa conta.")
                     Text("O acesso à biblioteca do dispositivo só é usado depois de o concederes nas definições do Android. Também podes abrir ficheiros individuais através do seletor de documentos.")
                     Text("Para pedidos de privacidade ou apoio, consulta a página do projeto DocPilot no GitHub. Não publiques dados pessoais em espaços públicos.")
@@ -512,6 +512,6 @@ private fun authErrorMessage(error: Exception?): String {
             code.contains("USER_NOT_FOUND") -> "E-mail ou palavra-passe incorretos."
         code.contains("OPERATION_NOT_ALLOWED") -> "Este método de início de sessão ainda não está disponível."
         code.contains("NETWORK_REQUEST_FAILED") -> "Sem ligação à Internet. Verifica a conexão e tenta novamente."
-        else -> "Não foi possível concluir a operação. Verifica a ligação e as definições de autenticação do Firebase."
+        else -> "Não foi possível concluir a operação. Verifica a ligação e tenta novamente."
     }
 }
