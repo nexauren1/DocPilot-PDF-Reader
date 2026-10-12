@@ -32,6 +32,8 @@ The interface includes Portuguese, English, Spanish, French, and German options.
 
 ## Free document tools
 
+- Add a discreet page number to every page, saved as a new PDF
+
 - Merge multiple PDFs
 - Extract an inclusive page range
 - Reorder every page using a sequence such as `3,1,2,4`; the sequence must include each page exactly once. Use Split PDF when you need only a subset
@@ -51,6 +53,8 @@ The interface includes Portuguese, English, Spanish, French, and German options.
 The visual signature is not a certificate-backed digital signature. Compression primarily optimizes embedded images, so PDFs dominated by text or vector content may show little size reduction.
 
 ## Privacy and storage
+
+Read the [privacy policy](docs/privacy-policy.md), available in Portuguese and English.
 
 The app uses Android's system document picker as a private, per-file access option. Users may also grant wider storage access to discover PDFs throughout the device. Selected PDFs and images are not uploaded to a DocPilot server. Optional account sign-in is available; PDF documents are not uploaded to a DocPilot server, and Google Analytics is not included.
 
