@@ -84,7 +84,7 @@ fun HomeScreen(
             onDismissRequest = { showAccessDialog = false },
             title = { LText("Aceder aos teus documentos") },
             text = {
-                LText("O DocPilot pode procurar PDFs no armazenamento partilhado do dispositivo para criar uma biblioteca automática. Os ficheiros são lidos no teu dispositivo e não são enviados para um servidor. Podes continuar a abrir um PDF individualmente se preferires não conceder este acesso.")
+                LText("O PDF Reader & Tools pode procurar PDFs no armazenamento partilhado do dispositivo para criar uma biblioteca automática. Os ficheiros são lidos no teu dispositivo e não são enviados para um servidor. Podes continuar a abrir um PDF individualmente se preferires não conceder este acesso.")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -121,7 +121,7 @@ fun HomeScreen(
                         }
                         Spacer(Modifier.width(11.dp))
                         Column {
-                            LText("DocPilot", style = MaterialTheme.typography.titleLarge)
+                            LText("PDF Reader & Tools", style = MaterialTheme.typography.titleLarge)
                             LText(
                                 "Espaço de documentos",
                                 style = MaterialTheme.typography.labelSmall,
@@ -438,7 +438,7 @@ fun HomeScreen(
                             }
                             LText("A tua biblioteca começa aqui", style = MaterialTheme.typography.titleMedium)
                             LText(
-                                if (hasDocumentAccess) "Ainda não encontrámos PDFs. Podes voltar a procurar ou abrir um ficheiro individualmente." else "Permite ao DocPilot procurar PDFs no dispositivo ou abre um ficheiro individualmente.",
+                                if (hasDocumentAccess) "Ainda não encontrámos PDFs. Podes voltar a procurar ou abrir um ficheiro individualmente." else "Permite ao PDF Reader & Tools procurar PDFs no dispositivo ou abre um ficheiro individualmente.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

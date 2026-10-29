@@ -65,6 +65,20 @@ internal fun translateForLanguage(languageCode: String, text: String): String {
         val name = text.removePrefix("PDF selecionado: ")
         return listOf("PDF selecionado: $name", "PDF selected: $name", "PDF sélectionné : $name", "PDF seleccionado: $name", "PDF ausgewählt: $name")[index]
     }
+    Regex("^(\\d+) páginas detetadas$").matchEntire(text)?.let {
+        val count = it.groupValues[1]
+        return listOf("$count páginas detetadas", "$count pages detected", "$count pages détectées", "$count páginas detectadas", "$count Seiten erkannt")[index]
+    }
+    Regex("^(\\d+) ferramentas gratuitas para organizar, proteger e transformar documentos no dispositivo\\.$").matchEntire(text)?.let {
+        val count = it.groupValues[1]
+        return listOf(
+            "$count ferramentas gratuitas para organizar, proteger e transformar documentos no dispositivo.",
+            "$count free tools to organize, protect and transform documents on your device.",
+            "$count outils gratuits pour organiser, protéger et transformer des documents sur votre appareil.",
+            "$count herramientas gratuitas para organizar, proteger y transformar documentos en tu dispositivo.",
+            "$count kostenlose Werkzeuge zum Organisieren, Schützen und Bearbeiten von Dokumenten auf deinem Gerät."
+        )[index]
+    }
     Regex("^(\\d+) documentos$").matchEntire(text)?.let {
         val n = it.groupValues[1]
         return listOf("$n documentos", "$n documents", "$n documents", "$n documentos", "$n Dokumente")[index]
@@ -82,27 +96,41 @@ internal fun translateForLanguage(languageCode: String, text: String): String {
         val total = it.groupValues[2]
         return listOf("Página $page de $total", "Page $page of $total", "Page $page sur $total", "Página $page de $total", "Seite $page von $total")[index]
     }
-    if (text.startsWith("DocPilot • versão ")) {
-        val version = text.substringAfter("DocPilot • versão ")
-        return listOf("DocPilot • versão $version", "DocPilot • version $version", "DocPilot • version $version", "DocPilot • versión $version", "DocPilot • Version $version")[index]
+    if (text.startsWith("PDF Reader & Tools • versão ")) {
+        val version = text.substringAfter("PDF Reader & Tools • versão ")
+        return listOf("PDF Reader & Tools • versão $version", "PDF Reader & Tools • version $version", "PDF Reader & Tools • version $version", "PDF Reader & Tools • versión $version", "PDF Reader & Tools • Version $version")[index]
     }
     return text
 }
 
 private val phrases: Map<String, List<String>> = mapOf(
+    "Todas" to listOf("Todas", "All", "Toutes", "Todas", "Alle"),
+    "Organizar" to listOf("Organizar", "Organize", "Organiser", "Organizar", "Organisieren"),
+    "Converter" to listOf("Converter", "Convert", "Convertir", "Convertir", "Konvertieren"),
+    "Segurança" to listOf("Segurança", "Security", "Sécurité", "Seguridad", "Sicherheit"),
+    "Scanner e OCR" to listOf("Scanner e OCR", "Scanner & OCR", "Scanner et OCR", "Escáner y OCR", "Scanner und OCR"),
+    "Texto e informação" to listOf("Texto e informação", "Text & info", "Texte et infos", "Texto e información", "Text und Info"),
+    "Atividade nesta sessão" to listOf("Atividade nesta sessão", "This session", "Activité de cette session", "Actividad de esta sesión", "Aktivität in dieser Sitzung"),
+    "Concluídas" to listOf("Concluídas", "Completed", "Terminées", "Completadas", "Abgeschlossen"),
+    "Falhas" to listOf("Falhas", "Failures", "Échecs", "Fallos", "Fehler"),
+    "Remover páginas" to listOf("Remover páginas", "Remove pages", "Supprimer des pages", "Eliminar páginas", "Seiten entfernen"),
+    "Eliminar páginas de um intervalo" to listOf("Eliminar páginas de um intervalo", "Remove a page range", "Supprimer une plage de pages", "Eliminar un intervalo de páginas", "Einen Seitenbereich entfernen"),
+    "Remover um intervalo de páginas de uma cópia do PDF." to listOf("Remover um intervalo de páginas de uma cópia do PDF.", "Remove a page range from a copy of the PDF.", "Supprimer une plage de pages d’une copie du PDF.", "Eliminar un intervalo de páginas de una copia del PDF.", "Einen Seitenbereich aus einer PDF-Kopie entfernen."),
+    "Seleciona um PDF e indica o intervalo a remover." to listOf("Seleciona um PDF e indica o intervalo a remover.", "Select a PDF and enter the page range to remove.", "Sélectionnez un PDF et indiquez la plage à supprimer.", "Selecciona un PDF e indica el intervalo que deseas eliminar.", "Wähle ein PDF und gib den zu entfernenden Seitenbereich ein."),
+    "Não podes remover todas as páginas do documento." to listOf("Não podes remover todas as páginas do documento.", "You cannot remove every page from the document.", "Vous ne pouvez pas supprimer toutes les pages du document.", "No puedes eliminar todas las páginas del documento.", "Du kannst nicht alle Seiten des Dokuments entfernen."),
     "Início" to listOf("Início", "Home", "Accueil", "Inicio", "Start"),
     "Biblioteca" to listOf("Biblioteca", "Library", "Bibliothèque", "Biblioteca", "Bibliothek"),
     "Ferramentas" to listOf("Ferramentas", "Tools", "Outils", "Herramientas", "Werkzeuge"),
     "Definições" to listOf("Definições", "Settings", "Paramètres", "Ajustes", "Einstellungen"),
     "Leitor e gestor de PDFs" to listOf("Leitor e gestor de PDFs", "PDF reader and manager", "Lecteur et gestionnaire PDF", "Lector y gestor de PDF", "PDF-Reader und Verwaltung"),
-    "DocPilot" to listOf("DocPilot", "DocPilot", "DocPilot", "DocPilot", "DocPilot"),
+    "PDF Reader & Tools" to listOf("PDF Reader & Tools", "PDF Reader & Tools", "PDF Reader & Tools", "PDF Reader & Tools", "PDF Reader & Tools"),
     "Aceder aos teus documentos" to listOf("Aceder aos teus documentos", "Access your documents", "Accéder à vos documents", "Acceder a tus documentos", "Auf Dokumente zugreifen"),
-    "O DocPilot pode procurar PDFs no armazenamento partilhado do dispositivo para criar uma biblioteca automática. Os ficheiros são lidos no teu dispositivo e não são enviados para um servidor. Podes continuar a abrir um PDF individualmente se preferires não conceder este acesso." to listOf(
-        "O DocPilot pode procurar PDFs no armazenamento partilhado do dispositivo para criar uma biblioteca automática. Os ficheiros são lidos no teu dispositivo e não são enviados para um servidor. Podes continuar a abrir um PDF individualmente se preferires não conceder este acesso.",
-        "DocPilot can look for PDFs in shared storage to build a library. Files are read on your device and are not sent to a server. You can still open a single PDF without granting this access.",
-        "DocPilot peut rechercher des PDF dans le stockage partagé pour créer une bibliothèque. Les fichiers sont lus sur votre appareil et ne sont pas envoyés à un serveur. Vous pouvez ouvrir un PDF individuellement sans accorder cet accès.",
-        "DocPilot puede buscar PDF en el almacenamiento compartido para crear una biblioteca. Los archivos se leen en tu dispositivo y no se envían a un servidor. También puedes abrir un PDF individual sin conceder este acceso.",
-        "DocPilot kann im gemeinsam genutzten Speicher nach PDFs suchen. Dateien werden auf deinem Gerät gelesen und nicht an einen Server gesendet. Du kannst einzelne PDFs auch ohne diesen Zugriff öffnen."
+    "O PDF Reader & Tools pode procurar PDFs no armazenamento partilhado do dispositivo para criar uma biblioteca automática. Os ficheiros são lidos no teu dispositivo e não são enviados para um servidor. Podes continuar a abrir um PDF individualmente se preferires não conceder este acesso." to listOf(
+        "O PDF Reader & Tools pode procurar PDFs no armazenamento partilhado do dispositivo para criar uma biblioteca automática. Os ficheiros são lidos no teu dispositivo e não são enviados para um servidor. Podes continuar a abrir um PDF individualmente se preferires não conceder este acesso.",
+        "PDF Reader & Tools can look for PDFs in shared storage to build a library. Files are read on your device and are not sent to a server. You can still open a single PDF without granting this access.",
+        "PDF Reader & Tools peut rechercher des PDF dans le stockage partagé pour créer une bibliothèque. Les fichiers sont lus sur votre appareil et ne sont pas envoyés à un serveur. Vous pouvez ouvrir un PDF individuellement sans accorder cet accès.",
+        "PDF Reader & Tools puede buscar PDF en el almacenamiento compartido para crear una biblioteca. Los archivos se leen en tu dispositivo y no se envían a un servidor. También puedes abrir un PDF individual sin conceder este acceso.",
+        "PDF Reader & Tools kann im gemeinsam genutzten Speicher nach PDFs suchen. Dateien werden auf deinem Gerät gelesen und nicht an einen Server gesendet. Du kannst einzelne PDFs auch ohne diesen Zugriff öffnen."
     ),
     "Continuar" to listOf("Continuar", "Continue", "Continuer", "Continuar", "Weiter"),
     "Agora não" to listOf("Agora não", "Not now", "Pas maintenant", "Ahora no", "Jetzt nicht"),
@@ -168,7 +196,7 @@ private val phrases: Map<String, List<String>> = mapOf(
     "Confere o conteúdo antes de o copiar ou guardar num ficheiro TXT." to listOf("Confere o conteúdo antes de o copiar ou guardar num ficheiro TXT.", "Review the content before copying it or saving it as a TXT file.", "Vérifiez le contenu avant de le copier ou de l’enregistrer en TXT.", "Revisa el contenido antes de copiarlo o guardarlo como TXT.", "Prüfe den Inhalt, bevor du ihn kopierst oder als TXT speicherst."),
     "Copiar" to listOf("Copiar", "Copy", "Copier", "Copiar", "Kopieren"),
     "Definições" to listOf("Definições", "Settings", "Paramètres", "Ajustes", "Einstellungen"),
-    "DocPilot, à tua maneira." to listOf("DocPilot, à tua maneira.", "DocPilot, your way.", "DocPilot, à votre façon.", "DocPilot, a tu manera.", "DocPilot, ganz nach deinem Geschmack."),
+    "PDF Reader & Tools, à tua maneira." to listOf("PDF Reader & Tools, à tua maneira.", "PDF Reader & Tools, your way.", "PDF Reader & Tools, à votre façon.", "PDF Reader & Tools, a tu manera.", "PDF Reader & Tools, ganz nach deinem Geschmack."),
     "Preferências, conta opcional e privacidade." to listOf("Preferências, conta opcional e privacidade.", "Preferences, optional account and privacy.", "Préférences, compte facultatif et confidentialité.", "Preferencias, cuenta opcional y privacidad.", "Einstellungen, optionales Konto und Datenschutz."),
     "Idioma da aplicação" to listOf("Idioma da aplicação", "App language", "Langue de l’application", "Idioma de la aplicación", "App-Sprache"),
     "Escolhe o idioma dos menus e das ferramentas." to listOf("Escolhe o idioma dos menus e das ferramentas.", "Choose the language for menus and tools.", "Choisissez la langue des menus et des outils.", "Elige el idioma de los menús y las herramientas.", "Wähle die Sprache für Menüs und Werkzeuge."),
@@ -177,7 +205,7 @@ private val phrases: Map<String, List<String>> = mapOf(
     "Français" to listOf("Français", "French", "Français", "Francés", "Französisch"),
     "Español" to listOf("Español", "Spanish", "Espagnol", "Español", "Spanisch"),
     "Deutsch" to listOf("Deutsch", "German", "Allemand", "Alemán", "Deutsch"),
-    "Conta DocPilot (opcional)" to listOf("Conta DocPilot (opcional)", "Account (optional)", "Compte (facultatif)", "Cuenta (opcional)", "Konto (optional)"),
+    "Conta PDF Reader & Tools (opcional)" to listOf("Conta PDF Reader & Tools (opcional)", "Account (optional)", "Compte (facultatif)", "Cuenta (opcional)", "Konto (optional)"),
     "Podes continuar a ler e tratar PDFs sem criar uma conta. A conta é opcional e serve para iniciar sessão." to listOf("Podes continuar a ler e tratar PDFs sem criar uma conta. A conta é opcional e serve para iniciar sessão.", "You can read and process PDFs without an account. An account is optional and is used to sign in.", "Vous pouvez lire et traiter des PDF sans compte. Le compte est facultatif et sert à vous connecter.", "Puedes leer y procesar PDF sin cuenta. La cuenta es opcional y sirve para iniciar sesión.", "Du kannst PDFs ohne Konto lesen und bearbeiten. Ein Konto ist optional und dient der Anmeldung."),
     "Sessão iniciada" to listOf("Sessão iniciada", "Signed in", "Connecté", "Sesión iniciada", "Angemeldet"),
     "Terminar sessão" to listOf("Terminar sessão", "Sign out", "Se déconnecter", "Cerrar sesión", "Abmelden"),
@@ -193,7 +221,7 @@ private val phrases: Map<String, List<String>> = mapOf(
     "Os PDFs são processados localmente. Não precisas de uma conta para usar as ferramentas locais." to listOf("Os PDFs são processados localmente. Não precisas de uma conta para usar as ferramentas locais.", "PDFs are processed locally. No account is needed for local tools.", "Les PDF sont traités localement. Aucun compte n’est nécessaire pour les outils locaux.", "Los PDF se procesan localmente. No necesitas una cuenta para las herramientas locales.", "PDFs werden lokal verarbeitet. Für lokale Werkzeuge ist kein Konto nötig."),
     "Política de privacidade" to listOf("Política de privacidade", "Privacy policy", "Politique de confidentialité", "Política de privacidad", "Datenschutzerklärung"),
     "Consulta como os teus dados são tratados." to listOf("Consulta como os teus dados são tratados.", "Learn how your data is handled.", "Découvrez comment vos données sont traitées.", "Consulta cómo se tratan tus datos.", "Erfahre, wie deine Daten verarbeitet werden."),
-    "Sobre o DocPilot" to listOf("Sobre o DocPilot", "About DocPilot", "À propos de DocPilot", "Acerca de DocPilot", "Über DocPilot"),
+    "Sobre o PDF Reader & Tools" to listOf("Sobre o PDF Reader & Tools", "About PDF Reader & Tools", "À propos de PDF Reader & Tools", "Acerca de PDF Reader & Tools", "Über PDF Reader & Tools"),
     "Funcionalidades" to listOf("Funcionalidades", "Features", "Fonctionnalités", "Funciones", "Funktionen"),
     "Leitor de PDF, biblioteca de documentos, scanner, OCR e ferramentas de organização." to listOf("Leitor de PDF, biblioteca de documentos, scanner, OCR e ferramentas de organização.", "PDF reader, document library, scanner, OCR and organization tools.", "Lecteur PDF, bibliothèque, scanner, OCR et outils d’organisation.", "Lector PDF, biblioteca, escáner, OCR y herramientas de organización.", "PDF-Reader, Dokumentbibliothek, Scanner, OCR und Organisationswerkzeuge."),
     "Ferramentas" to listOf("Ferramentas", "Tools", "Outils", "Herramientas", "Werkzeuge"),
@@ -227,7 +255,7 @@ private val phrases: Map<String, List<String>> = mapOf(
     "Remover linhas vazias" to listOf("Remover linhas vazias", "Remove blank lines", "Supprimer les lignes vides", "Eliminar líneas vacías", "Leere Zeilen entfernen"),
     "Útil para limpar texto exportado de alguns documentos." to listOf("Útil para limpar texto exportado de alguns documentos.", "Useful for cleaning exported text from some documents.", "Utile pour nettoyer le texte exporté de certains documents.", "Útil para limpiar el texto exportado de algunos documentos.", "Nützlich, um exportierten Text aus manchen Dokumenten zu bereinigen."),
     "Digitalização pronta para processar" to listOf("Digitalização pronta para processar", "Scan ready to process", "Numérisation prête à traiter", "Escaneo listo para procesar", "Scan bereit zur Verarbeitung"),
-    "O DocPilot vai preparar uma pré-visualização. O PDF só será guardado no destino escolhido depois de reveres o resultado." to listOf("O DocPilot vai preparar uma pré-visualização. O PDF só será guardado no destino escolhido depois de reveres o resultado.", "DocPilot will prepare a preview. The PDF is saved to your chosen destination only after you review the result.", "DocPilot va préparer un aperçu. Le PDF ne sera enregistré à l’emplacement choisi qu’après vérification du résultat.", "DocPilot preparará una vista previa. El PDF solo se guardará en el destino elegido después de revisar el resultado.", "DocPilot erstellt eine Vorschau. Die PDF wird erst nach deiner Prüfung am gewählten Speicherort gespeichert."),
+    "O PDF Reader & Tools vai preparar uma pré-visualização. O PDF só será guardado no destino escolhido depois de reveres o resultado." to listOf("O PDF Reader & Tools vai preparar uma pré-visualização. O PDF só será guardado no destino escolhido depois de reveres o resultado.", "PDF Reader & Tools will prepare a preview. The PDF is saved to your chosen destination only after you review the result.", "PDF Reader & Tools va préparer un aperçu. Le PDF ne sera enregistré à l’emplacement choisi qu’après vérification du résultat.", "PDF Reader & Tools preparará una vista previa. El PDF solo se guardará en el destino elegido después de revisar el resultado.", "PDF Reader & Tools erstellt eine Vorschau. Die PDF wird erst nach deiner Prüfung am gewählten Speicherort gespeichert."),
     "Consulta o número de páginas, o tamanho do ficheiro, as dimensões da primeira página e os metadados. O original não será alterado." to listOf("Consulta o número de páginas, o tamanho do ficheiro, as dimensões da primeira página e os metadados. O original não será alterado.", "Check page count, file size, first-page dimensions and metadata. The original will not be changed.", "Consultez le nombre de pages, la taille du fichier, les dimensions de la première page et les métadonnées. L’original ne sera pas modifié.", "Consulta el número de páginas, el tamaño, las dimensiones de la primera página y los metadatos. El original no cambiará.", "Sieh Seitenzahl, Dateigröße, Abmessungen der ersten Seite und Metadaten nach. Das Original wird nicht verändert."),
     "O recorte altera a área visível. O conteúdo fora da área recortada não é apagado permanentemente." to listOf("O recorte altera a área visível. O conteúdo fora da área recortada não é apagado permanentemente.", "Cropping changes the visible area. Content outside the crop is not permanently deleted.", "Le recadrage modifie la zone visible. Le contenu hors cadre n’est pas supprimé définitivement.", "El recorte cambia el área visible. El contenido fuera del recorte no se elimina permanentemente.", "Der Zuschnitt verändert den sichtbaren Bereich. Inhalte außerhalb des Ausschnitts werden nicht dauerhaft gelöscht."),
 

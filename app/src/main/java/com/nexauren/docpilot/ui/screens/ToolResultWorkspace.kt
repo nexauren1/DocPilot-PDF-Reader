@@ -74,7 +74,7 @@ internal data class CachedPdfResult(
 
 internal data class CachedTextResult(
     val text: String,
-    val outputName: String = "docpilot-text.txt",
+    val outputName: String = "pdf-tools-text.txt",
 )
 
 internal data class CachedImageResult(
@@ -91,7 +91,7 @@ internal fun createCachedPdfResult(
 ): CachedPdfResult {
     val directory = File(context.cacheDir, "tool-results")
     check(directory.exists() || directory.mkdirs()) { "Não foi possível preparar o espaço temporário." }
-    val file = File.createTempFile("docpilot-result-", ".pdf", directory)
+    val file = File.createTempFile("pdf-tools-result-", ".pdf", directory)
     try {
         val uri = FileProvider.getUriForFile(
             context,
@@ -121,7 +121,7 @@ internal fun createCachedImageResult(
     check(directory.exists() || directory.mkdirs()) {
         "Não foi possível preparar o espaço temporário."
     }
-    val file = File.createTempFile("docpilot-image-", ".png", directory)
+    val file = File.createTempFile("pdf-tools-image-", ".png", directory)
     try {
         val uri = FileProvider.getUriForFile(
             context,

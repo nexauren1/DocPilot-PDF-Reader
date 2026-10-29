@@ -167,7 +167,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             LText(
-                "DocPilot, à tua maneira.",
+                "PDF Reader & Tools, à tua maneira.",
                 style = MaterialTheme.typography.headlineSmall,
             )
             LText(
@@ -222,7 +222,7 @@ fun SettingsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         LText(
-                            "Conta DocPilot (opcional)",
+                            "Conta PDF Reader & Tools (opcional)",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(start = 10.dp),
                         )
@@ -453,8 +453,8 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 ListItem(
-                    headlineContent = { LText("Sobre o DocPilot") },
-                    supportingContent = { LText("DocPilot • versão ${BuildConfig.VERSION_NAME}") },
+                    headlineContent = { LText("Sobre PDF Reader & Tools") },
+                    supportingContent = { LText("PDF Reader & Tools • versão ${BuildConfig.VERSION_NAME}") },
                     leadingContent = { Icon(Icons.Outlined.Info, contentDescription = null) },
                 )
             }
