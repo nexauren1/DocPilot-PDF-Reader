@@ -356,6 +356,7 @@ fun DocPilotApp(
                         documents = documents,
                         onOpenDocument = { openDocument(it) },
                         onOpenMenu = { scope.launch { drawerState.open() } },
+                        onImportPdf = { showImportPicker = true },
                     )
 
                     Destination.TOOLS -> ToolsScreen(
