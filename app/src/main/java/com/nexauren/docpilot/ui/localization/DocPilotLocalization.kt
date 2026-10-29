@@ -93,6 +93,13 @@ private val phrases: Map<String, List<String>> = mapOf(
     "Início" to listOf("Início", "Home", "Accueil", "Inicio", "Start"),
     "Biblioteca" to listOf("Biblioteca", "Library", "Bibliothèque", "Biblioteca", "Bibliothek"),
     "Ferramentas" to listOf("Ferramentas", "Tools", "Outils", "Herramientas", "Werkzeuge"),
+    "Armazenamento interno" to listOf("Armazenamento interno", "Internal storage", "Stockage interne", "Almacenamiento interno", "Interner Speicher"),
+    "Ficheiros recentes" to listOf("Ficheiros recentes", "Recent files", "Fichiers récents", "Archivos recientes", "Zuletzt verwendete Dateien"),
+    "Documentos já usados nesta aplicação" to listOf("Documentos já usados nesta aplicação", "Files already opened in this app", "Fichiers déjà ouverts dans cette application", "Archivos ya abiertos en esta aplicación", "In dieser App bereits geöffnete Dateien"),
+    "Navega pelas pastas sem sair do DocPilot" to listOf("Navega pelas pastas sem sair do DocPilot", "Browse folders without leaving DocPilot", "Parcourez les dossiers sans quitter DocPilot", "Explora carpetas sin salir de DocPilot", "Durchsuche Ordner, ohne DocPilot zu verlassen"),
+    "Pasta anterior" to listOf("Pasta anterior", "Parent folder", "Dossier parent", "Carpeta superior", "Übergeordneter Ordner"),
+    "Pasta" to listOf("Pasta", "Folder", "Dossier", "Carpeta", "Ordner"),
+    "Esta pasta não contém ficheiros deste tipo" to listOf("Esta pasta não contém ficheiros deste tipo", "This folder has no files of this type", "Ce dossier ne contient aucun fichier de ce type", "Esta carpeta no contiene archivos de este tipo", "Dieser Ordner enthält keine Dateien dieses Typs"),
     "Todas" to listOf("Todas", "All", "Toutes", "Todas", "Alle"),
     "Não encontrámos ferramentas" to listOf(
         "Não encontrámos ferramentas",
