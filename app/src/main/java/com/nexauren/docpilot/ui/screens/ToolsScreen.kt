@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -634,30 +635,36 @@ fun ToolsScreen(
                         val categoryTools = filteredTools.filter { it.category == category }
                         if (categoryTools.isNotEmpty()) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 8.dp, start = 2.dp, end = 2.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 10.dp, start = 2.dp, end = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 LText(category.label, style = MaterialTheme.typography.titleMedium)
-                                Spacer(Modifier.weight(1f))
+                                Spacer(Modifier.width(8.dp))
                                 LText(
                                     categoryTools.size.toString().padStart(2, '0'),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                Spacer(Modifier.weight(1f))
+                                Box(
+                                    modifier = Modifier
+                                        .width(34.dp)
+                                        .height(3.dp)
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(toolAccent(category)),
+                                )
                             }
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(18.dp))
-                                    .background(MaterialTheme.colorScheme.surface),
-                            ) {
-                                categoryTools.forEachIndexed { index, card ->
-                                    val accent = toolAccent(card.category)
-                                    val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable(enabled = enabled) {
+
+                            categoryTools.chunked(2).forEach { rowTools ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.Top,
+                                ) {
+                                    rowTools.forEach { card ->
+                                        val accent = toolAccent(card.category)
+                                        Card(
+                                            onClick = {
                                                 when {
                                                     card.pdfTool != null -> selectedPdfTool = card.pdfTool
                                                     card.securityTool != null -> selectedSecurityTool = card.securityTool
@@ -671,60 +678,89 @@ fun ToolsScreen(
                                                     card.action == Action.PDF_INFO ->
                                                         requestDocumentSelection(Action.PDF_INFO, DocumentPickerType.PDF, false)
                                                 }
+                                            },
+                                            modifier = Modifier.weight(1f).heightIn(min = 164.dp),
+                                            shape = RoundedCornerShape(22.dp),
+                                            border = BorderStroke(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.82f),
+                                            ),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.surface,
+                                            ),
+                                            elevation = CardDefaults.cardElevation(
+                                                defaultElevation = 1.dp,
+                                                pressedElevation = 4.dp,
+                                            ),
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.fillMaxSize().padding(14.dp),
+                                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(46.dp)
+                                                            .clip(RoundedCornerShape(15.dp))
+                                                            .background(accent.copy(alpha = 0.12f)),
+                                                        contentAlignment = Alignment.Center,
+                                                    ) {
+                                                        Icon(
+                                                            card.icon,
+                                                            contentDescription = null,
+                                                            tint = accent,
+                                                            modifier = Modifier.size(23.dp),
+                                                        )
+                                                    }
+                                                    Spacer(Modifier.weight(1f))
+                                                    Icon(
+                                                        Icons.Outlined.ArrowForward,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.size(18.dp),
+                                                    )
+                                                }
+                                                LText(
+                                                    card.title,
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    maxLines = 2,
+                                                )
+                                                LText(
+                                                    card.subtitle,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 2,
+                                                )
+                                                Spacer(Modifier.weight(1f))
+                                                Row(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(9.dp))
+                                                        .background(accent.copy(alpha = 0.09f))
+                                                        .padding(horizontal = 9.dp, vertical = 5.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                ) {
+                                                    LText(
+                                                        card.category.label,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = accent,
+                                                        maxLines = 1,
+                                                    )
+                                                }
                                             }
-                                            .padding(horizontal = 14.dp, vertical = 13.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(44.dp)
-                                                .clip(RoundedCornerShape(13.dp))
-                                                .background(accent.copy(alpha = 0.10f)),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                card.icon,
-                                                contentDescription = null,
-                                                tint = accent,
-                                                modifier = Modifier.size(22.dp),
-                                            )
                                         }
-                                        Column(
-                                            modifier = Modifier.weight(1f),
-                                            verticalArrangement = Arrangement.spacedBy(3.dp),
-                                        ) {
-                                            LText(
-                                                card.title,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                maxLines = 1,
-                                            )
-                                            LText(
-                                                card.subtitle,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 2,
-                                            )
-                                        }
-                                        Icon(
-                                            Icons.Outlined.ArrowForward,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                                            modifier = Modifier.size(18.dp),
-                                        )
                                     }
-                                    if (index < categoryTools.lastIndex) {
-                                        HorizontalDivider(
-                                            modifier = Modifier.padding(start = 70.dp),
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
-                                        )
+                                    if (rowTools.size == 1) {
+                                        Spacer(Modifier.weight(1f))
                                     }
                                 }
+                                Spacer(Modifier.height(10.dp))
                             }
-                            Spacer(Modifier.height(6.dp))
                         }
                     }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(18.dp))
                 }
             }
             AnimatedVisibility(
