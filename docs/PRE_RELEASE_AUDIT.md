@@ -1,7 +1,7 @@
 # DocPilot pre-release audit
 
 ## Candidate
-DocPilot Free 0.1.15 (versionCode 16), subject to CI and real-device validation.
+DocPilot — PDF Reader & Tools 0.1.16 (versionCode 17), a proposed candidate subject to CI and real-device validation.
 
 ## Changes in this release candidate
 
@@ -12,6 +12,9 @@ DocPilot Free 0.1.15 (versionCode 16), subject to CI and real-device validation.
 - Added a memory-bounded page bitmap cache, reduced the main-page render target width and added retry/error states instead of indefinite spinners when page rendering fails.
 - Added a public multilingual privacy-policy page.
 - Kept document processing on-device and account sign-in optional.
+- Added category filters and live counts to the tools catalogue.
+- Added explicit source-file/image and detected-page counters to processing panels.
+- Added OCR for multiple selected images, combining recognized text into one reviewable TXT result.
 
 ## Existing capabilities
 
