@@ -360,7 +360,7 @@ fun DocumentPickerDialog(
                         },
                         modifier = Modifier.weight(1f),
                     ) {
-                        LText(if (multiple) "Usar ${selectedUris.size} ficheiros" else "Abrir PDF")
+                        LText(if (multiple) "Usar seleção" else "Abrir PDF")
                     }
                 }
             }
