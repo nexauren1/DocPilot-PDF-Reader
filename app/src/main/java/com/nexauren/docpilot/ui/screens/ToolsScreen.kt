@@ -514,77 +514,189 @@ fun ToolsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
                 )
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(bottom = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    itemsIndexed(filteredTools, key = { _, card -> card.title }) { index, card ->
-                        val accent = toolAccent(index)
-                        val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
+                if (filteredTools.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(bottom = 20.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Card(
-                            onClick = {
-                                when {
-                                    card.pdfTool != null -> selectedPdfTool = card.pdfTool
-                                    card.securityTool != null -> selectedSecurityTool = card.securityTool
-                                    card.action == Action.SCAN -> launchScanner()
-                                    card.action == Action.IMAGE_TO_PDF -> imagePicker.launch(arrayOf("image/*"))
-                                    card.action == Action.OCR -> ocrPicker.launch(arrayOf("image/*"))
-                                    card.action == Action.PDF_TEXT -> pdfTextPicker.launch(arrayOf("application/pdf"))
-                                    card.action == Action.PDF_INFO -> pdfInfoPicker.launch(arrayOf("application/pdf"))
-                                }
-                            },
-                            enabled = enabled,
-                            modifier = Modifier.animateContentSize(),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                         ) {
-                            Column {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(5.dp)
-                                        .background(Brush.horizontalGradient(listOf(accent, accent.copy(alpha = 0.16f)))),
-                                )
-                                Column(
-                                    Modifier.padding(15.dp),
-                                    verticalArrangement = Arrangement.spacedBy(9.dp),
+                                        .size(64.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                    contentAlignment = Alignment.Center,
                                 ) {
+                                    Icon(
+                                        Icons.Outlined.Search,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(30.dp),
+                                    )
+                                }
+                                LText(
+                                    "Não encontrámos ferramentas",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                )
+                                LText(
+                                    "Experimenta outra pesquisa ou remove os filtros ativos.",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                )
+                                OutlinedButton(
+                                    onClick = {
+                                        toolQuery = ""
+                                        selectedCategory = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Icon(Icons.Outlined.Close, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    LText("Limpar filtros")
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(bottom = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        itemsIndexed(filteredTools, key = { _, card -> card.title }) { _, card ->
+                            // Category accents stay consistent when the user searches or filters.
+                            val accent = toolAccent(card.category)
+                            val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
+                            Card(
+                                onClick = {
+                                    when {
+                                        card.pdfTool != null -> selectedPdfTool = card.pdfTool
+                                        card.securityTool != null -> selectedSecurityTool = card.securityTool
+                                        card.action == Action.SCAN -> launchScanner()
+                                        card.action == Action.IMAGE_TO_PDF -> imagePicker.launch(arrayOf("image/*"))
+                                        card.action == Action.OCR -> ocrPicker.launch(arrayOf("image/*"))
+                                        card.action == Action.PDF_TEXT -> pdfTextPicker.launch(arrayOf("application/pdf"))
+                                        card.action == Action.PDF_INFO -> pdfInfoPicker.launch(arrayOf("application/pdf"))
+                                    }
+                                },
+                                enabled = enabled,
+                                modifier = Modifier.animateContentSize(),
+                                shape = RoundedCornerShape(22.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                            ) {
+                                Column {
                                     Box(
                                         modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(RoundedCornerShape(15.dp))
-                                            .background(accent.copy(alpha = 0.13f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            card.icon,
-                                            contentDescription = null,
-                                            tint = if (enabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(25.dp),
-                                        )
-                                    }
-                                    LText(card.title, style = MaterialTheme.typography.titleSmall)
-                                    LText(
-                                        card.subtitle,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            .fillMaxWidth()
+                                            .height(4.dp)
+                                            .background(
+                                                Brush.horizontalGradient(
+                                                    listOf(accent, accent.copy(alpha = 0.18f)),
+                                                ),
+                                            ),
                                     )
-                                    if (!enabled) {
+                                    Column(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(46.dp)
+                                                    .clip(RoundedCornerShape(15.dp))
+                                                    .background(accent.copy(alpha = 0.12f)),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    card.icon,
+                                                    contentDescription = null,
+                                                    tint = if (enabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(24.dp),
+                                                )
+                                            }
+                                            Spacer(Modifier.weight(1f))
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(28.dp)
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(accent.copy(alpha = 0.08f)),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    Icons.Outlined.ArrowForward,
+                                                    contentDescription = null,
+                                                    tint = accent,
+                                                    modifier = Modifier.size(16.dp),
+                                                )
+                                            }
+                                        }
                                         LText(
-                                            "Em breve",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            card.title,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            maxLines = 2,
+                                            minLines = 2,
                                         )
+                                        LText(
+                                            card.subtitle,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
+                                            minLines = 2,
+                                        )
+                                        Row(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(accent.copy(alpha = 0.09f))
+                                                .padding(horizontal = 8.dp, vertical = 5.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            LText(
+                                                card.category.label,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = accent,
+                                                maxLines = 1,
+                                            )
+                                        }
+                                        if (!enabled) {
+                                            LText(
+                                                "Em breve",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
             AnimatedVisibility(
                 visible = processing,
                 modifier = Modifier.align(Alignment.Center).padding(20.dp),
@@ -888,20 +1000,12 @@ private fun UtilityWorkspace(
     }
 }
 
-private fun toolAccent(index: Int): Color {
-    val colors = listOf(
-        Color(0xFF356AE6),
-        Color(0xFF7C4DFF),
-        Color(0xFF008C95),
-        Color(0xFFB45309),
-        Color(0xFFDB4B73),
-        Color(0xFF387D4A),
-        Color(0xFF9356CF),
-        Color(0xFF2376A8),
-        Color(0xFFB76D28),
-        Color(0xFF515BC4),
-    )
-    return colors[index % colors.size]
+private fun toolAccent(category: ToolCategory): Color = when (category) {
+    ToolCategory.MANAGE -> Color(0xFF356AE6)
+    ToolCategory.EDIT -> Color(0xFF7C4DFF)
+    ToolCategory.CONVERT -> Color(0xFF008C95)
+    ToolCategory.SECURITY -> Color(0xFFB45309)
+    ToolCategory.ANALYZE -> Color(0xFFDB4B73)
 }
 
 private fun pdfToolAccent(tool: PdfTool): Color = when (tool) {
