@@ -6,8 +6,8 @@
 
 - PDF reading with page navigation, selectable-text search, saved reading position, bookmarks, zoom and light/sepia/dark appearance.
 - Library with filename search, recent order, alphabetical sorting and persistent favourites.
-- PDF tools including merge, page-range split, page reordering, rotation, cropping, text watermarks on every page, page numbering, image-focused compression, image-to-PDF conversion, text export, metadata inspection, password protection, and visual text signatures.
-- Document scanning and image OCR where the device supports the required services.
+- PDF tools including merge, page-range split, page reordering, rotation, cropping, text watermarks on every page, page numbering, image-focused compression, image-to-PDF conversion, text export, metadata inspection, password protection, and visual text signatures. Tool categories include live counts, and processing panels show the actual number of selected source files/images and known PDF pages.
+- Document scanning and batch OCR for multiple images in one export where the device supports the required services.
 - Interface language options: Portuguese, English, French, Spanish and German.
 - Optional account sign-in. Local reading and document tools do not require an account.
 - No integrated ads or usage analytics in this release.
