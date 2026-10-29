@@ -72,6 +72,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import com.nexauren.docpilot.ui.localization.LText
+import com.nexauren.docpilot.model.DocumentItem
+import com.nexauren.docpilot.ui.components.DocumentPickerDialog
+import com.nexauren.docpilot.ui.components.DocumentPickerType
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -184,6 +187,9 @@ fun ToolsScreen(
     onOpenMenu: () -> Unit,
     initialCategory: String? = null,
     categoryRequestId: Int = 0,
+    availableDocuments: List<DocumentItem> = emptyList(),
+    hasStorageAccess: Boolean = false,
+    onRequestDocumentAccess: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -206,6 +212,17 @@ fun ToolsScreen(
     var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var workflowError by remember { mutableStateOf<String?>(null) }
+    var showDocumentPicker by remember { mutableStateOf(false) }
+    var pickerPurpose by remember { mutableStateOf<Action?>(null) }
+    var pickerType by remember { mutableStateOf(DocumentPickerType.PDF) }
+    var pickerMultiple by remember { mutableStateOf(false) }
+
+    fun requestDocumentSelection(purpose: Action, type: DocumentPickerType, multiple: Boolean) {
+        pickerPurpose = purpose
+        pickerType = type
+        pickerMultiple = multiple
+        showDocumentPicker = true
+    }
 
     fun processPdfResult(
         outputName: String,
@@ -271,37 +288,6 @@ fun ToolsScreen(
         }
     }
 
-    val pdfTextPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            pendingPdfTextUri = uri
-            activeUtility = Action.PDF_TEXT
-        }
-    }
-    val pdfInfoPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            pendingPdfTextUri = uri
-            activeUtility = Action.PDF_INFO
-        }
-    }
-
-    val imagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments(),
-    ) { uris ->
-        pendingImageUris = uris
-        if (uris.isNotEmpty()) activeUtility = Action.IMAGE_TO_PDF
-    }
-
-    val ocrPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments(),
-    ) { uris ->
-        pendingImageUris = uris
-        if (uris.isNotEmpty()) activeUtility = Action.OCR
-    }
-
     val scannerOptions = remember {
         GmsDocumentScannerOptions.Builder()
             .setGalleryImportAllowed(true)
@@ -352,6 +338,41 @@ fun ToolsScreen(
         )
     }
 
+    if (showDocumentPicker) {
+        val purpose = pickerPurpose
+        DocumentPickerDialog(
+            title = when (purpose) {
+                Action.IMAGE_TO_PDF -> "Selecionar imagens"
+                Action.OCR -> "Selecionar imagens para OCR"
+                Action.PDF_TEXT -> "Selecionar PDF para extrair texto"
+                Action.PDF_INFO -> "Selecionar PDF para análise"
+                else -> "Selecionar documento"
+            },
+            type = pickerType,
+            multiple = pickerMultiple,
+            knownDocuments = availableDocuments,
+            hasStorageAccess = hasStorageAccess,
+            onRequestStorageAccess = onRequestDocumentAccess,
+            onDismiss = { showDocumentPicker = false },
+            onConfirm = { selected ->
+                showDocumentPicker = false
+                when (purpose) {
+                    Action.PDF_TEXT, Action.PDF_INFO -> {
+                        selected.firstOrNull()?.let { document ->
+                            pendingPdfTextUri = Uri.parse(document.uri)
+                            activeUtility = purpose
+                        }
+                    }
+                    Action.IMAGE_TO_PDF, Action.OCR -> {
+                        pendingImageUris = selected.map { Uri.parse(it.uri) }
+                        activeUtility = purpose
+                    }
+                    else -> Unit
+                }
+            },
+        )
+    }
+
     resultPdf?.let { result ->
         PdfResultWorkspace(
             result = result,
@@ -376,6 +397,9 @@ fun ToolsScreen(
             tool = selectedPdfTool!!,
             onBack = { selectedPdfTool = null },
             processing = processing,
+            availableDocuments = availableDocuments,
+            hasStorageAccess = hasStorageAccess,
+            onRequestDocumentAccess = onRequestDocumentAccess,
             onProcessPdf = { name, action -> processPdfResult(name, action) },
             onProcessPdfPage = { name, page, action -> processPdfResult(name, action, page) },
             onProcessImage = { name, action -> processImageResult(name, action) },
@@ -388,6 +412,9 @@ fun ToolsScreen(
             tool = selectedSecurityTool!!,
             onBack = { selectedSecurityTool = null },
             processing = processing,
+            availableDocuments = availableDocuments,
+            hasStorageAccess = hasStorageAccess,
+            onRequestDocumentAccess = onRequestDocumentAccess,
             onProcessPdf = { name, action -> processPdfResult(name, action) },
         )
         return
@@ -595,10 +622,14 @@ fun ToolsScreen(
                                         card.pdfTool != null -> selectedPdfTool = card.pdfTool
                                         card.securityTool != null -> selectedSecurityTool = card.securityTool
                                         card.action == Action.SCAN -> launchScanner()
-                                        card.action == Action.IMAGE_TO_PDF -> imagePicker.launch(arrayOf("image/*"))
-                                        card.action == Action.OCR -> ocrPicker.launch(arrayOf("image/*"))
-                                        card.action == Action.PDF_TEXT -> pdfTextPicker.launch(arrayOf("application/pdf"))
-                                        card.action == Action.PDF_INFO -> pdfInfoPicker.launch(arrayOf("application/pdf"))
+                                        card.action == Action.IMAGE_TO_PDF ->
+                                            requestDocumentSelection(Action.IMAGE_TO_PDF, DocumentPickerType.IMAGE, true)
+                                        card.action == Action.OCR ->
+                                            requestDocumentSelection(Action.OCR, DocumentPickerType.IMAGE, true)
+                                        card.action == Action.PDF_TEXT ->
+                                            requestDocumentSelection(Action.PDF_TEXT, DocumentPickerType.PDF, false)
+                                        card.action == Action.PDF_INFO ->
+                                            requestDocumentSelection(Action.PDF_INFO, DocumentPickerType.PDF, false)
                                     }
                                 },
                                 enabled = enabled,
