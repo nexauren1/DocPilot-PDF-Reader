@@ -2,6 +2,7 @@ package com.nexauren.docpilot.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import android.util.LruCache
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
@@ -91,6 +92,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
+import java.io.FileOutputStream
 
 private enum class ReaderAppearance(val title: String) {
     LIGHT("Claro"),
@@ -772,13 +776,26 @@ private fun PdfPage(
         offsetY += panChange.y
     }
 
+    var renderTimedOut by remember(uri, pageIndex) { mutableStateOf(false) }
+
     LaunchedEffect(uri, pageIndex, renderAttempt) {
+        bitmap = null
         renderFailed = false
-        val result = withContext(Dispatchers.IO) {
-            runCatching { renderPdfPageCached(context, uri, pageIndex, 1100) }
+        renderTimedOut = false
+        val renderJob = launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { renderPdfPageCached(context, uri, pageIndex, 1100) }
+            }
+            bitmap = result.getOrNull()
+            renderFailed = bitmap == null
+            renderTimedOut = false
         }
-        bitmap = result.getOrNull()
-        renderFailed = bitmap == null
+        val completedInTime = withTimeoutOrNull(25_000) {
+            renderJob.join()
+            true
+        } ?: false
+        if (!completedInTime && bitmap == null) renderTimedOut = true
+        renderJob.join()
     }
 
     Card(
@@ -840,12 +857,17 @@ private fun PdfPage(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                if (renderFailed) {
+                if (renderFailed || renderTimedOut) {
                     Column(
+                        modifier = Modifier.padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        LText("Não foi possível mostrar esta página.")
+                        LText(
+                            if (renderTimedOut) "Esta página está a demorar mais do que o normal."
+                            else "Não foi possível mostrar esta página.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                         TextButton(onClick = { renderAttempt += 1 }) {
                             LText("Tentar novamente")
                         }
@@ -858,14 +880,68 @@ private fun PdfPage(
     }
 }
 
+private val pdfMaterializationLock = Any()
+
+/**
+ * PdfRenderer needs a seekable file descriptor. Some cloud/content providers expose a pipe,
+ * not a seekable descriptor. Copying once into the app cache gives the reader a reliable local
+ * source while keeping the original document unchanged.
+ */
+private fun cachedSeekablePdfFile(
+    context: android.content.Context,
+    uriString: String,
+): File {
+    val uri = android.net.Uri.parse(uriString)
+    if (uri.scheme == "file") {
+        val path = uri.path
+        require(!path.isNullOrBlank()) { "O caminho deste PDF não é válido." }
+        return File(path)
+    }
+
+    val cacheDirectory = File(context.cacheDir, "docpilot-pdf-source")
+    if (!cacheDirectory.exists()) {
+        check(cacheDirectory.mkdirs() || cacheDirectory.isDirectory) {
+            "Não foi possível preparar a cache de leitura."
+        }
+    }
+    val cacheKey = uriString.hashCode().toUInt().toString(16)
+    val target = File(cacheDirectory, "pdf-$cacheKey.pdf")
+
+    synchronized(pdfMaterializationLock) {
+        if (target.isFile && target.length() > 0L) return target
+
+        val temporary = File(cacheDirectory, "pdf-$cacheKey.part")
+        try {
+            context.contentResolver.openInputStream(uri).use { input ->
+                requireNotNull(input) { "Não foi possível ler o PDF selecionado." }
+                FileOutputStream(temporary).buffered().use { output ->
+                    input.copyTo(output, 128 * 1024)
+                    output.flush()
+                }
+            }
+            require(temporary.isFile && temporary.length() > 0L) {
+                "O ficheiro PDF está vazio ou não pode ser lido."
+            }
+            if (target.exists()) target.delete()
+            check(temporary.renameTo(target)) {
+                "Não foi possível preparar o PDF para leitura."
+            }
+        } catch (failure: Exception) {
+            temporary.delete()
+            throw failure
+        }
+    }
+    return target
+}
+
 private data class PdfPageInfo(val pageCount: Int, val firstPageAspectRatio: Float)
 
 private fun openPdfPageInfo(
     context: android.content.Context,
     uriString: String,
 ): PdfPageInfo {
-    val uri = android.net.Uri.parse(uriString)
-    context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
+    val file = cachedSeekablePdfFile(context, uriString)
+    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
         requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
         PdfRenderer(descriptor).use { renderer ->
             require(renderer.pageCount > 0) { "Este PDF não contém páginas." }
@@ -906,8 +982,8 @@ private fun openPdfPageAspectRatios(
     context: android.content.Context,
     uriString: String,
 ): List<Float> {
-    val uri = android.net.Uri.parse(uriString)
-    context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
+    val file = cachedSeekablePdfFile(context, uriString)
+    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
         requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
         PdfRenderer(descriptor).use { renderer ->
             return (0 until renderer.pageCount).map { pageIndex ->
@@ -925,8 +1001,8 @@ private fun renderPdfPage(
     pageIndex: Int,
     targetWidth: Int,
 ): Bitmap {
-    val uri = android.net.Uri.parse(uriString)
-    context.contentResolver.openFileDescriptor(uri, "r").use { descriptor ->
+    val file = cachedSeekablePdfFile(context, uriString)
+    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
         requireNotNull(descriptor) { "Não foi possível abrir o PDF." }
 
         PdfRenderer(descriptor).use { renderer ->
