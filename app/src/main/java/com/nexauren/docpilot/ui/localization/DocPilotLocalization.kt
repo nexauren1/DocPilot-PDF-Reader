@@ -94,6 +94,27 @@ private val phrases: Map<String, List<String>> = mapOf(
     "Biblioteca" to listOf("Biblioteca", "Library", "Bibliothèque", "Biblioteca", "Bibliothek"),
     "Ferramentas" to listOf("Ferramentas", "Tools", "Outils", "Herramientas", "Werkzeuge"),
     "Todas" to listOf("Todas", "All", "Toutes", "Todas", "Alle"),
+    "Não encontrámos ferramentas" to listOf(
+        "Não encontrámos ferramentas",
+        "No tools found",
+        "Aucun outil trouvé",
+        "No se encontraron herramientas",
+        "Keine Werkzeuge gefunden"
+    ),
+    "Experimenta outra pesquisa ou remove os filtros ativos." to listOf(
+        "Experimenta outra pesquisa ou remove os filtros ativos.",
+        "Try another search or clear the active filters.",
+        "Essayez une autre recherche ou effacez les filtres actifs.",
+        "Prueba otra búsqueda o borra los filtros activos.",
+        "Versuche eine andere Suche oder setze die aktiven Filter zurück."
+    ),
+    "Limpar filtros" to listOf(
+        "Limpar filtros",
+        "Clear filters",
+        "Effacer les filtres",
+        "Borrar filtros",
+        "Filter löschen"
+    ),
     "Editar" to listOf("Editar", "Edit", "Modifier", "Editar", "Bearbeiten"),
     "Converter" to listOf("Converter", "Convert", "Convertir", "Convertir", "Konvertieren"),
     "Segurança" to listOf("Segurança", "Security", "Sécurité", "Seguridad", "Sicherheit"),
