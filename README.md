@@ -1,6 +1,6 @@
-# DocPilot
+# DocPilot — PDF Reader & Tools
 
-DocPilot is a free Android PDF reader and document toolkit from Nexauren. It is designed around a simple flow: open a document, read or process it on the device, review the result, and save a copy.
+**DocPilot — PDF Reader & Tools** is a free Android PDF reader and document toolkit from Nexauren. Read, organize, annotate and process documents in one polished app. The app is designed around a privacy-first flow: open a document, read or process it on the device, review the result, and save a copy.
 
 ## Features
 
