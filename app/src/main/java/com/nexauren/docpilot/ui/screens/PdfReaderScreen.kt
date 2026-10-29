@@ -49,12 +49,15 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FormatListNumbered
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.ZoomOutMap
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -187,6 +190,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     var jumpPageText by remember(document.uri) { mutableStateOf("") }
     var isBookmarked by remember(document.uri) { mutableStateOf(false) }
     var readingMode by remember(document.uri) { mutableStateOf(false) }
+    var showReaderMenu by remember(document.uri) { mutableStateOf(false) }
     var readingText by remember(document.uri) { mutableStateOf("") }
     var readingModeLoading by remember(document.uri) { mutableStateOf(false) }
     val bookmarkKey = remember(document.uri) { "bookmark_page_${document.uri.hashCode()}" }
@@ -387,27 +391,52 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                     }) {
                         Icon(Icons.Outlined.Search, contentDescription = "Pesquisar no PDF")
                     }
-                    IconButton(onClick = { jumpPageText = currentPage.toString(); jumpDialog = true }) {
-                        Icon(Icons.Outlined.FormatListNumbered, contentDescription = "Ir para página")
-                    }
-                    IconButton(onClick = {
-                        val prefs = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
-                        if (isBookmarked) {
-                            prefs.edit().remove(bookmarkKey).apply()
-                            isBookmarked = false
-                        } else {
-                            prefs.edit().putInt(bookmarkKey, currentPage).apply()
-                            isBookmarked = true
+                    Box {
+                        IconButton(onClick = { showReaderMenu = true }) {
+                            Icon(Icons.Outlined.MoreVert, contentDescription = "Mais opções")
                         }
-                    }) {
-                        Icon(
-                            if (isBookmarked) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
-                            contentDescription = if (isBookmarked) "Remover marcador" else "Guardar marcador",
-                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    IconButton(onClick = { resetZoomToken++ }) {
-                        Icon(Icons.Outlined.ZoomOutMap, contentDescription = "Repor zoom")
+                        DropdownMenu(
+                            expanded = showReaderMenu,
+                            onDismissRequest = { showReaderMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { LText("Ir para página") },
+                                leadingIcon = { Icon(Icons.Outlined.FormatListNumbered, contentDescription = null) },
+                                onClick = {
+                                    showReaderMenu = false
+                                    jumpPageText = currentPage.toString()
+                                    jumpDialog = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { LText(if (isBookmarked) "Remover marcador" else "Guardar marcador") },
+                                leadingIcon = {
+                                    Icon(
+                                        if (isBookmarked) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                                        contentDescription = null,
+                                    )
+                                },
+                                onClick = {
+                                    val prefs = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
+                                    if (isBookmarked) {
+                                        prefs.edit().remove(bookmarkKey).apply()
+                                        isBookmarked = false
+                                    } else {
+                                        prefs.edit().putInt(bookmarkKey, currentPage).apply()
+                                        isBookmarked = true
+                                    }
+                                    showReaderMenu = false
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { LText("Repor zoom") },
+                                leadingIcon = { Icon(Icons.Outlined.ZoomOutMap, contentDescription = null) },
+                                onClick = {
+                                    resetZoomToken++
+                                    showReaderMenu = false
+                                },
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
