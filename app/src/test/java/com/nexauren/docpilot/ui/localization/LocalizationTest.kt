@@ -81,6 +81,13 @@ class LocalizationTest {
     }
 
     @Test
+    fun localizes_reader_overflow_menu_actions() {
+        assertEquals("More options", translateForLanguage("en", "Mais opções"))
+        assertEquals("Ajouter un signet", translateForLanguage("fr", "Guardar marcador"))
+        assertEquals("Zoom zurücksetzen", translateForLanguage("de", "Repor zoom"))
+    }
+
+    @Test
     fun localizes_in_app_folder_navigation() {
         assertEquals("Internal storage", translateForLanguage("en", "Armazenamento interno"))
         assertEquals("Fichiers récents", translateForLanguage("fr", "Ficheiros recentes"))

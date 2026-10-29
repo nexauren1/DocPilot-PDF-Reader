@@ -26,8 +26,8 @@ android {
         applicationId = "com.nexauren.docpilot"
         minSdk = 24
         targetSdk = 36
-        versionCode = 18
-        versionName = "0.1.17"
+        versionCode = 19
+        versionName = "0.1.18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

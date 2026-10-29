@@ -1,11 +1,11 @@
 # DocPilot — PDF Reader & Tools
 
-**DocPilot — PDF Reader & Tools** is a free Android PDF reader and document toolkit from Nexauren. Open documents in an in-app library, read and navigate long PDFs, then process and review a new copy using focused tools. The interface uses Portuguese, English, French, Spanish and German, with a consistent navy-and-teal visual system.
+**DocPilot — PDF Reader & Tools** is a free Android PDF reader and document toolkit from Nexauren. Open documents in an in-app library, read and navigate long PDFs, then process and review a new copy using focused tools. The interface uses Portuguese, English, French, Spanish and German, with a consistent indigo-and-teal visual system.
 
 ## Features
 
-- PDF reader with long-document scrolling, page navigation, selectable-text search, saved position, bookmarks, zoom, a thumbnail strip and light/sepia/dark appearance. PDFs selected from content providers are copied into private cache as a seekable read source so providers that return non-seekable streams do not leave pages stuck loading; the original remains untouched.
-- Library and built-in file selector for PDFs and images, with filename search, recent order, alphabetical sorting, multi-selection where supported and persistent favourites.
+- PDF reader with long-document scrolling, page navigation, selectable-text search, saved position, bookmarks, zoom, a thumbnail strip and light/sepia/dark appearance. PDFs selected from content providers are copied into private cache as a seekable read source; opening and page-rendering timeouts show retry/error guidance instead of a permanent spinner, and the original remains untouched.
+- Built-in in-app file browser for PDFs and images, with filename search, recent order, alphabetical sorting, multi-selection where supported and persistent favourites. It navigates folders inside DocPilot instead of relying on a separate file-manager app. Full-storage browsing on Android 11+ requires optional all-files access; previously opened PDFs remain available without it.
 - PDF tools including merge, page-range split, page reordering, rotation, cropping, text watermarks on every page, page numbering, image-focused compression, image-to-PDF conversion, text export, metadata inspection, password protection, and visual text signatures. Tool categories include live counts, and processing panels show the actual number of selected source files/images and known PDF pages.
 - Document scanning and batch OCR for multiple images in one export where the device supports the required services.
 - Home-screen widget with localized shortcuts that open Organize, Convert, Security or Text & Analysis tools directly.
@@ -21,6 +21,7 @@ Read the [Privacy Policy](https://nexauren1.github.io/DocPilot-PDF-Reader/privac
 
 ## Build information
 
+- Release candidate: `0.1.18` (`versionCode 19`)
 - Application ID: `com.nexauren.docpilot`
 - Minimum Android version: Android 7.0 (API 24)
 - Production APKs are built with GitHub Actions after unit tests, build and APK signature verification succeed.
