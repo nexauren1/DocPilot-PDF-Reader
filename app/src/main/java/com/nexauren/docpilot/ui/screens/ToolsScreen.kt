@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,6 +72,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import com.nexauren.docpilot.ui.localization.LText
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -119,6 +121,14 @@ private enum class SecurityTool(val title: String, val subtitle: String, val ico
     SIGN("Assinatura visual", "Adicionar assinatura ao PDF", Icons.Outlined.Create),
 }
 
+private enum class ToolCategory(val label: String) {
+    MANAGE("Organizar"),
+    EDIT("Editar"),
+    CONVERT("Converter"),
+    SECURITY("Segurança"),
+    ANALYZE("Texto e análise"),
+}
+
 private data class ToolCard(
     val title: String,
     val subtitle: String,
@@ -126,6 +136,7 @@ private data class ToolCard(
     val pdfTool: PdfTool? = null,
     val securityTool: SecurityTool? = null,
     val action: Action = Action.NONE,
+    val category: ToolCategory = ToolCategory.EDIT,
 )
 
 private enum class Action { NONE, SCAN, IMAGE_TO_PDF, OCR, PDF_TEXT, PDF_INFO }
@@ -146,23 +157,23 @@ private fun displayName(context: android.content.Context, uri: Uri, fallback: St
 }
 
 private val toolCards = listOf(
-    ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, pdfTool = PdfTool.MERGE),
-    ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, pdfTool = PdfTool.SPLIT),
-    ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, pdfTool = PdfTool.COMPRESS),
-    ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER),
-    ToolCard("Rodar páginas", "Rodar todas as páginas", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE),
-    ToolCard("Rodar uma página", "Rodar só a página escolhida", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE_ONE),
-    ToolCard("Recortar página", "Ajustar a área de uma página", Icons.Outlined.Crop, pdfTool = PdfTool.CROP_ONE),
-    ToolCard("Página para PNG", "Exportar uma página como imagem", Icons.Outlined.PhotoLibrary, pdfTool = PdfTool.EXPORT_PAGE_IMAGE),
-    ToolCard("Numerar páginas", "Adicionar números em todas as páginas", Icons.Outlined.FormatListNumbered, pdfTool = PdfTool.PAGE_NUMBERS),
-    ToolCard("Marca de água", "Adicionar texto a todas as páginas", Icons.Outlined.Edit, pdfTool = PdfTool.WATERMARK),
-    ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, action = Action.SCAN),
-    ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF),
-    ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN),
-    ToolCard("Proteger", "Senha e permissões", Icons.Outlined.Lock, securityTool = SecurityTool.PROTECT),
-    ToolCard("OCR de imagem", "Ler texto em fotos", Icons.Outlined.Description, action = Action.OCR),
-    ToolCard("Extrair texto PDF", "Exportar texto para TXT", Icons.Outlined.ContentCopy, action = Action.PDF_TEXT),
-    ToolCard("Informações do PDF", "Páginas, tamanho e metadados", Icons.Outlined.Info, action = Action.PDF_INFO),
+    ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, pdfTool = PdfTool.MERGE, category = ToolCategory.MANAGE),
+    ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, pdfTool = PdfTool.SPLIT, category = ToolCategory.MANAGE),
+    ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, pdfTool = PdfTool.COMPRESS, category = ToolCategory.EDIT),
+    ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER, category = ToolCategory.MANAGE),
+    ToolCard("Rodar páginas", "Rodar todas as páginas", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE, category = ToolCategory.EDIT),
+    ToolCard("Rodar uma página", "Rodar só a página escolhida", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE_ONE, category = ToolCategory.EDIT),
+    ToolCard("Recortar página", "Ajustar a área de uma página", Icons.Outlined.Crop, pdfTool = PdfTool.CROP_ONE, category = ToolCategory.EDIT),
+    ToolCard("Página para PNG", "Exportar uma página como imagem", Icons.Outlined.PhotoLibrary, pdfTool = PdfTool.EXPORT_PAGE_IMAGE, category = ToolCategory.CONVERT),
+    ToolCard("Numerar páginas", "Adicionar números em todas as páginas", Icons.Outlined.FormatListNumbered, pdfTool = PdfTool.PAGE_NUMBERS, category = ToolCategory.EDIT),
+    ToolCard("Marca de água", "Adicionar texto a todas as páginas", Icons.Outlined.Edit, pdfTool = PdfTool.WATERMARK, category = ToolCategory.EDIT),
+    ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, action = Action.SCAN, category = ToolCategory.CONVERT),
+    ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF, category = ToolCategory.CONVERT),
+    ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN, category = ToolCategory.SECURITY),
+    ToolCard("Proteger", "Senha e permissões", Icons.Outlined.Lock, securityTool = SecurityTool.PROTECT, category = ToolCategory.SECURITY),
+    ToolCard("OCR de imagem", "Ler texto em fotos", Icons.Outlined.Description, action = Action.OCR, category = ToolCategory.ANALYZE),
+    ToolCard("Extrair texto PDF", "Exportar texto para TXT", Icons.Outlined.ContentCopy, action = Action.PDF_TEXT, category = ToolCategory.ANALYZE),
+    ToolCard("Informações do PDF", "Páginas, tamanho e metadados", Icons.Outlined.Info, action = Action.PDF_INFO, category = ToolCategory.ANALYZE),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -181,6 +192,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     var activeUtility by remember { mutableStateOf<Action?>(null) }
     var processing by remember { mutableStateOf(false) }
     var toolQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<ToolCategory?>(null) }
     var pendingPdfTextUri by remember { mutableStateOf<Uri?>(null) }
     var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
@@ -401,10 +413,13 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        val filteredTools = remember(toolQuery) {
-            toolCards.filter {
-                it.title.contains(toolQuery, ignoreCase = true) ||
-                    it.subtitle.contains(toolQuery, ignoreCase = true)
+        val filteredTools = remember(toolQuery, selectedCategory) {
+            toolCards.filter { card ->
+                val matchesQuery = toolQuery.isBlank() ||
+                    card.title.contains(toolQuery, ignoreCase = true) ||
+                    card.subtitle.contains(toolQuery, ignoreCase = true)
+                val matchesCategory = selectedCategory == null || card.category == selectedCategory
+                matchesQuery && matchesCategory
             }
         }
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -455,8 +470,40 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                     },
                     placeholder = { LText("Pesquisar ferramentas") },
                 )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(top = 8.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    FilterChip(
+                        selected = selectedCategory == null,
+                        onClick = { selectedCategory = null },
+                        label = { LText("Todas") },
+                    )
+                    ToolCategory.entries.forEach { category ->
+                        val count = toolCards.count { it.category == category }
+                        FilterChip(
+                            selected = selectedCategory == category,
+                            onClick = { selectedCategory = category },
+                            label = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    LText(category.label)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = count.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
                 LText(
-                    if (toolQuery.isBlank()) "Ferramentas para o teu fluxo de trabalho"
+                    if (toolQuery.isBlank() && selectedCategory == null) "Ferramentas para o teu fluxo de trabalho"
+                    else "${filteredTools.size} resultado(s)"
                     else "${filteredTools.size} resultado(s)",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -720,8 +767,20 @@ private fun UtilityWorkspace(
                         Action.PDF_INFO -> "A analisar informações"
                         Action.NONE -> "A processar"
                     },
-                    detail = "O trabalho é feito no dispositivo. Mantém o DocPilot aberto.",
+                    detail = "O trabalho é feito localmente no dispositivo.",
                     accent = MaterialTheme.colorScheme.primary,
+                    counterLabel = when (action) {
+                        Action.IMAGE_TO_PDF, Action.OCR ->
+                            if (imageUris.size == 1) "imagem de origem" else "imagens de origem"
+                        Action.SCAN, Action.PDF_TEXT, Action.PDF_INFO -> "ficheiro de origem"
+                        Action.NONE -> null
+                    },
+                    counterValue = when (action) {
+                        Action.IMAGE_TO_PDF, Action.OCR -> imageUris.size.takeIf { it > 0 }?.toString()
+                        Action.SCAN -> if (scanUri != null) "1" else null
+                        Action.PDF_TEXT, Action.PDF_INFO -> if (pdfUri != null) "1" else null
+                        Action.NONE -> null
+                    },
                 )
             }
 
@@ -893,6 +952,10 @@ private fun ProcessingPanel(
     title: String,
     detail: String,
     accent: Color,
+    counterLabel: String? = null,
+    counterValue: String? = null,
+    secondaryCounterLabel: String? = null,
+    secondaryCounterValue: String? = null,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
@@ -917,8 +980,45 @@ private fun ProcessingPanel(
             ) {
                 LText(title, style = MaterialTheme.typography.titleMedium)
                 LText(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (counterLabel != null && counterValue != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ProcessingCounter(label = counterLabel, value = counterValue, accent = accent)
+                        if (secondaryCounterLabel != null && secondaryCounterValue != null) {
+                            ProcessingCounter(
+                                label = secondaryCounterLabel,
+                                value = secondaryCounterValue,
+                                accent = accent,
+                            )
+                        }
+                    }
+                }
                 LinearProgressIndicator(color = accent, modifier = Modifier.fillMaxWidth())
             }
+        }
+    }
+}
+
+@Composable
+private fun ProcessingCounter(
+    label: String,
+    value: String,
+    accent: Color,
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(11.dp))
+            .background(accent.copy(alpha = 0.10f))
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            LText(value, style = MaterialTheme.typography.labelLarge, color = accent)
+            LText(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -1015,6 +1115,8 @@ private fun SecurityWorkspace(
                     title = if (tool == SecurityTool.PROTECT) "A proteger o PDF" else "A aplicar assinatura",
                     detail = "A preparar uma nova cópia sem alterar o ficheiro original.",
                     accent = if (tool == SecurityTool.PROTECT) Color(0xFFB45309) else Color(0xFF7C4DFF),
+                    counterLabel = "ficheiro de origem",
+                    counterValue = if (inputUri != null) "1" else null,
                 )
             }
 
@@ -1341,8 +1443,12 @@ private fun ToolWorkspace(
                         PdfTool.PAGE_NUMBERS -> "A numerar páginas"
                         PdfTool.WATERMARK -> "A adicionar marca de água"
                     },
-                    detail = "O DocPilot - PDF Reader está a criar uma nova cópia do teu PDF.",
+                    detail = "O processamento é local. O ficheiro original será preservado.",
                     accent = pdfToolAccent(tool),
+                    counterLabel = if (selectedUris.size == 1) "ficheiro de origem" else "ficheiros de origem",
+                    counterValue = selectedUris.size.toString(),
+                    secondaryCounterLabel = detectedPageCount?.let { if (it == 1) "página" else "páginas" },
+                    secondaryCounterValue = detectedPageCount?.toString(),
                 )
             }
 
