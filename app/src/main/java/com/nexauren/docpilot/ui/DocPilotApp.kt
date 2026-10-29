@@ -94,6 +94,8 @@ fun DocPilotApp(
 
     LaunchedEffect(initialDestination, navigationRequestId) {
         if (initialDestination == "tools") {
+            // A widget shortcut must also exit the reader screen if the activity is already open.
+            selectedDocument = null
             destination = Destination.TOOLS
         }
     }
