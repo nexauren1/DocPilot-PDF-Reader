@@ -190,7 +190,7 @@ fun DocPilotApp() {
                     )
                     Spacer(androidx.compose.ui.Modifier.height(4.dp))
                     LText(
-                        "PDF Reader & Tools",
+                        "Leitor de PDFs e ferramentas",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
