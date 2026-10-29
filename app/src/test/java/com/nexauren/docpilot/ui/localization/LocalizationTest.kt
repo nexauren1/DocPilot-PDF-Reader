@@ -81,6 +81,16 @@ class LocalizationTest {
     }
 
     @Test
+    fun localizes_in_app_folder_navigation() {
+        assertEquals("Internal storage", translateForLanguage("en", "Armazenamento interno"))
+        assertEquals("Fichiers récents", translateForLanguage("fr", "Ficheiros recentes"))
+        assertEquals("Browse folders without leaving DocPilot", translateForLanguage("en", "Navega pelas pastas sem sair do DocPilot"))
+        assertEquals("Übergeordneter Ordner", translateForLanguage("de", "Pasta anterior"))
+        assertEquals("Carpeta", translateForLanguage("es", "Pasta"))
+        assertEquals("This folder has no files of this type", translateForLanguage("en", "Esta pasta não contém ficheiros deste tipo"))
+    }
+
+    @Test
     fun localizes_tools_empty_state_and_filter_reset() {
         assertEquals("No tools found", translateForLanguage("en", "Não encontrámos ferramentas"))
         assertEquals("Aucun outil trouvé", translateForLanguage("fr", "Não encontrámos ferramentas"))
