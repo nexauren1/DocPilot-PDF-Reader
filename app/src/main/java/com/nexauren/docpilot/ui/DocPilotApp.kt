@@ -12,14 +12,21 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.nexauren.docpilot.storage.DocumentAccess
+import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
@@ -38,6 +45,7 @@ import androidx.compose.material3.NavigationBarItem
 import com.nexauren.docpilot.ui.localization.LText
 import com.nexauren.docpilot.ui.localization.DocPilotLocalization
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
@@ -48,6 +56,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -61,6 +70,8 @@ import com.nexauren.docpilot.ui.screens.LibraryScreen
 import com.nexauren.docpilot.ui.screens.PdfReaderScreen
 import com.nexauren.docpilot.ui.screens.SettingsScreen
 import com.nexauren.docpilot.ui.screens.ToolsScreen
+import com.nexauren.docpilot.ui.components.DocumentPickerDialog
+import com.nexauren.docpilot.ui.components.DocumentPickerType
 import com.nexauren.docpilot.widget.PdfToolsWidgetProvider
 
 private const val PREFS = "docpilot_documents"
@@ -88,9 +99,17 @@ fun DocPilotApp(
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
     var hasDocumentAccess by remember { mutableStateOf(DocumentAccess.hasAccess(context)) }
     var isScanningDocuments by remember { mutableStateOf(false) }
+    var showImportPicker by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    BackHandler(enabled = selectedDocument != null) {
+        selectedDocument = null
+    }
+    BackHandler(enabled = selectedDocument == null && destination != Destination.HOME) {
+        destination = Destination.HOME
+    }
 
     LaunchedEffect(initialDestination, navigationRequestId) {
         if (initialDestination == "tools") {
@@ -160,25 +179,6 @@ fun DocPilotApp(
         selectedDocument = document
     }
 
-    val picker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                )
-            }
-            openDocument(
-                DocumentItem(
-                    name = queryDisplayName(context, uri.toString()),
-                    uri = uri.toString(),
-                ),
-            )
-        }
-    }
-
     if (selectedDocument != null) {
         PdfReaderScreen(
             document = selectedDocument!!,
@@ -193,44 +193,114 @@ fun DocPilotApp(
             ModalDrawerSheet {
                 Column(
                     modifier = androidx.compose.ui.Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 20.dp),
+                        .fillMaxSize()
+                        .verticalScroll(androidx.compose.foundation.rememberScrollState()),
                 ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .padding(horizontal = 22.dp, vertical = 24.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(50.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                        ) {
+                            androidx.compose.foundation.layout.Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                Icon(
+                                    androidx.compose.material.icons.Icons.Outlined.PictureAsPdf,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(28.dp),
+                                )
+                            }
+                        }
+                        Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(3.dp)) {
+                            LText("DocPilot", style = MaterialTheme.typography.headlineSmall)
+                            LText(
+                                "PDF Reader & Tools",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            LText(
+                                "PRIVADO • NO DISPOSITIVO",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    HorizontalDivider()
                     LText(
-                        "DocPilot",
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
-                    )
-                    Spacer(androidx.compose.ui.Modifier.height(4.dp))
-                    LText(
-                        "Leitor de PDFs e ferramentas",
-                        style = MaterialTheme.typography.bodyMedium,
+                        "ESPAÇO DE TRABALHO",
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
+                        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 8.dp),
                     )
-                }
-                HorizontalDivider()
-                Destination.entries.forEach { item ->
+                    Destination.values().filter { it != Destination.SETTINGS }.forEach { item ->
+                        NavigationDrawerItem(
+                            icon = { Icon(item.icon, contentDescription = null) },
+                            label = { LText(item.label) },
+                            selected = destination == item,
+                            onClick = {
+                                selectedDocument = null
+                                destination = item
+                                scope.launch { drawerState.close() }
+                            },
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                        )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+                    LText(
+                        "PREFERÊNCIAS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 18.dp, bottom = 8.dp),
+                    )
                     NavigationDrawerItem(
-                        icon = { Icon(item.icon, contentDescription = null) },
-                        label = { LText(item.label) },
-                        selected = destination == item,
+                        icon = { Icon(Destination.SETTINGS.icon, contentDescription = null) },
+                        label = { LText(Destination.SETTINGS.label) },
+                        selected = destination == Destination.SETTINGS,
                         onClick = {
-                            destination = item
+                            selectedDocument = null
+                            destination = Destination.SETTINGS
                             scope.launch { drawerState.close() }
                         },
-                        modifier = androidx.compose.ui.Modifier.padding(horizontal = 12.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
                     )
+                    Spacer(Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            androidx.compose.material.icons.Icons.Outlined.Folder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(3.dp)) {
+                            LText("Os ficheiros ficam contigo", style = MaterialTheme.typography.titleSmall)
+                            LText(
+                                "Leitura e ferramentas executadas localmente.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(14.dp))
                 }
             }
-        },
+        }
     ) {
         Scaffold(
             modifier = androidx.compose.ui.Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 NavigationBar {
-                    Destination.entries.forEach { item ->
+                    listOf(Destination.HOME, Destination.LIBRARY, Destination.TOOLS).forEach { item ->
                         NavigationBarItem(
                             selected = destination == item,
                             onClick = { destination = item },
@@ -254,7 +324,7 @@ fun DocPilotApp(
                 when (targetDestination) {
                     Destination.HOME -> HomeScreen(
                         documents = documents,
-                        onImportPdf = { picker.launch(arrayOf("application/pdf")) },
+                        onImportPdf = { showImportPicker = true },
                         hasDocumentAccess = hasDocumentAccess,
                         onRequestDocumentAccess = { requestDocumentAccess() },
                         onRefreshDeviceDocuments = { refreshDeviceDocuments() },
@@ -273,6 +343,9 @@ fun DocPilotApp(
                     Destination.TOOLS -> ToolsScreen(
                         initialCategory = initialToolCategory,
                         categoryRequestId = navigationRequestId,
+                        availableDocuments = documents,
+                        hasStorageAccess = hasDocumentAccess,
+                        onRequestDocumentAccess = { requestDocumentAccess() },
                         onOutputSaved = { uriString ->
                             val outputUri = android.net.Uri.parse(uriString)
                             runCatching {
@@ -305,6 +378,22 @@ fun DocPilotApp(
                 }
             }
         }
+    }
+
+    if (showImportPicker) {
+        DocumentPickerDialog(
+            title = "Abrir PDF",
+            type = DocumentPickerType.PDF,
+            multiple = false,
+            knownDocuments = documents,
+            hasStorageAccess = hasDocumentAccess,
+            onRequestStorageAccess = { requestDocumentAccess() },
+            onDismiss = { showImportPicker = false },
+            onConfirm = { selected ->
+                showImportPicker = false
+                selected.firstOrNull()?.let { openDocument(it) }
+            },
+        )
     }
 }
 
