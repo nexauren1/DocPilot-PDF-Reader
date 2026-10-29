@@ -503,7 +503,6 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                 }
                 LText(
                     if (toolQuery.isBlank() && selectedCategory == null) "Ferramentas para o teu fluxo de trabalho"
-                    else "${filteredTools.size} resultado(s)"
                     else "${filteredTools.size} resultado(s)",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
