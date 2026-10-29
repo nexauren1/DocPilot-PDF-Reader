@@ -171,7 +171,7 @@ private val toolCards = listOf(
     ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF, category = ToolCategory.CONVERT),
     ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN, category = ToolCategory.SECURITY),
     ToolCard("Proteger", "Senha e permissões", Icons.Outlined.Lock, securityTool = SecurityTool.PROTECT, category = ToolCategory.SECURITY),
-    ToolCard("OCR de imagem", "Ler texto em fotos", Icons.Outlined.Description, action = Action.OCR, category = ToolCategory.ANALYZE),
+    ToolCard("OCR de imagem", "Extrair texto de várias imagens", Icons.Outlined.Description, action = Action.OCR, category = ToolCategory.ANALYZE),
     ToolCard("Extrair texto PDF", "Exportar texto para TXT", Icons.Outlined.ContentCopy, action = Action.PDF_TEXT, category = ToolCategory.ANALYZE),
     ToolCard("Informações do PDF", "Páginas, tamanho e metadados", Icons.Outlined.Info, action = Action.PDF_INFO, category = ToolCategory.ANALYZE),
 )
@@ -287,12 +287,10 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     }
 
     val ocrPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            pendingImageUris = listOf(uri)
-            activeUtility = Action.OCR
-        }
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        pendingImageUris = uris
+        if (uris.isNotEmpty()) activeUtility = Action.OCR
     }
 
     val scannerOptions = remember {
@@ -815,13 +813,17 @@ private fun UtilityWorkspace(
                         }
 
                         Action.OCR -> {
-                            val source = imageUris.firstOrNull() ?: return@Button
+                            val sources = imageUris
+                            if (sources.isEmpty()) return@Button
                             onProcessText("docpilot-ocr.txt") {
-                                val image = InputImage.fromFilePath(context, source)
                                 val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
                                 try {
-                                    val recognized = Tasks.await(recognizer.process(image)).text.trim()
-                                    recognized.ifBlank { "Nenhum texto foi identificado nesta imagem." }
+                                    sources.mapIndexed { index, source ->
+                                        val sourceName = displayName(context, source, "Imagem ${index + 1}")
+                                        val image = InputImage.fromFilePath(context, source)
+                                        val recognized = Tasks.await(recognizer.process(image)).text.trim()
+                                        "$sourceName\n${recognized.ifBlank { "Nenhum texto foi identificado nesta imagem." }}"
+                                    }.joinToString("\n\n")
                                 } finally {
                                     recognizer.close()
                                 }
