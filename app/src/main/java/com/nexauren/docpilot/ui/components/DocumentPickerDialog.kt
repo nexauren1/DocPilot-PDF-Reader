@@ -130,7 +130,7 @@ fun DocumentPickerDialog(
             tonalElevation = 6.dp,
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                modifier = Modifier.fillMaxSize().padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Row(
@@ -355,8 +355,7 @@ fun DocumentPickerDialog(
                     Button(
                         enabled = selectedUris.isNotEmpty() && (!scanning || files.isNotEmpty()),
                         onClick = {
-                            val selected = filteredFiles.filter { it.uri in selectedUris }
-                                .ifEmpty { files.filter { it.uri in selectedUris } }
+                            val selected = files.filter { it.uri in selectedUris }
                             if (selected.isNotEmpty()) onConfirm(selected)
                         },
                         modifier = Modifier.weight(1f),
