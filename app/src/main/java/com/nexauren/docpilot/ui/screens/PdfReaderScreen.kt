@@ -88,10 +88,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.nexauren.docpilot.model.DocumentItem
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
@@ -171,6 +173,7 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
     var pageAspectRatios by remember(document.uri) { mutableStateOf<List<Float>>(emptyList()) }
     var positionRestored by remember(document.uri) { mutableStateOf(false) }
     var error by remember(document.uri) { mutableStateOf<String?>(null) }
+    var loadingSlow by remember(document.uri) { mutableStateOf(false) }
     var loadAttempt by remember(document.uri) { mutableStateOf(0) }
     var resetZoomToken by remember(document.uri) { mutableStateOf(0) }
     var searchOpen by remember(document.uri) { mutableStateOf(false) }
@@ -205,19 +208,24 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
         pageAspectRatios = emptyList()
         positionRestored = false
         error = null
+        loadingSlow = false
         pageListState.scrollToItem(0)
         isBookmarked = context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
             .getInt(bookmarkKey, -1) > 0
-        runCatching {
+
+        try {
             val info = withTimeout(20_000) {
                 withContext(Dispatchers.IO) {
                     openPdfPageInfo(context, requestedUri)
                 }
             }
+            if (document.uri != requestedUri) return@LaunchedEffect
             pageCount = info.pageCount
             pageAspectRatios = List(info.pageCount) { info.firstPageAspectRatio }
-            // Render can begin as soon as the page count is known. Measuring every page's
-            // proportions is useful but must not block the first paint of a long document.
+            loadingSlow = false
+
+            // The first page is now available. Full-page dimensions are measured in the
+            // background and never block the reader from painting the document.
             launch {
                 runCatching {
                     withContext(Dispatchers.IO) {
@@ -229,8 +237,29 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                     }
                 }
             }
-        }.onFailure {
-            error = "Não foi possível abrir este PDF. Verifica o ficheiro e tenta novamente."
+        } catch (timeout: TimeoutCancellationException) {
+            loadingSlow = false
+            error = "A abertura deste PDF excedeu o tempo esperado. Tenta novamente ou escolhe uma cópia guardada no dispositivo."
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            loadingSlow = false
+            error = failure.message
+                ?.takeIf { it.isNotBlank() }
+                ?.take(260)
+                ?: "Não foi possível abrir este PDF. Verifica o ficheiro e tenta novamente."
+        }
+    }
+
+    // A blocked content provider must never leave a permanent spinner on screen.
+    // This watchdog lives separately from the I/O operation, which may be slow or non-cancellable.
+    LaunchedEffect(document.uri, loadAttempt) {
+        delay(12_000)
+        if (pageCount == 0 && error == null) loadingSlow = true
+        delay(18_000)
+        if (pageCount == 0 && error == null) {
+            loadingSlow = false
+            error = "O PDF continua sem responder. O ficheiro pode estar indisponível ou danificado. Tenta novamente ou volta à biblioteca."
         }
     }
 
@@ -451,10 +480,24 @@ fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
                 ) {
                     CircularProgressIndicator()
                     LText(
-                        "A abrir documento…",
-                        modifier = Modifier.padding(top = 12.dp),
+                        if (loadingSlow) "O documento está a demorar mais do que o normal…"
+                        else "A preparar o PDF para leitura…",
+                        modifier = Modifier.padding(top = 14.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
+                    if (loadingSlow) {
+                        LText(
+                            "Ainda não há páginas prontas. Podes tentar novamente sem sair do DocPilot.",
+                            modifier = Modifier.padding(top = 6.dp, start = 28.dp, end = 28.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        TextButton(
+                            onClick = { loadAttempt += 1 },
+                            modifier = Modifier.padding(top = 6.dp),
+                        ) { LText("Tentar novamente") }
+                    }
                 }
             }
 
@@ -797,8 +840,12 @@ private fun PdfPage(
             renderJob.join()
             true
         } ?: false
-        if (!completedInTime && bitmap == null) renderTimedOut = true
-        renderJob.join()
+        if (!completedInTime && bitmap == null) {
+            renderTimedOut = true
+            // Do not join this job again after the timeout: a blocking renderer must not
+            // keep the screen in an endless loading state.
+            renderJob.cancel()
+        }
     }
 
     Card(
