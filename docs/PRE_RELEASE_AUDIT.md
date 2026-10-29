@@ -15,6 +15,7 @@ DocPilot — PDF Reader & Tools 0.1.16 (versionCode 17), a proposed candidate su
 - Added category filters and live counts to the tools catalogue.
 - Added explicit source-file/image and detected-page counters to processing panels.
 - Added OCR for multiple selected images, combining recognized text into one reviewable TXT result.
+- Added a localized Android home-screen widget with shortcuts that open a specific tool category.
 
 ## Existing capabilities
 
