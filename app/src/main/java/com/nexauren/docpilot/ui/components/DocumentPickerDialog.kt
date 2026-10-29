@@ -1,5 +1,8 @@
 package com.nexauren.docpilot.ui.components
 
+import androidx.activity.compose.BackHandler
+import android.net.Uri
+import android.os.Environment
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,10 +54,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.nexauren.docpilot.model.DocumentItem
-import com.nexauren.docpilot.storage.DocumentAccess
 import com.nexauren.docpilot.ui.localization.LText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 enum class DocumentPickerType {
     PDF,
@@ -77,31 +80,60 @@ fun DocumentPickerDialog(
     onConfirm: (List<DocumentItem>) -> Unit,
 ) {
     val context = LocalContext.current
+    val rootDirectory = remember(type) { Environment.getExternalStorageDirectory() }
+    var currentDirectory by remember(type) { mutableStateOf(rootDirectory) }
     var query by remember(type) { mutableStateOf("") }
     var files by remember(type) { mutableStateOf(knownDocuments.filter { accepts(type, it) }) }
+    var directories by remember(type) { mutableStateOf<List<File>>(emptyList()) }
     var selectedUris by remember(type, multiple) { mutableStateOf<Set<String>>(emptySet()) }
     var scanning by remember(type) { mutableStateOf(false) }
     var refreshToken by remember(type) { mutableStateOf(0) }
+    val atRoot = currentDirectory.absolutePath == rootDirectory.absolutePath
 
-    LaunchedEffect(type, knownDocuments, hasStorageAccess, refreshToken) {
-        files = knownDocuments.filter { accepts(type, it) }.distinctBy { it.uri }
+    BackHandler(enabled = hasStorageAccess && !atRoot) {
+        currentDirectory = currentDirectory.parentFile ?: rootDirectory
+        query = ""
+        selectedUris = emptySet()
+    }
+
+    LaunchedEffect(type, knownDocuments, hasStorageAccess, refreshToken, currentDirectory) {
+        files = if (hasStorageAccess) emptyList() else knownDocuments.filter { accepts(type, it) }
+        directories = emptyList()
         scanning = true
-        val indexed = withContext(Dispatchers.IO) {
-            if (!hasStorageAccess) emptyList()
-            else runCatching {
-                when (type) {
-                    DocumentPickerType.PDF -> DocumentAccess.scanPdfs(context)
-                    DocumentPickerType.IMAGE -> DocumentAccess.scanImages(context)
-                }
-            }.getOrDefault(emptyList())
+        val contents = withContext(Dispatchers.IO) {
+            if (!hasStorageAccess) {
+                emptyList<File>() to emptyList<DocumentItem>()
+            } else {
+                val children = runCatching {
+                    currentDirectory.listFiles()
+                        ?.filter { it.canRead() && !it.isHidden }
+                        .orEmpty()
+                }.getOrDefault(emptyList())
+                val folders = children
+                    .filter { it.isDirectory && it.canRead() }
+                    .sortedBy { it.name.lowercase() }
+                val documents = children
+                    .filter { it.isFile && acceptsFileName(type, it.name) }
+                    .sortedWith(compareByDescending<File> { it.lastModified() }.thenBy { it.name.lowercase() })
+                    .map { file -> DocumentItem(file.name, Uri.fromFile(file).toString()) }
+                folders to documents
+            }
         }
-        files = (indexed + knownDocuments.filter { accepts(type, it) })
-            .filter { accepts(type, it) }
-            .distinctBy { it.uri }
+        directories = contents.first
+        val visibleDocuments = if (hasStorageAccess) {
+            contents.second
+        } else {
+            knownDocuments.filter { accepts(type, it) }
+        }
+        files = visibleDocuments.distinctBy { it.uri }
         scanning = false
         selectedUris = selectedUris.intersect(files.map { it.uri }.toSet())
     }
 
+    val filteredDirectories = remember(directories, query) {
+        if (query.isBlank()) directories
+        else directories.filter { it.name.contains(query.trim(), ignoreCase = true) }
+    }
     val filteredFiles = remember(files, query) {
         if (query.isBlank()) files
         else files.filter { it.name.contains(query.trim(), ignoreCase = true) }
@@ -185,6 +217,40 @@ fun DocumentPickerDialog(
                     placeholder = { LText("Pesquisar ficheiros") },
                 )
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    IconButton(
+                        enabled = hasStorageAccess && !atRoot,
+                        onClick = {
+                            currentDirectory = currentDirectory.parentFile ?: rootDirectory
+                            query = ""
+                            selectedUris = emptySet()
+                        },
+                    ) {
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Pasta anterior")
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        LText(
+                            if (!hasStorageAccess) "Ficheiros recentes" else if (atRoot) "Armazenamento interno" else currentDirectory.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                        )
+                        LText(
+                            if (!hasStorageAccess) "Documentos já usados nesta aplicação"
+                            else "Navega pelas pastas sem sair do DocPilot",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
+                }
+
                 if (!hasStorageAccess) {
                     Card(
                         shape = RoundedCornerShape(16.dp),
@@ -220,8 +286,7 @@ fun DocumentPickerDialog(
                     LText(
                         when {
                             scanning -> "A procurar ficheiros…"
-                            filteredFiles.isEmpty() -> "Nenhum ficheiro encontrado"
-                            else -> "${filteredFiles.size} ficheiros"
+                            else -> "${filteredDirectories.size} pastas · ${filteredFiles.size} ficheiros"
                         },
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -238,11 +303,11 @@ fun DocumentPickerDialog(
                     }
                 }
 
-                if (scanning && files.isEmpty()) {
+                if (scanning && files.isEmpty() && directories.isEmpty()) {
                     Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
-                } else if (filteredFiles.isEmpty()) {
+                } else if (filteredFiles.isEmpty() && filteredDirectories.isEmpty()) {
                     Box(
                         Modifier.fillMaxWidth().weight(1f).padding(20.dp),
                         contentAlignment = Alignment.Center,
@@ -258,8 +323,9 @@ fun DocumentPickerDialog(
                                 modifier = Modifier.size(42.dp),
                             )
                             LText(
-                                if (query.isBlank()) "A tua lista de ficheiros está vazia"
-                                else "Não encontrámos ficheiros com esse nome",
+                                if (query.isNotBlank()) "Não encontrámos ficheiros com esse nome"
+                                else if (!hasStorageAccess) "A tua lista de ficheiros está vazia"
+                                else "Esta pasta não contém ficheiros deste tipo",
                                 style = MaterialTheme.typography.titleMedium,
                             )
                             LText(
@@ -280,6 +346,44 @@ fun DocumentPickerDialog(
                         modifier = Modifier.fillMaxWidth().weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
+                        items(filteredDirectories, key = { "folder:${it.absolutePath}" }) { folder ->
+                            Card(
+                                onClick = {
+                                    currentDirectory = folder
+                                    query = ""
+                                    selectedUris = emptySet()
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f)),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 13.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    Surface(
+                                        modifier = Modifier.size(42.dp),
+                                        shape = RoundedCornerShape(13.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Outlined.FolderOpen,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                    }
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                        LText(folder.name, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                                        LText("Pasta", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Icon(Icons.Outlined.ArrowForward, contentDescription = "Abrir pasta", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
                         items(filteredFiles, key = { it.uri }) { document ->
                             val isSelected = document.uri in selectedUris
                             Card(
@@ -369,6 +473,13 @@ fun DocumentPickerDialog(
     }
 
 }
+
+private fun acceptsFileName(type: DocumentPickerType, fileName: String): Boolean =
+    when (type) {
+        DocumentPickerType.PDF -> fileName.endsWith(".pdf", ignoreCase = true)
+        DocumentPickerType.IMAGE -> listOf(".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".heic", ".heif", ".tif", ".tiff")
+            .any { extension -> fileName.endsWith(extension, ignoreCase = true) }
+    }
 
 private fun accepts(type: DocumentPickerType, document: DocumentItem): Boolean =
     when (type) {
