@@ -86,6 +86,25 @@ class PdfProcessorTest {
     }
 
     @Test
+    fun removes_only_pages_inside_the_requested_range() {
+        assertEquals(listOf(1, 4, 5), PdfProcessor.pagesToKeepAfterRemoval(5, 2, 3))
+    }
+
+    @Test
+    fun does_not_allow_removing_every_page() {
+        runCatching { PdfProcessor.pagesToKeepAfterRemoval(4, 1, 4) }
+            .onSuccess { error("Expected removing all pages to be rejected") }
+    }
+
+    @Test
+    fun validates_page_range_bounds_and_order() {
+        runCatching { PdfProcessor.pagesToKeepAfterRemoval(5, 0, 2) }
+            .onSuccess { error("Expected a page below one to be rejected") }
+        runCatching { PdfProcessor.pagesToKeepAfterRemoval(5, 4, 2) }
+            .onSuccess { error("Expected a reversed range to be rejected") }
+    }
+
+    @Test
     fun formats_bytes_for_ui() {
         assertEquals("1.0 KB", formatBytes(1024))
     }

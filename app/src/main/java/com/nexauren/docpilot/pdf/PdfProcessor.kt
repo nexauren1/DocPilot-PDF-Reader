@@ -70,6 +70,39 @@ object PdfProcessor {
         return fileSize(resolver, outputUri)
     }
 
+    /**
+     * Returns the 1-based pages that remain after removing an inclusive range.
+     * Kept separate from I/O so the bounds can be unit-tested.
+     */
+    fun pagesToKeepAfterRemoval(totalPages: Int, startPage: Int, endPage: Int): List<Int> {
+        require(totalPages > 1) { "O PDF precisa de pelo menos duas páginas." }
+        require(startPage in 1..totalPages && endPage in 1..totalPages) {
+            "O intervalo de páginas está fora dos limites do documento."
+        }
+        require(startPage <= endPage) { "A página inicial deve ser menor ou igual à final." }
+        require(startPage != 1 || endPage != totalPages) {
+            "Não podes remover todas as páginas do documento."
+        }
+        return (1..totalPages).filterNot { it in startPage..endPage }
+    }
+
+    fun removePageRange(resolver: ContentResolver, inputUri: Uri, outputUri: Uri, startPage: Int, endPage: Int): Long {
+        resolver.openInputStream(inputUri).use { input ->
+            requireNotNull(input) { "Não foi possível abrir o PDF." }
+            PDDocument.load(input).use { source ->
+                val pagesToKeep = pagesToKeepAfterRemoval(source.numberOfPages, startPage, endPage)
+                PDDocument().use { outputDocument ->
+                    pagesToKeep.forEach { pageNumber -> outputDocument.importPage(source.getPage(pageNumber - 1)) }
+                    resolver.openOutputStream(outputUri).use { output ->
+                        requireNotNull(output) { "Não foi possível criar o PDF de saída." }
+                        outputDocument.save(output)
+                    }
+                }
+            }
+        }
+        return fileSize(resolver, outputUri)
+    }
+
     fun rotateAllPages(resolver: ContentResolver, inputUri: Uri, outputUri: Uri): Long {
         resolver.openInputStream(inputUri).use { input ->
             requireNotNull(input) { "Não foi possível abrir o PDF." }

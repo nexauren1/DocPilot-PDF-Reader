@@ -79,6 +79,8 @@ fun DocPilotApp() {
     var destination by remember { mutableStateOf(Destination.HOME) }
     var language by remember { mutableStateOf(DocPilotLocalization.language(context)) }
     var documents by remember { mutableStateOf(loadDocuments(context)) }
+    var completedToolOperations by remember { mutableStateOf(0) }
+    var failedToolOperations by remember { mutableStateOf(0) }
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
     var hasDocumentAccess by remember { mutableStateOf(DocumentAccess.hasAccess(context)) }
     var isScanningDocuments by remember { mutableStateOf(false) }
@@ -184,13 +186,13 @@ fun DocPilotApp() {
                         .padding(vertical = 20.dp),
                 ) {
                     LText(
-                        "DocPilot",
+                        "PDF Reader & Tools",
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
                     )
                     Spacer(androidx.compose.ui.Modifier.height(4.dp))
                     LText(
-                        "Leitor e gestor de PDFs",
+                        "Leitor de PDFs e ferramentas",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = androidx.compose.ui.Modifier.padding(horizontal = 24.dp),
@@ -258,6 +260,10 @@ fun DocPilotApp() {
                     )
 
                     Destination.TOOLS -> ToolsScreen(
+                        completedOperations = completedToolOperations,
+                        failedOperations = failedToolOperations,
+                        onOperationSuccess = { completedToolOperations += 1 },
+                        onOperationFailure = { failedToolOperations += 1 },
                         onOutputSaved = { uriString ->
                             val outputUri = android.net.Uri.parse(uriString)
                             runCatching {

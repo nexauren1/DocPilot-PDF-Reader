@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,9 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FormatListNumbered
@@ -104,6 +108,7 @@ import kotlinx.coroutines.withContext
 private enum class PdfTool(val title: String, val subtitle: String, val icon: ImageVector) {
     MERGE("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description),
     SPLIT("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit),
+    REMOVE_PAGES("Remover páginas", "Eliminar páginas de um intervalo", Icons.Outlined.Delete),
     COMPRESS("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive),
     REORDER("Organizar", "Reordenar páginas", Icons.Outlined.Edit),
     ROTATE("Rodar páginas", "Rodar todas as páginas 90°", Icons.Outlined.RotateRight),
@@ -148,6 +153,7 @@ private fun displayName(context: android.content.Context, uri: Uri, fallback: St
 private val toolCards = listOf(
     ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, pdfTool = PdfTool.MERGE),
     ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, pdfTool = PdfTool.SPLIT),
+    ToolCard("Remover páginas", "Eliminar páginas de um intervalo", Icons.Outlined.Delete, pdfTool = PdfTool.REMOVE_PAGES),
     ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, pdfTool = PdfTool.COMPRESS),
     ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER),
     ToolCard("Rodar páginas", "Rodar todas as páginas", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE),
@@ -167,7 +173,14 @@ private val toolCards = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
+fun ToolsScreen(
+    completedOperations: Int,
+    failedOperations: Int,
+    onOperationSuccess: () -> Unit,
+    onOperationFailure: () -> Unit,
+    onOutputSaved: (String) -> Unit,
+    onOpenMenu: () -> Unit,
+) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
@@ -181,6 +194,7 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     var activeUtility by remember { mutableStateOf<Action?>(null) }
     var processing by remember { mutableStateOf(false) }
     var toolQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Todas") }
     var pendingPdfTextUri by remember { mutableStateOf<Uri?>(null) }
     var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
@@ -201,9 +215,11 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             processing = false
             outcome.fold(
                 onSuccess = {
+                    onOperationSuccess()
                     resultPdf = it
                 },
                 onFailure = {
+                    onOperationFailure()
                     workflowError = it.message ?: "O processamento não foi concluído."
                 },
             )
@@ -220,8 +236,8 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             }
             processing = false
             outcome.fold(
-                onSuccess = { resultImage = it },
-                onFailure = { workflowError = it.message ?: "A exportação da imagem falhou." },
+                onSuccess = { onOperationSuccess(); resultImage = it },
+                onFailure = { onOperationFailure(); workflowError = it.message ?: "A exportação da imagem falhou." },
             )
         }
     }
@@ -241,9 +257,11 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
             processing = false
             outcome.fold(
                 onSuccess = {
+                    onOperationSuccess()
                     resultText = it
                 },
                 onFailure = {
+                    onOperationFailure()
                     workflowError = it.message ?: "O processamento do texto falhou."
                 },
             )
@@ -401,10 +419,11 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        val filteredTools = remember(toolQuery) {
-            toolCards.filter {
-                it.title.contains(toolQuery, ignoreCase = true) ||
-                    it.subtitle.contains(toolQuery, ignoreCase = true)
+        val filteredTools = remember(toolQuery, selectedCategory) {
+            toolCards.filter { card ->
+                val matchesQuery = card.title.contains(toolQuery, ignoreCase = true) ||
+                    card.subtitle.contains(toolQuery, ignoreCase = true)
+                matchesQuery && matchesToolCategory(card, selectedCategory)
             }
         }
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -455,9 +474,18 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                     },
                     placeholder = { LText("Pesquisar ferramentas") },
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 5.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    listOf("Todas", "Organizar", "Converter", "Segurança", "Scanner e OCR", "Texto e informação").forEach { category ->
+                        FilterChip(selected = selectedCategory == category, onClick = { selectedCategory = category }, label = { LText(category) })
+                    }
+                }
+                ToolOperationStats(completedOperations = completedOperations, failedOperations = failedOperations)
                 LText(
-                    if (toolQuery.isBlank()) "Ferramentas para o teu fluxo de trabalho"
-                    else "${filteredTools.size} resultado(s)",
+                    if (toolQuery.isBlank() && selectedCategory == "Todas") "Ferramentas para o teu fluxo de trabalho"
+                    else "${filteredTools.size} resultados",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
@@ -738,7 +766,7 @@ private fun UtilityWorkspace(
                     when (action) {
                         Action.SCAN -> {
                             val source = scanUri ?: return@Button
-                            onProcessPdf("docpilot-scan.pdf") { outputUri ->
+                            onProcessPdf("pdf-tools-scan.pdf") { outputUri ->
                                 DocumentTools.scanResultPdf(resolver, source, outputUri)
                             }
                         }
@@ -751,14 +779,14 @@ private fun UtilityWorkspace(
                             }
                             val width = if (landscape) dimensions.second else dimensions.first
                             val height = if (landscape) dimensions.first else dimensions.second
-                            onProcessPdf("docpilot-images.pdf") { outputUri ->
+                            onProcessPdf("pdf-tools-images.pdf") { outputUri ->
                                 DocumentTools.imagesToPdf(resolver, imageUris, outputUri, width, height)
                             }
                         }
 
                         Action.OCR -> {
                             val source = imageUris.firstOrNull() ?: return@Button
-                            onProcessText("docpilot-ocr.txt") {
+                            onProcessText("pdf-tools-ocr.txt") {
                                 val image = InputImage.fromFilePath(context, source)
                                 val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
                                 try {
@@ -772,7 +800,7 @@ private fun UtilityWorkspace(
 
                         Action.PDF_TEXT -> {
                             val source = pdfUri ?: return@Button
-                            onProcessText("docpilot-text.txt") {
+                            onProcessText("pdf-tools-text.txt") {
                                 val extracted = DocumentTools.extractPdfText(resolver, source)
                                 if (removeBlankLines) {
                                     extracted.lineSequence().filter { it.isNotBlank() }.joinToString("\n")
@@ -784,7 +812,7 @@ private fun UtilityWorkspace(
 
                         Action.PDF_INFO -> {
                             val source = pdfUri ?: return@Button
-                            onProcessText("docpilot-info.txt") {
+                            onProcessText("pdf-tools-info.txt") {
                                 DocumentTools.inspectPdf(resolver, source)
                             }
                         }
@@ -820,6 +848,47 @@ private fun UtilityWorkspace(
     }
 }
 
+private fun matchesToolCategory(card: ToolCard, category: String): Boolean = when (category) {
+    "Organizar" -> card.pdfTool != null && card.pdfTool in listOf(
+        PdfTool.MERGE, PdfTool.SPLIT, PdfTool.REMOVE_PAGES, PdfTool.REORDER,
+        PdfTool.ROTATE, PdfTool.ROTATE_ONE, PdfTool.CROP_ONE, PdfTool.PAGE_NUMBERS, PdfTool.WATERMARK,
+    )
+    "Converter" -> card.pdfTool == PdfTool.EXPORT_PAGE_IMAGE || card.action == Action.IMAGE_TO_PDF
+    "Segurança" -> card.securityTool != null
+    "Scanner e OCR" -> card.action == Action.SCAN || card.action == Action.OCR
+    "Texto e informação" -> card.action == Action.PDF_TEXT || card.action == Action.PDF_INFO
+    else -> true
+}
+
+@Composable
+private fun ToolOperationStats(completedOperations: Int, failedOperations: Int) {
+    Column(Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        LText("Atividade nesta sessão", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ToolOperationMetric("Concluídas", completedOperations, Icons.Outlined.CheckCircle, Color(0xFF16856B), Modifier.weight(1f))
+            ToolOperationMetric("Falhas", failedOperations, Icons.Outlined.ErrorOutline, Color(0xFFD9485F), Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun ToolOperationMetric(label: String, value: Int, icon: ImageVector, accent: Color, modifier: Modifier = Modifier) {
+    Card(modifier = modifier.animateContentSize(), shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(21.dp))
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                LText(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LText(value.toString(), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
+        }
+    }
+}
+
 private fun toolAccent(index: Int): Color {
     val colors = listOf(
         Color(0xFF356AE6),
@@ -839,6 +908,7 @@ private fun toolAccent(index: Int): Color {
 private fun pdfToolAccent(tool: PdfTool): Color = when (tool) {
     PdfTool.MERGE -> Color(0xFF356AE6)
     PdfTool.SPLIT -> Color(0xFF7C4DFF)
+    PdfTool.REMOVE_PAGES -> Color(0xFFD9485F)
     PdfTool.COMPRESS -> Color(0xFF008C95)
     PdfTool.REORDER -> Color(0xFFB45309)
     PdfTool.ROTATE -> Color(0xFFDB4B73)
@@ -893,6 +963,7 @@ private fun ProcessingPanel(
     title: String,
     detail: String,
     accent: Color,
+    pageCount: Int? = null,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
@@ -917,6 +988,7 @@ private fun ProcessingPanel(
             ) {
                 LText(title, style = MaterialTheme.typography.titleMedium)
                 LText(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                pageCount?.let { count -> LText("$count páginas detetadas", style = MaterialTheme.typography.labelSmall, color = accent) }
                 LinearProgressIndicator(color = accent, modifier = Modifier.fillMaxWidth())
             }
         }
@@ -1023,11 +1095,11 @@ private fun SecurityWorkspace(
                 onClick = {
                     val source = inputUri ?: return@Button
                     if (tool == SecurityTool.PROTECT) {
-                        onProcessPdf("docpilot-protected.pdf") { outputUri ->
+                        onProcessPdf("pdf-tools-protected.pdf") { outputUri ->
                             DocumentTools.protectPdf(resolver, source, outputUri, value)
                         }
                     } else {
-                        onProcessPdf("docpilot-signed.pdf") { outputUri ->
+                        onProcessPdf("pdf-tools-signed.pdf") { outputUri ->
                             DocumentTools.addVisualSignature(resolver, source, outputUri, value)
                         }
                     }
@@ -1146,6 +1218,7 @@ private fun ToolWorkspace(
                 subtitle = when (tool) {
                     PdfTool.MERGE -> "Combina vários ficheiros num só."
                     PdfTool.SPLIT -> "Escolhe o intervalo que queres guardar."
+                    PdfTool.REMOVE_PAGES -> "Remover um intervalo de páginas de uma cópia do PDF."
                     PdfTool.COMPRESS -> "Otimiza imagens incorporadas no PDF."
                     PdfTool.REORDER -> "Define a sequência final das páginas."
                     PdfTool.ROTATE -> "Roda todas as páginas 90° e guarda uma nova cópia."
@@ -1163,6 +1236,7 @@ private fun ToolWorkspace(
                 text = when (tool) {
                     PdfTool.MERGE -> "Selecione dois ou mais PDFs para criar um único documento."
                     PdfTool.SPLIT -> "Selecione um PDF e indique o intervalo de páginas."
+                    PdfTool.REMOVE_PAGES -> "Seleciona um PDF e indica o intervalo a remover."
                     PdfTool.COMPRESS -> "Otimiza imagens incorporadas, quando adequado. PDFs de texto ou vetoriais podem reduzir pouco."
                     PdfTool.REORDER -> "Indique a nova ordem, por exemplo: 3,1,2,4."
                     PdfTool.ROTATE -> "Roda todas as páginas 90° no sentido horário."
@@ -1218,7 +1292,7 @@ private fun ToolWorkspace(
             }
 
             when (tool) {
-                PdfTool.SPLIT -> {
+                PdfTool.SPLIT, PdfTool.REMOVE_PAGES -> {
                     detectedPageCount?.let { count ->
                         LText(
                             "Documento com $count página(s).",
@@ -1332,6 +1406,7 @@ private fun ToolWorkspace(
                     title = when (tool) {
                         PdfTool.MERGE -> "A juntar documentos"
                         PdfTool.SPLIT -> "A extrair páginas"
+                        PdfTool.REMOVE_PAGES -> "A remover páginas"
                         PdfTool.COMPRESS -> "A otimizar imagens"
                         PdfTool.REORDER -> "A reorganizar páginas"
                         PdfTool.ROTATE -> "A rodar todas as páginas"
@@ -1341,8 +1416,9 @@ private fun ToolWorkspace(
                         PdfTool.PAGE_NUMBERS -> "A numerar páginas"
                         PdfTool.WATERMARK -> "A adicionar marca de água"
                     },
-                    detail = "O DocPilot - PDF Reader está a criar uma nova cópia do teu PDF.",
+                    detail = "O PDF Reader & Tools está a criar uma nova cópia do teu PDF.",
                     accent = pdfToolAccent(tool),
+                    pageCount = detectedPageCount,
                 )
             }
 
@@ -1355,7 +1431,7 @@ private fun ToolWorkspace(
                                     snackbar.showSnackbar("Selecione pelo menos dois PDFs.")
                                 }
                             } else {
-                                createOutput("docpilot-merged.pdf") { uri ->
+                                createOutput("pdf-tools-merged.pdf") { uri ->
                                     PdfProcessor.merge(resolver, selectedUris, uri)
                                 }
                             }
@@ -1372,7 +1448,7 @@ private fun ToolWorkspace(
                                     )
                                 }
                             } else {
-                                createOutput("docpilot-split.pdf") { uri ->
+                                createOutput("pdf-tools-split.pdf") { uri ->
                                     PdfProcessor.extractPages(
                                         resolver,
                                         selectedUris.single(),
@@ -1384,13 +1460,25 @@ private fun ToolWorkspace(
                             }
                         }
 
-                        PdfTool.COMPRESS -> {
+                                                PdfTool.REMOVE_PAGES -> {
+                            val start = startPage.toIntOrNull()
+                            val end = endPage.toIntOrNull()
+                            if (selectedUris.size != 1 || start == null || end == null) {
+                                scope.launch { snackbar.showSnackbar("Selecione um PDF e um intervalo válido.") }
+                            } else {
+                                createOutput("pdf-tools-pages-removed.pdf") { uri ->
+                                    PdfProcessor.removePageRange(resolver, selectedUris.single(), uri, start, end)
+                                }
+                            }
+                        }
+
+PdfTool.COMPRESS -> {
                             if (selectedUris.size != 1) {
                                 scope.launch {
                                     snackbar.showSnackbar("Selecione um PDF.")
                                 }
                             } else {
-                                createOutput("docpilot-compressed.pdf") { uri ->
+                                createOutput("pdf-tools-compressed.pdf") { uri ->
                                     PdfProcessor.compress(
                                         resolver,
                                         selectedUris.single(),
@@ -1417,7 +1505,7 @@ private fun ToolWorkspace(
                                     snackbar.showSnackbar("Selecione um PDF.")
                                 }
                             } else {
-                                createOutput("docpilot-reordered.pdf") { uri ->
+                                createOutput("pdf-tools-reordered.pdf") { uri ->
                                     PdfProcessor.reorder(
                                         resolver,
                                         selectedUris.single(),
@@ -1432,7 +1520,7 @@ private fun ToolWorkspace(
                             if (selectedUris.size != 1) {
                                 scope.launch { snackbar.showSnackbar("Selecione um PDF.") }
                             } else {
-                                createOutput("docpilot-rotated.pdf") { uri ->
+                                createOutput("pdf-tools-rotated.pdf") { uri ->
                                     PdfProcessor.rotateAllPages(resolver, selectedUris.single(), uri)
                                 }
                             }
@@ -1444,7 +1532,7 @@ private fun ToolWorkspace(
                             if (selectedUris.size != 1 || number == null || count == null || number !in 1..count) {
                                 scope.launch { snackbar.showSnackbar("Seleciona um PDF e uma página válida.") }
                             } else {
-                                createPageOutput("docpilot-page-rotated.pdf", number) { uri ->
+                                createPageOutput("pdf-tools-page-rotated.pdf", number) { uri ->
                                     PdfProcessor.rotatePage(
                                         resolver, selectedUris.single(), uri, number, rotationDegrees,
                                     )
@@ -1458,7 +1546,7 @@ private fun ToolWorkspace(
                             if (selectedUris.size != 1 || number == null || count == null || number !in 1..count) {
                                 scope.launch { snackbar.showSnackbar("Seleciona um PDF e uma página válida.") }
                             } else {
-                                createPageOutput("docpilot-page-cropped.pdf", number) { uri ->
+                                createPageOutput("pdf-tools-page-cropped.pdf", number) { uri ->
                                     PdfProcessor.cropPage(
                                         resolver, selectedUris.single(), uri, number, cropMarginPercent / 100f,
                                     )
@@ -1472,7 +1560,7 @@ private fun ToolWorkspace(
                             if (selectedUris.size != 1 || number == null || count == null || number !in 1..count) {
                                 scope.launch { snackbar.showSnackbar("Seleciona um PDF e uma página válida.") }
                             } else {
-                                onProcessImage("docpilot-page-$number.png") { uri ->
+                                onProcessImage("pdf-tools-page-$number.png") { uri ->
                                     DocumentTools.exportPdfPageAsPng(resolver, selectedUris.single(), number, uri)
                                 }
                             }
@@ -1482,7 +1570,7 @@ private fun ToolWorkspace(
                             if (selectedUris.size != 1) {
                                 scope.launch { snackbar.showSnackbar("Selecione um PDF.") }
                             } else {
-                                createOutput("docpilot-numbered.pdf") { uri ->
+                                createOutput("pdf-tools-numbered.pdf") { uri ->
                                     DocumentTools.addPageNumbers(resolver, selectedUris.single(), uri)
                                 }
                             }
@@ -1492,7 +1580,7 @@ private fun ToolWorkspace(
                             if (selectedUris.size != 1) {
                                 scope.launch { snackbar.showSnackbar("Seleciona um PDF.") }
                             } else {
-                                createOutput("docpilot-watermarked.pdf") { uri ->
+                                createOutput("pdf-tools-watermarked.pdf") { uri ->
                                     PdfProcessor.addTextWatermark(resolver, selectedUris.single(), uri, watermarkText)
                                 }
                             }
