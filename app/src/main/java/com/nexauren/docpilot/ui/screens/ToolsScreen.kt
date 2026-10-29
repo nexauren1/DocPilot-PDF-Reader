@@ -37,6 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.CallSplit
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -509,7 +510,7 @@ fun ToolsScreen(
                 }
                 LText(
                     if (toolQuery.isBlank() && selectedCategory == null) "Ferramentas para o teu fluxo de trabalho"
-                    else "${filteredTools.size} resultado(s)",
+                    else "${filteredTools.size} resultados",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
