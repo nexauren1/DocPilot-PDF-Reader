@@ -21,6 +21,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -64,7 +66,7 @@ enum class DocumentPickerType {
 }
 
 /**
- * In-app document picker. It presents indexed device documents and recently used files inside
+ * In-app file browser. When device access is granted, it navigates folders directly inside
  * DocPilot; selection never launches a third-party file-browser activity.
  */
 @Composable
@@ -327,8 +329,11 @@ fun DocumentPickerDialog(
                                 style = MaterialTheme.typography.titleMedium,
                             )
                             LText(
-                                if (query.isBlank()) "Importa um PDF para a biblioteca ou ativa o acesso ao dispositivo para mostrar os ficheiros existentes."
-                                else "Experimenta outro termo de pesquisa.",
+                                when {
+                                    query.isNotBlank() -> "Experimenta outro termo de pesquisa."
+                                    !hasStorageAccess -> "Importa um PDF para a biblioteca ou ativa o acesso ao dispositivo para mostrar os ficheiros existentes."
+                                    else -> "Experimenta abrir outra pasta para encontrar o documento."
+                                },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
