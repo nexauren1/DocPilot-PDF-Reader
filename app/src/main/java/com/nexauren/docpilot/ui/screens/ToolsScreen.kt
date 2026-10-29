@@ -23,13 +23,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -457,34 +455,53 @@ fun ToolsScreen(
             }
         }
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 10.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Brush.linearGradient(listOf(Color(0xFF245BE2), Color(0xFF7250E8))), RoundedCornerShape(24.dp))
-                            .padding(18.dp),
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Box(
-                                modifier = Modifier.size(52.dp).background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(17.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(Icons.Outlined.Description, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
-                            }
-                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                LText("Os teus PDFs, mais simples.", style = MaterialTheme.typography.titleLarge, color = Color.White)
-                                LText(
-                                    toolCards.size.toString() + " ferramentas gratuitas para organizar, proteger e transformar documentos no dispositivo.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.88f),
-                                )
-                            }
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Outlined.Description,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(28.dp),
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            LText(
+                                "Ferramentas para PDF",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                            LText(
+                                "${toolCards.size} ferramentas para organizar, editar, converter e proteger os teus documentos no dispositivo.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
+                            )
                         }
                     }
                 }
@@ -543,116 +560,93 @@ fun ToolsScreen(
                     modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
                 )
                 if (filteredTools.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .padding(bottom = 20.dp),
-                        contentAlignment = Alignment.Center,
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 24.dp),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     ) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            Box(
+                                modifier = Modifier
+                                    .size(58.dp)
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center,
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(64.dp)
-                                        .clip(RoundedCornerShape(20.dp))
-                                        .background(MaterialTheme.colorScheme.primaryContainer),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.Search,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(30.dp),
-                                    )
-                                }
-                                LText(
-                                    "Não encontrámos ferramentas",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                Icon(
+                                    Icons.Outlined.Search,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp),
                                 )
-                                LText(
-                                    "Experimenta outra pesquisa ou remove os filtros ativos.",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                )
-                                OutlinedButton(
-                                    onClick = {
-                                        toolQuery = ""
-                                        selectedCategory = null
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Icon(Icons.Outlined.Close, contentDescription = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    LText("Limpar filtros")
-                                }
+                            }
+                            LText(
+                                "Não encontrámos ferramentas",
+                                modifier = Modifier.fillMaxWidth(),
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                            LText(
+                                "Experimenta outra pesquisa ou remove os filtros ativos.",
+                                modifier = Modifier.fillMaxWidth(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                            OutlinedButton(
+                                onClick = {
+                                    toolQuery = ""
+                                    selectedCategory = null
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(Icons.Outlined.Close, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                LText("Limpar filtros")
                             }
                         }
                     }
                 } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(bottom = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        itemsIndexed(filteredTools, key = { _, card -> card.title }) { _, card ->
-                            // Category accents stay consistent when the user searches or filters.
-                            val accent = toolAccent(card.category)
-                            val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
-                            Card(
-                                onClick = {
-                                    when {
-                                        card.pdfTool != null -> selectedPdfTool = card.pdfTool
-                                        card.securityTool != null -> selectedSecurityTool = card.securityTool
-                                        card.action == Action.SCAN -> launchScanner()
-                                        card.action == Action.IMAGE_TO_PDF ->
-                                            requestDocumentSelection(Action.IMAGE_TO_PDF, DocumentPickerType.IMAGE, true)
-                                        card.action == Action.OCR ->
-                                            requestDocumentSelection(Action.OCR, DocumentPickerType.IMAGE, true)
-                                        card.action == Action.PDF_TEXT ->
-                                            requestDocumentSelection(Action.PDF_TEXT, DocumentPickerType.PDF, false)
-                                        card.action == Action.PDF_INFO ->
-                                            requestDocumentSelection(Action.PDF_INFO, DocumentPickerType.PDF, false)
-                                    }
-                                },
-                                enabled = enabled,
-                                modifier = Modifier.animateContentSize(),
-                                shape = RoundedCornerShape(22.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                            ) {
-                                Column {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(4.dp)
-                                            .background(
-                                                Brush.horizontalGradient(
-                                                    listOf(accent, accent.copy(alpha = 0.18f)),
-                                                ),
-                                            ),
-                                    )
+                    filteredTools.chunked(2).forEach { rowTools ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            rowTools.forEach { card ->
+                                val accent = toolAccent(card.category)
+                                val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
+                                Card(
+                                    onClick = {
+                                        when {
+                                            card.pdfTool != null -> selectedPdfTool = card.pdfTool
+                                            card.securityTool != null -> selectedSecurityTool = card.securityTool
+                                            card.action == Action.SCAN -> launchScanner()
+                                            card.action == Action.IMAGE_TO_PDF ->
+                                                requestDocumentSelection(Action.IMAGE_TO_PDF, DocumentPickerType.IMAGE, true)
+                                            card.action == Action.OCR ->
+                                                requestDocumentSelection(Action.OCR, DocumentPickerType.IMAGE, true)
+                                            card.action == Action.PDF_TEXT ->
+                                                requestDocumentSelection(Action.PDF_TEXT, DocumentPickerType.PDF, false)
+                                            card.action == Action.PDF_INFO ->
+                                                requestDocumentSelection(Action.PDF_INFO, DocumentPickerType.PDF, false)
+                                        }
+                                    },
+                                    enabled = enabled,
+                                    modifier = Modifier.weight(1f).heightIn(min = 166.dp),
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                ) {
                                     Column(
-                                        modifier = Modifier.padding(14.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(14.dp),
                                         verticalArrangement = Arrangement.spacedBy(10.dp),
                                     ) {
                                         Row(
@@ -661,33 +655,25 @@ fun ToolsScreen(
                                         ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(46.dp)
-                                                    .clip(RoundedCornerShape(15.dp))
+                                                    .size(44.dp)
+                                                    .clip(RoundedCornerShape(14.dp))
                                                     .background(accent.copy(alpha = 0.12f)),
                                                 contentAlignment = Alignment.Center,
                                             ) {
                                                 Icon(
                                                     card.icon,
                                                     contentDescription = null,
-                                                    tint = if (enabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(24.dp),
+                                                    tint = accent,
+                                                    modifier = Modifier.size(23.dp),
                                                 )
                                             }
                                             Spacer(Modifier.weight(1f))
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(28.dp)
-                                                    .clip(RoundedCornerShape(10.dp))
-                                                    .background(accent.copy(alpha = 0.08f)),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                Icon(
-                                                    Icons.Outlined.ArrowForward,
-                                                    contentDescription = null,
-                                                    tint = accent,
-                                                    modifier = Modifier.size(16.dp),
-                                                )
-                                            }
+                                            Icon(
+                                                Icons.Outlined.ArrowForward,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                                                modifier = Modifier.size(18.dp),
+                                            )
                                         }
                                         LText(
                                             card.title,
@@ -702,32 +688,20 @@ fun ToolsScreen(
                                             maxLines = 2,
                                             minLines = 2,
                                         )
-                                        Row(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(accent.copy(alpha = 0.09f))
-                                                .padding(horizontal = 8.dp, vertical = 5.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            LText(
-                                                card.category.label,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = accent,
-                                                maxLines = 1,
-                                            )
-                                        }
-                                        if (!enabled) {
-                                            LText(
-                                                "Em breve",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
+                                        Spacer(Modifier.height(1.dp))
+                                        LText(
+                                            card.category.label.uppercase(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = accent,
+                                            maxLines = 1,
+                                        )
                                     }
                                 }
                             }
+                            if (rowTools.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
+                    Spacer(Modifier.height(12.dp))
                 }
             }
             AnimatedVisibility(
