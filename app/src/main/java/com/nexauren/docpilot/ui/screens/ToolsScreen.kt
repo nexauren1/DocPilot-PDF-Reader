@@ -623,7 +623,7 @@ private fun UtilityWorkspace(
     val subtitle = when (action) {
         Action.SCAN -> "Revê a digitalização antes de guardar."
         Action.IMAGE_TO_PDF -> "Configura a página antes de converter as imagens."
-        Action.OCR -> "Reconhece texto localmente e mostra-o antes de guardar."
+        Action.OCR -> "Reconhece texto de uma ou várias imagens localmente."
         Action.PDF_TEXT -> "Extrai o texto, revê o conteúdo e só depois guarda."
         Action.PDF_INFO -> "Consulta o tamanho, as páginas e os metadados disponíveis."
         Action.NONE -> ""
