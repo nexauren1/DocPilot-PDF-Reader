@@ -770,8 +770,8 @@ private fun UtilityWorkspace(
                     accent = MaterialTheme.colorScheme.primary,
                     counterLabel = when (action) {
                         Action.IMAGE_TO_PDF, Action.OCR ->
-                            if (imageUris.size == 1) "imagem de origem" else "imagens de origem"
-                        Action.SCAN, Action.PDF_TEXT, Action.PDF_INFO -> "ficheiro de origem"
+                            if (imageUris.size == 1) "Imagem" else "Imagens"
+                        Action.SCAN, Action.PDF_TEXT, Action.PDF_INFO -> "Ficheiro"
                         Action.NONE -> null
                     },
                     counterValue = when (action) {
@@ -1114,7 +1114,7 @@ private fun SecurityWorkspace(
                     title = if (tool == SecurityTool.PROTECT) "A proteger o PDF" else "A aplicar assinatura",
                     detail = "A preparar uma nova cópia sem alterar o ficheiro original.",
                     accent = if (tool == SecurityTool.PROTECT) Color(0xFFB45309) else Color(0xFF7C4DFF),
-                    counterLabel = "ficheiro de origem",
+                    counterLabel = "Ficheiro",
                     counterValue = if (inputUri != null) "1" else null,
                 )
             }
@@ -1444,7 +1444,7 @@ private fun ToolWorkspace(
                     },
                     detail = "O processamento é local. O ficheiro original será preservado.",
                     accent = pdfToolAccent(tool),
-                    counterLabel = if (selectedUris.size == 1) "ficheiro de origem" else "ficheiros de origem",
+                    counterLabel = if (selectedUris.size == 1) "Ficheiro" else "Ficheiros",
                     counterValue = selectedUris.size.toString(),
                     secondaryCounterLabel = detectedPageCount?.let { if (it == 1) "página" else "páginas" },
                     secondaryCounterValue = detectedPageCount?.toString(),
