@@ -1175,16 +1175,16 @@ private fun SecurityWorkspace(
     tool: SecurityTool,
     onBack: () -> Unit,
     processing: Boolean,
+    availableDocuments: List<DocumentItem>,
+    hasStorageAccess: Boolean,
+    onRequestDocumentAccess: () -> Unit,
     onProcessPdf: (String, (Uri) -> Long) -> Unit,
 ) {
     val context = LocalContext.current
     val resolver = context.contentResolver
     var inputUri by remember { mutableStateOf<Uri?>(null) }
     var value by remember { mutableStateOf("") }
-
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        inputUri = uri
-    }
+    var showPdfPicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -1226,7 +1226,7 @@ private fun SecurityWorkspace(
             )
 
             OutlinedButton(
-                onClick = { picker.launch(arrayOf("application/pdf")) },
+                onClick = { showPdfPicker = true },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Outlined.Folder, contentDescription = null)
@@ -1298,6 +1298,22 @@ private fun SecurityWorkspace(
             )
         }
     }
+    
+    if (showPdfPicker) {
+        DocumentPickerDialog(
+            title = "Selecionar PDF",
+            type = DocumentPickerType.PDF,
+            multiple = false,
+            knownDocuments = availableDocuments,
+            hasStorageAccess = hasStorageAccess,
+            onRequestStorageAccess = onRequestDocumentAccess,
+            onDismiss = { showPdfPicker = false },
+            onConfirm = { documents ->
+                inputUri = documents.firstOrNull()?.let { Uri.parse(it.uri) }
+                showPdfPicker = false
+            },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1306,6 +1322,9 @@ private fun ToolWorkspace(
     tool: PdfTool,
     onBack: () -> Unit,
     processing: Boolean,
+    availableDocuments: List<DocumentItem>,
+    hasStorageAccess: Boolean,
+    onRequestDocumentAccess: () -> Unit,
     onProcessPdf: (String, (Uri) -> Long) -> Unit,
     onProcessPdfPage: (String, Int, (Uri) -> Long) -> Unit,
     onProcessImage: (String, (Uri) -> Long) -> Unit,
@@ -1323,38 +1342,34 @@ private fun ToolWorkspace(
     var cropMarginPercent by remember { mutableStateOf(5) }
     var watermarkText by remember { mutableStateOf("") }
     var detectedPageCount by remember { mutableStateOf<Int?>(null) }
+    var showPdfPicker by remember { mutableStateOf(false) }
+    var selectingMultiple by remember { mutableStateOf(false) }
 
-    val multiPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris ->
+    fun acceptPickedDocuments(documents: List<DocumentItem>) {
+        val uris = documents.map { Uri.parse(it.uri) }
+        if (uris.isEmpty()) return
         selectedUris = uris
-    }
-
-    val singlePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            selectedUris = listOf(uri)
-            detectedPageCount = null
-            pageNumber = "1"
-            scope.launch {
-                val pageCountResult = withContext(Dispatchers.IO) {
-                    runCatching {
-                        resolver.openInputStream(uri).use { input ->
-                            requireNotNull(input) { "Não foi possível abrir este PDF." }
-                            PDDocument.load(input).use { it.numberOfPages }
-                        }
+        detectedPageCount = null
+        pageNumber = "1"
+        if (uris.size != 1) return
+        val uri = uris.single()
+        scope.launch {
+            val pageCountResult = withContext(Dispatchers.IO) {
+                runCatching {
+                    resolver.openInputStream(uri).use { input ->
+                        requireNotNull(input) { "Não foi possível abrir este PDF." }
+                        PDDocument.load(input).use { it.numberOfPages }
                     }
                 }
-                pageCountResult.onSuccess { count ->
-                    detectedPageCount = count
-                    if (count > 0) {
-                        endPage = count.toString()
-                        orderText = (1..count).joinToString(",")
-                    }
-                }.onFailure {
-                    snackbar.showSnackbar("Não foi possível ler as páginas: " + (it.message ?: "erro desconhecido"))
+            }
+            pageCountResult.onSuccess { count ->
+                detectedPageCount = count
+                if (count > 0) {
+                    endPage = count.toString()
+                    orderText = (1..count).joinToString(",")
                 }
+            }.onFailure {
+                snackbar.showSnackbar("Não foi possível ler as páginas: " + (it.message ?: "erro desconhecido"))
             }
         }
     }
@@ -1425,7 +1440,7 @@ private fun ToolWorkspace(
 
             if (tool == PdfTool.MERGE) {
                 OutlinedButton(
-                    onClick = { multiPicker.launch(arrayOf("application/pdf")) },
+                    onClick = { selectingMultiple = true; showPdfPicker = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Outlined.Folder, contentDescription = null)
@@ -1434,7 +1449,7 @@ private fun ToolWorkspace(
                 }
             } else {
                 OutlinedButton(
-                    onClick = { singlePicker.launch(arrayOf("application/pdf")) },
+                    onClick = { selectingMultiple = false; showPdfPicker = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Outlined.Folder, contentDescription = null)
@@ -1787,5 +1802,21 @@ private fun ToolWorkspace(
 
             Spacer(Modifier.height(18.dp))
         }
+    }
+    
+    if (showPdfPicker) {
+        DocumentPickerDialog(
+            title = if (selectingMultiple) "Selecionar PDFs" else "Selecionar PDF",
+            type = DocumentPickerType.PDF,
+            multiple = selectingMultiple,
+            knownDocuments = availableDocuments,
+            hasStorageAccess = hasStorageAccess,
+            onRequestStorageAccess = onRequestDocumentAccess,
+            onDismiss = { showPdfPicker = false },
+            onConfirm = { documents ->
+                showPdfPicker = false
+                acceptPickedDocuments(documents)
+            },
+        )
     }
 }
