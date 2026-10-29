@@ -42,6 +42,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +61,7 @@ import com.nexauren.docpilot.ui.screens.LibraryScreen
 import com.nexauren.docpilot.ui.screens.PdfReaderScreen
 import com.nexauren.docpilot.ui.screens.SettingsScreen
 import com.nexauren.docpilot.ui.screens.ToolsScreen
+import com.nexauren.docpilot.widget.PdfToolsWidgetProvider
 
 private const val PREFS = "docpilot_documents"
 private const val KEY_URIS = "uris"
@@ -74,7 +76,11 @@ private enum class Destination(val label: String, val icon: androidx.compose.ui.
 }
 
 @Composable
-fun DocPilotApp() {
+fun DocPilotApp(
+    initialDestination: String? = null,
+    initialToolCategory: String? = null,
+    navigationRequestId: Int = 0,
+) {
     val context = LocalContext.current
     var destination by remember { mutableStateOf(Destination.HOME) }
     var language by remember { mutableStateOf(DocPilotLocalization.language(context)) }
@@ -86,6 +92,11 @@ fun DocPilotApp() {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(initialDestination, navigationRequestId) {
+        if (initialDestination == "tools") {
+            destination = Destination.TOOLS
+        }
+    }
 
     fun refreshDeviceDocuments() {
         hasDocumentAccess = DocumentAccess.hasAccess(context)
@@ -258,6 +269,8 @@ fun DocPilotApp() {
                     )
 
                     Destination.TOOLS -> ToolsScreen(
+                        initialCategory = initialToolCategory,
+                        categoryRequestId = navigationRequestId,
                         onOutputSaved = { uriString ->
                             val outputUri = android.net.Uri.parse(uriString)
                             runCatching {
@@ -282,6 +295,7 @@ fun DocPilotApp() {
                         onLanguageChanged = { newLanguage ->
                             DocPilotLocalization.setLanguage(context, newLanguage)
                             language = newLanguage
+                            PdfToolsWidgetProvider.refreshAll(context)
                         },
                         onRequestDocumentAccess = { requestDocumentAccess() },
                         onOpenMenu = { scope.launch { drawerState.open() } },
