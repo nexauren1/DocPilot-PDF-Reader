@@ -51,7 +51,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.nexauren.docpilot.model.DocumentItem
 import com.nexauren.docpilot.ui.components.DocumentCard
@@ -409,15 +408,15 @@ fun HomeScreen(
 
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    QuickActionCard("Leitor PDF", "Abre um documento", Icons.Outlined.PictureAsPdf, Color(0xFFE5EDFF), Color(0xFF2F63D8), Modifier.weight(1f), onImportPdf)
-                    QuickActionCard("Biblioteca", "Encontra os ficheiros", Icons.Outlined.Folder, Color(0xFFEDE7FF), Color(0xFF7250E8), Modifier.weight(1f), onViewLibrary)
+                    QuickActionCard("Leitor PDF", "Abre um documento", Icons.Outlined.PictureAsPdf, Modifier.weight(1f), onImportPdf)
+                    QuickActionCard("Biblioteca", "Encontra os ficheiros", Icons.Outlined.Folder, Modifier.weight(1f), onViewLibrary)
                 }
             }
 
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    QuickActionCard("Scanner", "Digitaliza documentos", Icons.Outlined.CameraAlt, Color(0xFFE1F5EF), Color(0xFF16856B), Modifier.weight(1f), onViewTools)
-                    QuickActionCard("Ferramentas", "PDF e conversão", Icons.Outlined.AutoAwesome, Color(0xFFFFF0DA), Color(0xFFB66B08), Modifier.weight(1f), onViewTools)
+                    QuickActionCard("Scanner", "Digitaliza documentos", Icons.Outlined.CameraAlt, Modifier.weight(1f), onViewTools)
+                    QuickActionCard("Ferramentas", "PDF e conversão", Icons.Outlined.AutoAwesome, Modifier.weight(1f), onViewTools)
                 }
             }
 
@@ -532,8 +531,6 @@ private fun QuickActionCard(
     title: String,
     description: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconBackground: Color,
-    iconTint: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -548,10 +545,10 @@ private fun QuickActionCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box(
-                modifier = Modifier.size(42.dp).background(iconBackground, RoundedCornerShape(14.dp)),
+                modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(23.dp))
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
             }
             LText(title, style = MaterialTheme.typography.titleSmall)
             LText(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
