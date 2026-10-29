@@ -1,11 +1,11 @@
 # DocPilot — PDF Reader & Tools
 
-**DocPilot — PDF Reader & Tools** is a free Android PDF reader and document toolkit from Nexauren. Read, organize, annotate and process documents in one polished app. The app is designed around a privacy-first flow: open a document, read or process it on the device, review the result, and save a copy.
+**DocPilot — PDF Reader & Tools** is a free Android PDF reader and document toolkit from Nexauren. Open documents in an in-app library, read and navigate long PDFs, then process and review a new copy using focused tools. The interface uses Portuguese, English, French, Spanish and German, with a consistent navy-and-teal visual system.
 
 ## Features
 
-- PDF reading with page navigation, selectable-text search, saved reading position, bookmarks, zoom and light/sepia/dark appearance.
-- Library with filename search, recent order, alphabetical sorting and persistent favourites.
+- PDF reader with long-document scrolling, page navigation, selectable-text search, saved position, bookmarks, zoom, a thumbnail strip and light/sepia/dark appearance. PDFs selected from content providers are copied into private cache as a seekable read source so providers that return non-seekable streams do not leave pages stuck loading; the original remains untouched.
+- Library and built-in file selector for PDFs and images, with filename search, recent order, alphabetical sorting, multi-selection where supported and persistent favourites.
 - PDF tools including merge, page-range split, page reordering, rotation, cropping, text watermarks on every page, page numbering, image-focused compression, image-to-PDF conversion, text export, metadata inspection, password protection, and visual text signatures. Tool categories include live counts, and processing panels show the actual number of selected source files/images and known PDF pages.
 - Document scanning and batch OCR for multiple images in one export where the device supports the required services.
 - Home-screen widget with localized shortcuts that open Organize, Convert, Security or Text & Analysis tools directly.
@@ -15,7 +15,7 @@
 
 ## Privacy
 
-Selected PDFs and images are processed on the device. The app does not send document contents, extracted text, filenames or previews to DocPilot servers. Android's document picker allows per-file access; broader storage access is optional for automatic PDF discovery. Optional sign-in is handled by the configured authentication provider.
+Selected PDFs and images are processed on the device. The app does not send document contents, extracted text, filenames or previews to DocPilot servers. The built-in selector lists previously opened documents without a fresh permission request. To index and browse the full device storage inside DocPilot, Android may require the app's all-files access permission; that permission is optional, but the selector cannot enumerate every folder without it. Optional sign-in is handled by the configured authentication provider.
 
 Read the [Privacy Policy](https://nexauren1.github.io/DocPilot-PDF-Reader/privacy-policy.html).
 
