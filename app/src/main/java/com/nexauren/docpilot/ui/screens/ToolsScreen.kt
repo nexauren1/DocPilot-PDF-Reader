@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.CallSplit
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -71,6 +73,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import com.nexauren.docpilot.ui.localization.LText
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -119,6 +122,14 @@ private enum class SecurityTool(val title: String, val subtitle: String, val ico
     SIGN("Assinatura visual", "Adicionar assinatura ao PDF", Icons.Outlined.Create),
 }
 
+private enum class ToolCategory(val label: String) {
+    MANAGE("Organizar"),
+    EDIT("Editar"),
+    CONVERT("Converter"),
+    SECURITY("Segurança"),
+    ANALYZE("Texto e análise"),
+}
+
 private data class ToolCard(
     val title: String,
     val subtitle: String,
@@ -126,6 +137,7 @@ private data class ToolCard(
     val pdfTool: PdfTool? = null,
     val securityTool: SecurityTool? = null,
     val action: Action = Action.NONE,
+    val category: ToolCategory = ToolCategory.EDIT,
 )
 
 private enum class Action { NONE, SCAN, IMAGE_TO_PDF, OCR, PDF_TEXT, PDF_INFO }
@@ -146,28 +158,33 @@ private fun displayName(context: android.content.Context, uri: Uri, fallback: St
 }
 
 private val toolCards = listOf(
-    ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, pdfTool = PdfTool.MERGE),
-    ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, pdfTool = PdfTool.SPLIT),
-    ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, pdfTool = PdfTool.COMPRESS),
-    ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER),
-    ToolCard("Rodar páginas", "Rodar todas as páginas", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE),
-    ToolCard("Rodar uma página", "Rodar só a página escolhida", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE_ONE),
-    ToolCard("Recortar página", "Ajustar a área de uma página", Icons.Outlined.Crop, pdfTool = PdfTool.CROP_ONE),
-    ToolCard("Página para PNG", "Exportar uma página como imagem", Icons.Outlined.PhotoLibrary, pdfTool = PdfTool.EXPORT_PAGE_IMAGE),
-    ToolCard("Numerar páginas", "Adicionar números em todas as páginas", Icons.Outlined.FormatListNumbered, pdfTool = PdfTool.PAGE_NUMBERS),
-    ToolCard("Marca de água", "Adicionar texto a todas as páginas", Icons.Outlined.Edit, pdfTool = PdfTool.WATERMARK),
-    ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, action = Action.SCAN),
-    ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF),
-    ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN),
-    ToolCard("Proteger", "Senha e permissões", Icons.Outlined.Lock, securityTool = SecurityTool.PROTECT),
-    ToolCard("OCR de imagem", "Ler texto em fotos", Icons.Outlined.Description, action = Action.OCR),
-    ToolCard("Extrair texto PDF", "Exportar texto para TXT", Icons.Outlined.ContentCopy, action = Action.PDF_TEXT),
-    ToolCard("Informações do PDF", "Páginas, tamanho e metadados", Icons.Outlined.Info, action = Action.PDF_INFO),
+    ToolCard("Juntar PDFs", "Combinar documentos", Icons.Outlined.Description, pdfTool = PdfTool.MERGE, category = ToolCategory.MANAGE),
+    ToolCard("Dividir PDF", "Extrair páginas", Icons.Outlined.CallSplit, pdfTool = PdfTool.SPLIT, category = ToolCategory.MANAGE),
+    ToolCard("Comprimir", "Reduzir tamanho", Icons.Outlined.Archive, pdfTool = PdfTool.COMPRESS, category = ToolCategory.EDIT),
+    ToolCard("Organizar", "Reordenar páginas", Icons.Outlined.Edit, pdfTool = PdfTool.REORDER, category = ToolCategory.MANAGE),
+    ToolCard("Rodar páginas", "Rodar todas as páginas", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE, category = ToolCategory.EDIT),
+    ToolCard("Rodar uma página", "Rodar só a página escolhida", Icons.Outlined.RotateRight, pdfTool = PdfTool.ROTATE_ONE, category = ToolCategory.EDIT),
+    ToolCard("Recortar página", "Ajustar a área de uma página", Icons.Outlined.Crop, pdfTool = PdfTool.CROP_ONE, category = ToolCategory.EDIT),
+    ToolCard("Página para PNG", "Exportar uma página como imagem", Icons.Outlined.PhotoLibrary, pdfTool = PdfTool.EXPORT_PAGE_IMAGE, category = ToolCategory.CONVERT),
+    ToolCard("Numerar páginas", "Adicionar números em todas as páginas", Icons.Outlined.FormatListNumbered, pdfTool = PdfTool.PAGE_NUMBERS, category = ToolCategory.EDIT),
+    ToolCard("Marca de água", "Adicionar texto a todas as páginas", Icons.Outlined.Edit, pdfTool = PdfTool.WATERMARK, category = ToolCategory.EDIT),
+    ToolCard("Scanner", "Digitalizar documentos", Icons.Outlined.CameraAlt, action = Action.SCAN, category = ToolCategory.CONVERT),
+    ToolCard("Imagem → PDF", "Converter imagens", Icons.Outlined.PhotoLibrary, action = Action.IMAGE_TO_PDF, category = ToolCategory.CONVERT),
+    ToolCard("Assinatura visual", "Adicionar assinatura", Icons.Outlined.Create, securityTool = SecurityTool.SIGN, category = ToolCategory.SECURITY),
+    ToolCard("Proteger", "Senha e permissões", Icons.Outlined.Lock, securityTool = SecurityTool.PROTECT, category = ToolCategory.SECURITY),
+    ToolCard("OCR de imagem", "Extrair texto de várias imagens", Icons.Outlined.Description, action = Action.OCR, category = ToolCategory.ANALYZE),
+    ToolCard("Extrair texto PDF", "Exportar texto para TXT", Icons.Outlined.ContentCopy, action = Action.PDF_TEXT, category = ToolCategory.ANALYZE),
+    ToolCard("Informações do PDF", "Páginas, tamanho e metadados", Icons.Outlined.Info, action = Action.PDF_INFO, category = ToolCategory.ANALYZE),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
+fun ToolsScreen(
+    onOutputSaved: (String) -> Unit,
+    onOpenMenu: () -> Unit,
+    initialCategory: String? = null,
+    categoryRequestId: Int = 0,
+) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
@@ -181,6 +198,10 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     var activeUtility by remember { mutableStateOf<Action?>(null) }
     var processing by remember { mutableStateOf(false) }
     var toolQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<ToolCategory?>(null) }
+    LaunchedEffect(initialCategory, categoryRequestId) {
+        selectedCategory = ToolCategory.values().toList().firstOrNull { it.name == initialCategory }
+    }
     var pendingPdfTextUri by remember { mutableStateOf<Uri?>(null) }
     var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
@@ -275,12 +296,10 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     }
 
     val ocrPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            pendingImageUris = listOf(uri)
-            activeUtility = Action.OCR
-        }
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        pendingImageUris = uris
+        if (uris.isNotEmpty()) activeUtility = Action.OCR
     }
 
     val scannerOptions = remember {
@@ -401,10 +420,13 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        val filteredTools = remember(toolQuery) {
-            toolCards.filter {
-                it.title.contains(toolQuery, ignoreCase = true) ||
-                    it.subtitle.contains(toolQuery, ignoreCase = true)
+        val filteredTools = remember(toolQuery, selectedCategory) {
+            toolCards.filter { card ->
+                val matchesQuery = toolQuery.isBlank() ||
+                    card.title.contains(toolQuery, ignoreCase = true) ||
+                    card.subtitle.contains(toolQuery, ignoreCase = true)
+                val matchesCategory = selectedCategory == null || card.category == selectedCategory
+                matchesQuery && matchesCategory
             }
         }
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -455,77 +477,221 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
                     },
                     placeholder = { LText("Pesquisar ferramentas") },
                 )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(top = 8.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    FilterChip(
+                        selected = selectedCategory == null,
+                        onClick = { selectedCategory = null },
+                        label = { LText("Todas") },
+                    )
+                    ToolCategory.values().toList().forEach { category ->
+                        val count = toolCards.count { it.category == category }
+                        FilterChip(
+                            selected = selectedCategory == category,
+                            onClick = { selectedCategory = category },
+                            label = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    LText(category.label)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = count.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
                 LText(
-                    if (toolQuery.isBlank()) "Ferramentas para o teu fluxo de trabalho"
-                    else "${filteredTools.size} resultado(s)",
+                    if (toolQuery.isBlank() && selectedCategory == null) "Ferramentas para o teu fluxo de trabalho"
+                    else "${filteredTools.size} resultados",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
                 )
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(bottom = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    itemsIndexed(filteredTools, key = { _, card -> card.title }) { index, card ->
-                        val accent = toolAccent(index)
-                        val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
+                if (filteredTools.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(bottom = 20.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Card(
-                            onClick = {
-                                when {
-                                    card.pdfTool != null -> selectedPdfTool = card.pdfTool
-                                    card.securityTool != null -> selectedSecurityTool = card.securityTool
-                                    card.action == Action.SCAN -> launchScanner()
-                                    card.action == Action.IMAGE_TO_PDF -> imagePicker.launch(arrayOf("image/*"))
-                                    card.action == Action.OCR -> ocrPicker.launch(arrayOf("image/*"))
-                                    card.action == Action.PDF_TEXT -> pdfTextPicker.launch(arrayOf("application/pdf"))
-                                    card.action == Action.PDF_INFO -> pdfInfoPicker.launch(arrayOf("application/pdf"))
-                                }
-                            },
-                            enabled = enabled,
-                            modifier = Modifier.animateContentSize(),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                         ) {
-                            Column {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(5.dp)
-                                        .background(Brush.horizontalGradient(listOf(accent, accent.copy(alpha = 0.16f)))),
-                                )
-                                Column(
-                                    Modifier.padding(15.dp),
-                                    verticalArrangement = Arrangement.spacedBy(9.dp),
+                                        .size(64.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                    contentAlignment = Alignment.Center,
                                 ) {
+                                    Icon(
+                                        Icons.Outlined.Search,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(30.dp),
+                                    )
+                                }
+                                LText(
+                                    "Não encontrámos ferramentas",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                )
+                                LText(
+                                    "Experimenta outra pesquisa ou remove os filtros ativos.",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                )
+                                OutlinedButton(
+                                    onClick = {
+                                        toolQuery = ""
+                                        selectedCategory = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Icon(Icons.Outlined.Close, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    LText("Limpar filtros")
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(bottom = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        itemsIndexed(filteredTools, key = { _, card -> card.title }) { _, card ->
+                            // Category accents stay consistent when the user searches or filters.
+                            val accent = toolAccent(card.category)
+                            val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
+                            Card(
+                                onClick = {
+                                    when {
+                                        card.pdfTool != null -> selectedPdfTool = card.pdfTool
+                                        card.securityTool != null -> selectedSecurityTool = card.securityTool
+                                        card.action == Action.SCAN -> launchScanner()
+                                        card.action == Action.IMAGE_TO_PDF -> imagePicker.launch(arrayOf("image/*"))
+                                        card.action == Action.OCR -> ocrPicker.launch(arrayOf("image/*"))
+                                        card.action == Action.PDF_TEXT -> pdfTextPicker.launch(arrayOf("application/pdf"))
+                                        card.action == Action.PDF_INFO -> pdfInfoPicker.launch(arrayOf("application/pdf"))
+                                    }
+                                },
+                                enabled = enabled,
+                                modifier = Modifier.animateContentSize(),
+                                shape = RoundedCornerShape(22.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                            ) {
+                                Column {
                                     Box(
                                         modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(RoundedCornerShape(15.dp))
-                                            .background(accent.copy(alpha = 0.13f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            card.icon,
-                                            contentDescription = null,
-                                            tint = if (enabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(25.dp),
-                                        )
-                                    }
-                                    LText(card.title, style = MaterialTheme.typography.titleSmall)
-                                    LText(
-                                        card.subtitle,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            .fillMaxWidth()
+                                            .height(4.dp)
+                                            .background(
+                                                Brush.horizontalGradient(
+                                                    listOf(accent, accent.copy(alpha = 0.18f)),
+                                                ),
+                                            ),
                                     )
-                                    if (!enabled) {
+                                    Column(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(46.dp)
+                                                    .clip(RoundedCornerShape(15.dp))
+                                                    .background(accent.copy(alpha = 0.12f)),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    card.icon,
+                                                    contentDescription = null,
+                                                    tint = if (enabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(24.dp),
+                                                )
+                                            }
+                                            Spacer(Modifier.weight(1f))
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(28.dp)
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(accent.copy(alpha = 0.08f)),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    Icons.Outlined.ArrowForward,
+                                                    contentDescription = null,
+                                                    tint = accent,
+                                                    modifier = Modifier.size(16.dp),
+                                                )
+                                            }
+                                        }
                                         LText(
-                                            "Em breve",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            card.title,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            maxLines = 2,
+                                            minLines = 2,
                                         )
+                                        LText(
+                                            card.subtitle,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
+                                            minLines = 2,
+                                        )
+                                        Row(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(accent.copy(alpha = 0.09f))
+                                                .padding(horizontal = 8.dp, vertical = 5.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            LText(
+                                                card.category.label,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = accent,
+                                                maxLines = 1,
+                                            )
+                                        }
+                                        if (!enabled) {
+                                            LText(
+                                                "Em breve",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -579,7 +745,7 @@ private fun UtilityWorkspace(
     val subtitle = when (action) {
         Action.SCAN -> "Revê a digitalização antes de guardar."
         Action.IMAGE_TO_PDF -> "Configura a página antes de converter as imagens."
-        Action.OCR -> "Reconhece texto localmente e mostra-o antes de guardar."
+        Action.OCR -> "Reconhece texto de uma ou várias imagens localmente."
         Action.PDF_TEXT -> "Extrai o texto, revê o conteúdo e só depois guarda."
         Action.PDF_INFO -> "Consulta o tamanho, as páginas e os metadados disponíveis."
         Action.NONE -> ""
@@ -720,8 +886,20 @@ private fun UtilityWorkspace(
                         Action.PDF_INFO -> "A analisar informações"
                         Action.NONE -> "A processar"
                     },
-                    detail = "O trabalho é feito no dispositivo. Mantém o DocPilot aberto.",
+                    detail = "O trabalho é feito localmente no dispositivo.",
                     accent = MaterialTheme.colorScheme.primary,
+                    counterLabel = when (action) {
+                        Action.IMAGE_TO_PDF, Action.OCR ->
+                            if (imageUris.size == 1) "Imagem" else "Imagens"
+                        Action.SCAN, Action.PDF_TEXT, Action.PDF_INFO -> "Ficheiro"
+                        Action.NONE -> null
+                    },
+                    counterValue = when (action) {
+                        Action.IMAGE_TO_PDF, Action.OCR -> imageUris.size.takeIf { it > 0 }?.toString()
+                        Action.SCAN -> if (scanUri != null) "1" else null
+                        Action.PDF_TEXT, Action.PDF_INFO -> if (pdfUri != null) "1" else null
+                        Action.NONE -> null
+                    },
                 )
             }
 
@@ -757,13 +935,17 @@ private fun UtilityWorkspace(
                         }
 
                         Action.OCR -> {
-                            val source = imageUris.firstOrNull() ?: return@Button
+                            val sources = imageUris
+                            if (sources.isEmpty()) return@Button
                             onProcessText("docpilot-ocr.txt") {
-                                val image = InputImage.fromFilePath(context, source)
                                 val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
                                 try {
-                                    val recognized = Tasks.await(recognizer.process(image)).text.trim()
-                                    recognized.ifBlank { "Nenhum texto foi identificado nesta imagem." }
+                                    sources.mapIndexed { index, source ->
+                                        val sourceName = displayName(context, source, "Imagem ${index + 1}")
+                                        val image = InputImage.fromFilePath(context, source)
+                                        val recognized = Tasks.await(recognizer.process(image)).text.trim()
+                                        "$sourceName\n${recognized.ifBlank { "Nenhum texto foi identificado nesta imagem." }}"
+                                    }.joinToString("\n\n")
                                 } finally {
                                     recognizer.close()
                                 }
@@ -820,20 +1002,12 @@ private fun UtilityWorkspace(
     }
 }
 
-private fun toolAccent(index: Int): Color {
-    val colors = listOf(
-        Color(0xFF356AE6),
-        Color(0xFF7C4DFF),
-        Color(0xFF008C95),
-        Color(0xFFB45309),
-        Color(0xFFDB4B73),
-        Color(0xFF387D4A),
-        Color(0xFF9356CF),
-        Color(0xFF2376A8),
-        Color(0xFFB76D28),
-        Color(0xFF515BC4),
-    )
-    return colors[index % colors.size]
+private fun toolAccent(category: ToolCategory): Color = when (category) {
+    ToolCategory.MANAGE -> Color(0xFF356AE6)
+    ToolCategory.EDIT -> Color(0xFF7C4DFF)
+    ToolCategory.CONVERT -> Color(0xFF008C95)
+    ToolCategory.SECURITY -> Color(0xFFB45309)
+    ToolCategory.ANALYZE -> Color(0xFFDB4B73)
 }
 
 private fun pdfToolAccent(tool: PdfTool): Color = when (tool) {
@@ -893,6 +1067,10 @@ private fun ProcessingPanel(
     title: String,
     detail: String,
     accent: Color,
+    counterLabel: String? = null,
+    counterValue: String? = null,
+    secondaryCounterLabel: String? = null,
+    secondaryCounterValue: String? = null,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
@@ -917,8 +1095,45 @@ private fun ProcessingPanel(
             ) {
                 LText(title, style = MaterialTheme.typography.titleMedium)
                 LText(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (counterLabel != null && counterValue != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ProcessingCounter(label = counterLabel, value = counterValue, accent = accent)
+                        if (secondaryCounterLabel != null && secondaryCounterValue != null) {
+                            ProcessingCounter(
+                                label = secondaryCounterLabel,
+                                value = secondaryCounterValue,
+                                accent = accent,
+                            )
+                        }
+                    }
+                }
                 LinearProgressIndicator(color = accent, modifier = Modifier.fillMaxWidth())
             }
+        }
+    }
+}
+
+@Composable
+private fun ProcessingCounter(
+    label: String,
+    value: String,
+    accent: Color,
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(11.dp))
+            .background(accent.copy(alpha = 0.10f))
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            LText(value, style = MaterialTheme.typography.labelLarge, color = accent)
+            LText(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -1015,6 +1230,8 @@ private fun SecurityWorkspace(
                     title = if (tool == SecurityTool.PROTECT) "A proteger o PDF" else "A aplicar assinatura",
                     detail = "A preparar uma nova cópia sem alterar o ficheiro original.",
                     accent = if (tool == SecurityTool.PROTECT) Color(0xFFB45309) else Color(0xFF7C4DFF),
+                    counterLabel = "Ficheiro",
+                    counterValue = if (inputUri != null) "1" else null,
                 )
             }
 
@@ -1341,8 +1558,12 @@ private fun ToolWorkspace(
                         PdfTool.PAGE_NUMBERS -> "A numerar páginas"
                         PdfTool.WATERMARK -> "A adicionar marca de água"
                     },
-                    detail = "O DocPilot - PDF Reader está a criar uma nova cópia do teu PDF.",
+                    detail = "O processamento é local. O ficheiro original será preservado.",
                     accent = pdfToolAccent(tool),
+                    counterLabel = if (selectedUris.size == 1) "Ficheiro" else "Ficheiros",
+                    counterValue = selectedUris.size.toString(),
+                    secondaryCounterLabel = detectedPageCount?.let { if (it == 1) "página" else "páginas" },
+                    secondaryCounterValue = detectedPageCount?.toString(),
                 )
             }
 

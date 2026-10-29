@@ -123,7 +123,7 @@ fun HomeScreen(
                         Column {
                             LText("DocPilot", style = MaterialTheme.typography.titleLarge)
                             LText(
-                                "Espaço de documentos",
+                                "Leitor de PDFs e ferramentas",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
