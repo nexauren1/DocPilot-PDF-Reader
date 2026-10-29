@@ -61,6 +61,8 @@ import com.nexauren.docpilot.ui.screens.LibraryScreen
 import com.nexauren.docpilot.ui.screens.PdfReaderScreen
 import com.nexauren.docpilot.ui.screens.SettingsScreen
 import com.nexauren.docpilot.ui.screens.ToolsScreen
+import com.nexauren.docpilot.ui.components.DocumentPickerDialog
+import com.nexauren.docpilot.ui.components.DocumentPickerType
 import com.nexauren.docpilot.widget.PdfToolsWidgetProvider
 
 private const val PREFS = "docpilot_documents"
@@ -88,6 +90,7 @@ fun DocPilotApp(
     var selectedDocument by remember { mutableStateOf<DocumentItem?>(null) }
     var hasDocumentAccess by remember { mutableStateOf(DocumentAccess.hasAccess(context)) }
     var isScanningDocuments by remember { mutableStateOf(false) }
+    var showImportPicker by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -158,25 +161,6 @@ fun DocPilotApp(
         documents = listOf(document) + documents.filterNot { it.uri == document.uri }
         saveDocuments(context, documents)
         selectedDocument = document
-    }
-
-    val picker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                )
-            }
-            openDocument(
-                DocumentItem(
-                    name = queryDisplayName(context, uri.toString()),
-                    uri = uri.toString(),
-                ),
-            )
-        }
     }
 
     if (selectedDocument != null) {
@@ -254,7 +238,7 @@ fun DocPilotApp(
                 when (targetDestination) {
                     Destination.HOME -> HomeScreen(
                         documents = documents,
-                        onImportPdf = { picker.launch(arrayOf("application/pdf")) },
+                        onImportPdf = { showImportPicker = true },
                         hasDocumentAccess = hasDocumentAccess,
                         onRequestDocumentAccess = { requestDocumentAccess() },
                         onRefreshDeviceDocuments = { refreshDeviceDocuments() },
@@ -273,6 +257,9 @@ fun DocPilotApp(
                     Destination.TOOLS -> ToolsScreen(
                         initialCategory = initialToolCategory,
                         categoryRequestId = navigationRequestId,
+                        availableDocuments = documents,
+                        hasStorageAccess = hasDocumentAccess,
+                        onRequestDocumentAccess = { requestDocumentAccess() },
                         onOutputSaved = { uriString ->
                             val outputUri = android.net.Uri.parse(uriString)
                             runCatching {
@@ -305,6 +292,22 @@ fun DocPilotApp(
                 }
             }
         }
+    }
+
+    if (showImportPicker) {
+        DocumentPickerDialog(
+            title = "Abrir PDF",
+            type = DocumentPickerType.PDF,
+            multiple = false,
+            knownDocuments = documents,
+            hasStorageAccess = hasDocumentAccess,
+            onRequestStorageAccess = { requestDocumentAccess() },
+            onDismiss = { showImportPicker = false },
+            onConfirm = { selected ->
+                showImportPicker = false
+                selected.firstOrNull()?.let { openDocument(it) }
+            },
+        )
     }
 }
 
