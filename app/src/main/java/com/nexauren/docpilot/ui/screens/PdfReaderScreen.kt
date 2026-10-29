@@ -904,7 +904,7 @@ private fun cachedSeekablePdfFile(
             "Não foi possível preparar a cache de leitura."
         }
     }
-    val cacheKey = uriString.hashCode().toUInt().toString(16)
+    val cacheKey = Integer.toHexString(uriString.hashCode())
     val target = File(cacheDirectory, "pdf-$cacheKey.pdf")
 
     synchronized(pdfMaterializationLock) {
