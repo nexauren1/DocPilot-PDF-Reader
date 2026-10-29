@@ -178,7 +178,12 @@ private val toolCards = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
+fun ToolsScreen(
+    onOutputSaved: (String) -> Unit,
+    onOpenMenu: () -> Unit,
+    initialCategory: String? = null,
+    categoryRequestId: Int = 0,
+) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
@@ -193,6 +198,9 @@ fun ToolsScreen(onOutputSaved: (String) -> Unit, onOpenMenu: () -> Unit) {
     var processing by remember { mutableStateOf(false) }
     var toolQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<ToolCategory?>(null) }
+    LaunchedEffect(initialCategory, categoryRequestId) {
+        selectedCategory = ToolCategory.entries.firstOrNull { it.name == initialCategory }
+    }
     var pendingPdfTextUri by remember { mutableStateOf<Uri?>(null) }
     var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
