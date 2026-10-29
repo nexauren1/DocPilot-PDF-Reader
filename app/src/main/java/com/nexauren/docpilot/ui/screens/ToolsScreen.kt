@@ -85,7 +85,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -1025,24 +1024,24 @@ private fun UtilityWorkspace(
 }
 
 private fun toolAccent(category: ToolCategory): Color = when (category) {
-    ToolCategory.MANAGE -> Color(0xFF356AE6)
-    ToolCategory.EDIT -> Color(0xFF7C4DFF)
-    ToolCategory.CONVERT -> Color(0xFF008C95)
-    ToolCategory.SECURITY -> Color(0xFFB45309)
-    ToolCategory.ANALYZE -> Color(0xFFDB4B73)
+    ToolCategory.MANAGE -> Color(0xFF244F91)
+    ToolCategory.EDIT -> Color(0xFF2C7378)
+    ToolCategory.CONVERT -> Color(0xFF416A86)
+    ToolCategory.SECURITY -> Color(0xFF9A633A)
+    ToolCategory.ANALYZE -> Color(0xFF536B8B)
 }
 
 private fun pdfToolAccent(tool: PdfTool): Color = when (tool) {
-    PdfTool.MERGE -> Color(0xFF356AE6)
-    PdfTool.SPLIT -> Color(0xFF7C4DFF)
-    PdfTool.COMPRESS -> Color(0xFF008C95)
-    PdfTool.REORDER -> Color(0xFFB45309)
-    PdfTool.ROTATE -> Color(0xFFDB4B73)
-    PdfTool.ROTATE_ONE -> Color(0xFFDB4B73)
-    PdfTool.CROP_ONE -> Color(0xFF7C4DFF)
-    PdfTool.EXPORT_PAGE_IMAGE -> Color(0xFF16856B)
-    PdfTool.PAGE_NUMBERS -> Color(0xFF387D4A)
-    PdfTool.WATERMARK -> Color(0xFF5964C8)
+    PdfTool.MERGE -> Color(0xFF244F91)
+    PdfTool.SPLIT -> Color(0xFF244F91)
+    PdfTool.COMPRESS -> Color(0xFF2C7378)
+    PdfTool.REORDER -> Color(0xFF2C7378)
+    PdfTool.ROTATE -> Color(0xFF416A86)
+    PdfTool.ROTATE_ONE -> Color(0xFF416A86)
+    PdfTool.CROP_ONE -> Color(0xFF416A86)
+    PdfTool.EXPORT_PAGE_IMAGE -> Color(0xFF536B8B)
+    PdfTool.PAGE_NUMBERS -> Color(0xFF536B8B)
+    PdfTool.WATERMARK -> Color(0xFF9A633A)
 }
 
 @Composable
@@ -1053,32 +1052,40 @@ private fun WorkspaceHero(
     accent: Color,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().animateContentSize(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.08f)),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(7.dp)
-                    .background(Brush.horizontalGradient(listOf(accent, accent.copy(alpha = 0.22f)))),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(accent.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(29.dp))
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    LText(title, style = MaterialTheme.typography.titleLarge)
-                    LText(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(27.dp),
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                LText(title, style = MaterialTheme.typography.titleLarge)
+                LText(
+                    subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
