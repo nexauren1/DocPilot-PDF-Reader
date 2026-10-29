@@ -318,7 +318,7 @@ fun HomeScreen(
                         ) {
                             LText("Biblioteca do dispositivo", style = MaterialTheme.typography.titleSmall)
                             LText(
-                                if (hasDocumentAccess) "${documents.size} documentos na biblioteca"
+                                if (hasDocumentAccess) "${documents.size} documentos"
                                 else "Acede aos PDFs para os listar e pesquisar no DocPilot.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
