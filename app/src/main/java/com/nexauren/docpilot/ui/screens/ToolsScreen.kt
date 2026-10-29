@@ -200,7 +200,7 @@ fun ToolsScreen(
     var toolQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<ToolCategory?>(null) }
     LaunchedEffect(initialCategory, categoryRequestId) {
-        selectedCategory = ToolCategory.entries.firstOrNull { it.name == initialCategory }
+        selectedCategory = ToolCategory.values().toList().firstOrNull { it.name == initialCategory }
     }
     var pendingPdfTextUri by remember { mutableStateOf<Uri?>(null) }
     var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
@@ -490,7 +490,7 @@ fun ToolsScreen(
                         onClick = { selectedCategory = null },
                         label = { LText("Todas") },
                     )
-                    ToolCategory.entries.forEach { category ->
+                    ToolCategory.values().toList().forEach { category ->
                         val count = toolCards.count { it.category == category }
                         FilterChip(
                             selected = selectedCategory == category,
@@ -698,6 +698,7 @@ fun ToolsScreen(
                         }
                     }
                 }
+            }
             AnimatedVisibility(
                 visible = processing,
                 modifier = Modifier.align(Alignment.Center).padding(20.dp),
