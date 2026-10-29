@@ -31,7 +31,6 @@ import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
@@ -45,7 +44,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import com.nexauren.docpilot.ui.localization.LText
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,8 +51,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.nexauren.docpilot.model.DocumentItem
 import com.nexauren.docpilot.ui.components.DocumentCard
@@ -112,12 +108,12 @@ fun HomeScreen(
                             modifier = Modifier
                                 .size(42.dp)
                                 .background(
-                                    Brush.linearGradient(listOf(Color(0xFF2F63D8), Color(0xFF7250E8))),
+                                    MaterialTheme.colorScheme.primary,
                                     RoundedCornerShape(14.dp),
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Outlined.PictureAsPdf, contentDescription = null, tint = Color.White)
+                            Icon(Icons.Outlined.PictureAsPdf, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
                         }
                         Spacer(Modifier.width(11.dp))
                         Column {
@@ -223,55 +219,117 @@ fun HomeScreen(
             }
 
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(listOf(Color(0xFF2F63D8), Color(0xFF7250E8))),
-                            RoundedCornerShape(26.dp),
-                        )
-                        .padding(20.dp),
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            LText("O TEU ESPAÇO DE TRABALHO", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.88f))
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                Icons.Outlined.PictureAsPdf,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            LText(
+                                "PDF WORKSPACE",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                         }
-                        LText("Tudo começa com um PDF.", style = MaterialTheme.typography.headlineSmall, color = Color.White)
                         LText(
-                            "Abre um documento para ler ou usa as ferramentas para o preparar como precisas.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.90f),
+                            "Os teus documentos. O teu controlo.",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
-                        Spacer(Modifier.height(2.dp))
-                        Column(
+                        LText(
+                            "Abre, lê e transforma PDFs num único espaço. Os documentos são processados no dispositivo.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
+                        )
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Button(
-                                onClick = {
-                                    if (hasDocumentAccess) onRefreshDeviceDocuments()
-                                    else showAccessDialog = true
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF2F55BE)),
-                                shape = RoundedCornerShape(14.dp),
+                                onClick = onImportPdf,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
                             ) {
-                                Icon(Icons.Outlined.Folder, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                LText(if (hasDocumentAccess) "Atualizar ficheiros" else "Ativar biblioteca")
+                                Icon(Icons.Outlined.Add, contentDescription = null)
+                                Spacer(Modifier.width(7.dp))
+                                LText("Abrir PDF")
                             }
                             OutlinedButton(
-                                onClick = onViewLibrary,
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.60f)),
-                                shape = RoundedCornerShape(14.dp),
+                                onClick = onViewTools,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
                             ) {
-                                Icon(Icons.Outlined.Folder, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                LText("Biblioteca")
+                                Icon(Icons.Outlined.AutoAwesome, contentDescription = null)
+                                Spacer(Modifier.width(7.dp))
+                                LText("Ferramentas")
                             }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Outlined.Folder,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            LText("Biblioteca do dispositivo", style = MaterialTheme.typography.titleSmall)
+                            LText(
+                                if (hasDocumentAccess) "${documents.size} documentos"
+                                else "Acede aos PDFs para os listar e pesquisar no DocPilot.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(
+                            onClick = {
+                                if (hasDocumentAccess) onRefreshDeviceDocuments()
+                                else showAccessDialog = true
+                            },
+                        ) {
+                            LText(if (hasDocumentAccess) "Atualizar" else "Configurar")
                         }
                     }
                 }
@@ -295,7 +353,7 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .size(width = 62.dp, height = 76.dp)
                                     .background(
-                                        Brush.linearGradient(listOf(Color(0xFFE5EDFF), Color(0xFFEDE7FF))),
+                                        MaterialTheme.colorScheme.primaryContainer,
                                         RoundedCornerShape(14.dp),
                                     ),
                                 contentAlignment = Alignment.Center,
@@ -303,7 +361,7 @@ fun HomeScreen(
                                 Icon(
                                     Icons.Outlined.PictureAsPdf,
                                     contentDescription = null,
-                                    tint = Color(0xFF4B55D5),
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(32.dp),
                                 )
                             }
@@ -350,15 +408,15 @@ fun HomeScreen(
 
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    QuickActionCard("Leitor PDF", "Abre um documento", Icons.Outlined.PictureAsPdf, Color(0xFFE5EDFF), Color(0xFF2F63D8), Modifier.weight(1f), onImportPdf)
-                    QuickActionCard("Biblioteca", "Encontra os ficheiros", Icons.Outlined.Folder, Color(0xFFEDE7FF), Color(0xFF7250E8), Modifier.weight(1f), onViewLibrary)
+                    QuickActionCard("Leitor PDF", "Abre um documento", Icons.Outlined.PictureAsPdf, Modifier.weight(1f), onImportPdf)
+                    QuickActionCard("Biblioteca", "Encontra os ficheiros", Icons.Outlined.Folder, Modifier.weight(1f), onViewLibrary)
                 }
             }
 
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    QuickActionCard("Scanner", "Digitaliza documentos", Icons.Outlined.CameraAlt, Color(0xFFE1F5EF), Color(0xFF16856B), Modifier.weight(1f), onViewTools)
-                    QuickActionCard("Ferramentas", "PDF e conversão", Icons.Outlined.AutoAwesome, Color(0xFFFFF0DA), Color(0xFFB66B08), Modifier.weight(1f), onViewTools)
+                    QuickActionCard("Scanner", "Digitaliza documentos", Icons.Outlined.CameraAlt, Modifier.weight(1f), onViewTools)
+                    QuickActionCard("Ferramentas", "PDF e conversão", Icons.Outlined.AutoAwesome, Modifier.weight(1f), onViewTools)
                 }
             }
 
@@ -457,7 +515,7 @@ fun HomeScreen(
                     }
                 }
             } else {
-                items(documents.take(4), key = { it.uri }) { document ->
+                items(documents.take(8), key = { it.uri }) { document ->
                     DocumentCard(document = document) { onOpenDocument(document) }
                 }
             }
@@ -473,8 +531,6 @@ private fun QuickActionCard(
     title: String,
     description: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconBackground: Color,
-    iconTint: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -489,10 +545,10 @@ private fun QuickActionCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box(
-                modifier = Modifier.size(42.dp).background(iconBackground, RoundedCornerShape(14.dp)),
+                modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(23.dp))
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
             }
             LText(title, style = MaterialTheme.typography.titleSmall)
             LText(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
