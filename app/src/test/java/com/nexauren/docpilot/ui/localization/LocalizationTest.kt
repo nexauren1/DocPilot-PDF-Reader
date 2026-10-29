@@ -88,6 +88,8 @@ class LocalizationTest {
         assertEquals("Übergeordneter Ordner", translateForLanguage("de", "Pasta anterior"))
         assertEquals("Carpeta", translateForLanguage("es", "Pasta"))
         assertEquals("This folder has no files of this type", translateForLanguage("en", "Esta pasta não contém ficheiros deste tipo"))
+        assertEquals("Preparing PDF for reading…", translateForLanguage("en", "A preparar o PDF para leitura…"))
+        assertEquals("This document is taking longer than usual…", translateForLanguage("en", "O documento está a demorar mais do que o normal…"))
     }
 
     @Test
