@@ -1,7 +1,7 @@
 # DocPilot pre-release audit
 
 ## Candidate
-DocPilot — PDF Reader & Tools 0.1.16 (versionCode 17), a proposed candidate subject to CI and real-device validation.
+DocPilot — PDF Reader & Tools 0.1.17 (versionCode 18), a proposed candidate subject to CI and real-device validation.
 
 ## Changes in this release candidate
 
@@ -16,6 +16,11 @@ DocPilot — PDF Reader & Tools 0.1.16 (versionCode 17), a proposed candidate su
 - Added explicit source-file/image and detected-page counters to processing panels.
 - Added OCR for multiple selected images, combining recognized text into one reviewable TXT result.
 - Added a localized Android home-screen widget with shortcuts that open a specific tool category.
+- Rebuilt the Home screen with direct Open PDF and Tools actions, a separate device-library action, less decorative card treatment and more recent-document rows.
+- Replaced file-selection activity launchers throughout PDF editing, security, text extraction, metadata, OCR and image-to-PDF workflows with an in-app searchable, multi-select dialog.
+- Reworked the navigation drawer into workspace/preferences groups, simplified the main bottom navigation and added consistent system-back handling.
+- Replaced the high-saturation accent palette with a restrained navy/teal system and redesigned the launcher icon and widget background.
+- Added a seekable, app-private cached source for PdfRenderer to accommodate content providers that supply non-seekable streams; page rendering now exposes retry/error feedback instead of only an endless spinner.
 
 ## Existing capabilities
 
