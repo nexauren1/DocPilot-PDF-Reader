@@ -216,7 +216,7 @@ fun LibraryScreen(
             }
 
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (filtered.isEmpty()) {
