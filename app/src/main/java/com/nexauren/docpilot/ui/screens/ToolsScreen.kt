@@ -3,6 +3,7 @@ package com.nexauren.docpilot.ui.screens
 import android.app.Activity
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -220,6 +221,22 @@ fun ToolsScreen(
         pickerType = type
         pickerMultiple = multiple
         showDocumentPicker = true
+    }
+
+    BackHandler(
+        enabled = showDocumentPicker || resultPdf != null || resultImage != null ||
+            resultText != null || selectedPdfTool != null || selectedSecurityTool != null ||
+            activeUtility != null,
+    ) {
+        when {
+            showDocumentPicker -> showDocumentPicker = false
+            resultPdf != null -> resultPdf = null
+            resultImage != null -> resultImage = null
+            resultText != null -> resultText = null
+            selectedPdfTool != null -> selectedPdfTool = null
+            selectedSecurityTool != null -> selectedSecurityTool = null
+            activeUtility != null -> activeUtility = null
+        }
     }
 
     fun processPdfResult(
