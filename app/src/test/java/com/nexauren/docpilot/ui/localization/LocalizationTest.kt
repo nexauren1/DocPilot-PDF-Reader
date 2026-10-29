@@ -55,4 +55,28 @@ class LocalizationTest {
         assertEquals("Page 2 of 9", translateForLanguage("en", "Página 2 de 9"))
         assertEquals("Seite 2 von 9", translateForLanguage("de", "Página 2 de 9"))
     }
+    @Test
+    fun localizes_tool_categories_and_processing_counters() {
+        assertEquals("All", translateForLanguage("en", "Todas"))
+        assertEquals("Organiser", translateForLanguage("fr", "Organizar"))
+        assertEquals("Convert", translateForLanguage("en", "Converter"))
+        assertEquals("Sicherheit", translateForLanguage("de", "Segurança"))
+        assertEquals("Text & analysis", translateForLanguage("en", "Texto e análise"))
+        assertEquals("Files", translateForLanguage("en", "Ficheiros"))
+        assertEquals("Images", translateForLanguage("en", "Imagens"))
+        assertEquals("Seiten", translateForLanguage("de", "páginas"))
+    }
+
+    @Test
+    fun localizes_batch_ocr_tool() {
+        assertEquals(
+            "Extract text from multiple images",
+            translateForLanguage("en", "Extrair texto de várias imagens"),
+        )
+        assertEquals(
+            "Recognizes text from one or multiple images on-device.",
+            translateForLanguage("en", "Reconhece texto de uma ou várias imagens localmente."),
+        )
+    }
+
 }
