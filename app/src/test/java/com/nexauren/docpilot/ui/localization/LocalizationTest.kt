@@ -68,6 +68,19 @@ class LocalizationTest {
     }
 
     @Test
+    fun localizes_native_pdf_picker_and_new_home_actions() {
+        assertEquals("Open PDF", translateForLanguage("en", "Abrir PDF"))
+        assertEquals("Ouvrir un PDF", translateForLanguage("fr", "Abrir PDF"))
+        assertEquals("PDF öffnen", translateForLanguage("de", "Abrir PDF"))
+        assertEquals("Select one or more files", translateForLanguage("en", "Seleciona um ou mais ficheiros"))
+        assertEquals("Rechercher des fichiers", translateForLanguage("fr", "Pesquisar ficheiros"))
+        assertEquals("Keine Dateien gefunden", translateForLanguage("de", "Nenhum ficheiro encontrado"))
+        assertEquals("Use selection", translateForLanguage("en", "Usar seleção"))
+        assertEquals("Activar acceso al dispositivo", translateForLanguage("es", "Ativar acesso ao dispositivo"))
+        assertEquals("Your documents. Your control.", translateForLanguage("en", "Os teus documentos. O teu controlo."))
+    }
+
+    @Test
     fun localizes_tools_empty_state_and_filter_reset() {
         assertEquals("No tools found", translateForLanguage("en", "Não encontrámos ferramentas"))
         assertEquals("Aucun outil trouvé", translateForLanguage("fr", "Não encontrámos ferramentas"))
