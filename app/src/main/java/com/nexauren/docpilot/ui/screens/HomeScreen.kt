@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
@@ -51,6 +52,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nexauren.docpilot.model.DocumentItem
@@ -222,64 +225,91 @@ fun HomeScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF171A38)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                brush = Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFF171A38),
+                                        Color(0xFF343184),
+                                        Color(0xFF155D72),
+                                    ),
+                                ),
+                                shape = RoundedCornerShape(28.dp),
+                            )
+                            .padding(20.dp),
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Icon(
-                                Icons.Outlined.PictureAsPdf,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
+                        Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(Color.White.copy(alpha = 0.13f), RoundedCornerShape(12.dp)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.PictureAsPdf,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(21.dp),
+                                    )
+                                }
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    LText("PDF WORKSPACE", style = MaterialTheme.typography.labelLarge, color = Color.White)
+                                    LText(
+                                        "PRIVADO · NO DISPOSITIVO",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.White.copy(alpha = 0.72f),
+                                    )
+                                }
+                            }
+                            LText(
+                                "Os teus documentos. O teu controlo.",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = Color.White,
                             )
                             LText(
-                                "PDF WORKSPACE",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary,
+                                "Abre, lê e transforma PDFs num único espaço. Os documentos são processados no dispositivo.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.82f),
                             )
-                        }
-                        LText(
-                            "Os teus documentos. O teu controlo.",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        LText(
-                            "Abre, lê e transforma PDFs num único espaço. Os documentos são processados no dispositivo.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Button(
-                                onClick = onImportPdf,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Icon(Icons.Outlined.Add, contentDescription = null)
-                                Spacer(Modifier.width(7.dp))
-                                LText("Abrir PDF")
-                            }
-                            OutlinedButton(
-                                onClick = onViewTools,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
-                            ) {
-                                Icon(Icons.Outlined.AutoAwesome, contentDescription = null)
-                                Spacer(Modifier.width(7.dp))
-                                LText("Ferramentas")
+                                Button(
+                                    onClick = onImportPdf,
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White,
+                                        contentColor = Color(0xFF22235C),
+                                    ),
+                                ) {
+                                    Icon(Icons.Outlined.Add, contentDescription = null)
+                                    Spacer(Modifier.width(7.dp))
+                                    LText("Abrir PDF")
+                                }
+                                OutlinedButton(
+                                    onClick = onViewTools,
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.48f)),
+                                ) {
+                                    Icon(Icons.Outlined.AutoAwesome, contentDescription = null)
+                                    Spacer(Modifier.width(7.dp))
+                                    LText("Ferramentas")
+                                }
                             }
                         }
                     }
