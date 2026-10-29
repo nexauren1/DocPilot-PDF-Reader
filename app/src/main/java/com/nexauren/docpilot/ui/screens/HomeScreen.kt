@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -339,7 +340,8 @@ fun HomeScreen(
                 item {
                     val latestDocument = documents.first()
                     Card(
-                        modifier = Modifier.fillMaxWidth().clickable { onOpenDocument(latestDocument) },
+                        onClick = { onOpenDocument(latestDocument) },
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -535,17 +537,18 @@ private fun QuickActionCard(
     onClick: () -> Unit,
 ) {
     Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(19.dp),
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 132.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp, pressedElevation = 5.dp),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box(
-                modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(14.dp)),
+                modifier = Modifier.size(46.dp).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(15.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
