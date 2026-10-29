@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,7 +46,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -82,8 +80,9 @@ fun DocumentPickerDialog(
     var files by remember(type) { mutableStateOf(knownDocuments.filter { accepts(type, it) }) }
     var selectedUris by remember(type, multiple) { mutableStateOf<Set<String>>(emptySet()) }
     var scanning by remember(type) { mutableStateOf(false) }
+    var refreshToken by remember(type) { mutableStateOf(0) }
 
-    LaunchedEffect(type, knownDocuments, hasStorageAccess) {
+    LaunchedEffect(type, knownDocuments, hasStorageAccess, refreshToken) {
         files = knownDocuments.filter { accepts(type, it) }.distinctBy { it.uri }
         scanning = true
         val indexed = withContext(Dispatchers.IO) {
@@ -231,7 +230,7 @@ fun DocumentPickerDialog(
                         enabled = hasStorageAccess && !scanning,
                         onClick = {
                             // Re-trigger the indexed device query without leaving the in-app picker.
-                            scanning = true
+                            refreshToken += 1
                         },
                     ) {
                         Icon(Icons.Outlined.Refresh, contentDescription = "Atualizar")
@@ -369,22 +368,6 @@ fun DocumentPickerDialog(
         }
     }
 
-    // Refresh is intentionally internal: this key changes when the user taps refresh and then
-    // the effect re-indexes without handing selection off to another application.
-    LaunchedEffect(scanning) {
-        if (!scanning || !hasStorageAccess) return@LaunchedEffect
-        val indexed = withContext(Dispatchers.IO) {
-            runCatching {
-                when (type) {
-                    DocumentPickerType.PDF -> DocumentAccess.scanPdfs(context)
-                    DocumentPickerType.IMAGE -> DocumentAccess.scanImages(context)
-                }
-            }.getOrDefault(emptyList())
-        }
-        files = (indexed + knownDocuments.filter { accepts(type, it) })
-            .filter { accepts(type, it) }.distinctBy { it.uri }
-        scanning = false
-    }
 }
 
 private fun accepts(type: DocumentPickerType, document: DocumentItem): Boolean =
