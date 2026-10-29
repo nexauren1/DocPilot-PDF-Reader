@@ -3,6 +3,7 @@ package com.nexauren.docpilot.ui.screens
 import android.app.Activity
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,13 +24,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -72,6 +71,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import com.nexauren.docpilot.ui.localization.LText
+import com.nexauren.docpilot.model.DocumentItem
+import com.nexauren.docpilot.ui.components.DocumentPickerDialog
+import com.nexauren.docpilot.ui.components.DocumentPickerType
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -83,7 +85,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -184,6 +185,9 @@ fun ToolsScreen(
     onOpenMenu: () -> Unit,
     initialCategory: String? = null,
     categoryRequestId: Int = 0,
+    availableDocuments: List<DocumentItem> = emptyList(),
+    hasStorageAccess: Boolean = false,
+    onRequestDocumentAccess: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -206,6 +210,33 @@ fun ToolsScreen(
     var pendingScannerUri by remember { mutableStateOf<Uri?>(null) }
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var workflowError by remember { mutableStateOf<String?>(null) }
+    var showDocumentPicker by remember { mutableStateOf(false) }
+    var pickerPurpose by remember { mutableStateOf<Action?>(null) }
+    var pickerType by remember { mutableStateOf(DocumentPickerType.PDF) }
+    var pickerMultiple by remember { mutableStateOf(false) }
+
+    fun requestDocumentSelection(purpose: Action, type: DocumentPickerType, multiple: Boolean) {
+        pickerPurpose = purpose
+        pickerType = type
+        pickerMultiple = multiple
+        showDocumentPicker = true
+    }
+
+    BackHandler(
+        enabled = showDocumentPicker || resultPdf != null || resultImage != null ||
+            resultText != null || selectedPdfTool != null || selectedSecurityTool != null ||
+            activeUtility != null,
+    ) {
+        when {
+            showDocumentPicker -> showDocumentPicker = false
+            resultPdf != null -> resultPdf = null
+            resultImage != null -> resultImage = null
+            resultText != null -> resultText = null
+            selectedPdfTool != null -> selectedPdfTool = null
+            selectedSecurityTool != null -> selectedSecurityTool = null
+            activeUtility != null -> activeUtility = null
+        }
+    }
 
     fun processPdfResult(
         outputName: String,
@@ -271,37 +302,6 @@ fun ToolsScreen(
         }
     }
 
-    val pdfTextPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            pendingPdfTextUri = uri
-            activeUtility = Action.PDF_TEXT
-        }
-    }
-    val pdfInfoPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            pendingPdfTextUri = uri
-            activeUtility = Action.PDF_INFO
-        }
-    }
-
-    val imagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments(),
-    ) { uris ->
-        pendingImageUris = uris
-        if (uris.isNotEmpty()) activeUtility = Action.IMAGE_TO_PDF
-    }
-
-    val ocrPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments(),
-    ) { uris ->
-        pendingImageUris = uris
-        if (uris.isNotEmpty()) activeUtility = Action.OCR
-    }
-
     val scannerOptions = remember {
         GmsDocumentScannerOptions.Builder()
             .setGalleryImportAllowed(true)
@@ -352,6 +352,41 @@ fun ToolsScreen(
         )
     }
 
+    if (showDocumentPicker) {
+        val purpose = pickerPurpose
+        DocumentPickerDialog(
+            title = when (purpose) {
+                Action.IMAGE_TO_PDF -> "Selecionar imagens"
+                Action.OCR -> "Selecionar imagens para OCR"
+                Action.PDF_TEXT -> "Selecionar PDF para extrair texto"
+                Action.PDF_INFO -> "Selecionar PDF para análise"
+                else -> "Selecionar documento"
+            },
+            type = pickerType,
+            multiple = pickerMultiple,
+            knownDocuments = availableDocuments,
+            hasStorageAccess = hasStorageAccess,
+            onRequestStorageAccess = onRequestDocumentAccess,
+            onDismiss = { showDocumentPicker = false },
+            onConfirm = { selected ->
+                showDocumentPicker = false
+                when (purpose) {
+                    Action.PDF_TEXT, Action.PDF_INFO -> {
+                        selected.firstOrNull()?.let { document ->
+                            pendingPdfTextUri = Uri.parse(document.uri)
+                            activeUtility = purpose
+                        }
+                    }
+                    Action.IMAGE_TO_PDF, Action.OCR -> {
+                        pendingImageUris = selected.map { Uri.parse(it.uri) }
+                        activeUtility = purpose
+                    }
+                    else -> Unit
+                }
+            },
+        )
+    }
+
     resultPdf?.let { result ->
         PdfResultWorkspace(
             result = result,
@@ -376,6 +411,9 @@ fun ToolsScreen(
             tool = selectedPdfTool!!,
             onBack = { selectedPdfTool = null },
             processing = processing,
+            availableDocuments = availableDocuments,
+            hasStorageAccess = hasStorageAccess,
+            onRequestDocumentAccess = onRequestDocumentAccess,
             onProcessPdf = { name, action -> processPdfResult(name, action) },
             onProcessPdfPage = { name, page, action -> processPdfResult(name, action, page) },
             onProcessImage = { name, action -> processImageResult(name, action) },
@@ -388,6 +426,9 @@ fun ToolsScreen(
             tool = selectedSecurityTool!!,
             onBack = { selectedSecurityTool = null },
             processing = processing,
+            availableDocuments = availableDocuments,
+            hasStorageAccess = hasStorageAccess,
+            onRequestDocumentAccess = onRequestDocumentAccess,
             onProcessPdf = { name, action -> processPdfResult(name, action) },
         )
         return
@@ -430,34 +471,53 @@ fun ToolsScreen(
             }
         }
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 10.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Brush.linearGradient(listOf(Color(0xFF245BE2), Color(0xFF7250E8))), RoundedCornerShape(24.dp))
-                            .padding(18.dp),
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Box(
-                                modifier = Modifier.size(52.dp).background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(17.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(Icons.Outlined.Description, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
-                            }
-                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                LText("Os teus PDFs, mais simples.", style = MaterialTheme.typography.titleLarge, color = Color.White)
-                                LText(
-                                    toolCards.size.toString() + " ferramentas gratuitas para organizar, proteger e transformar documentos no dispositivo.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.88f),
-                                )
-                            }
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Outlined.Description,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(28.dp),
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            LText(
+                                "Ferramentas para PDF",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                            LText(
+                                "${toolCards.size} ferramentas para organizar, editar, converter e proteger os teus documentos no dispositivo.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
+                            )
                         }
                     }
                 }
@@ -516,112 +576,93 @@ fun ToolsScreen(
                     modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
                 )
                 if (filteredTools.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .padding(bottom = 20.dp),
-                        contentAlignment = Alignment.Center,
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 24.dp),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     ) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            Box(
+                                modifier = Modifier
+                                    .size(58.dp)
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center,
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(64.dp)
-                                        .clip(RoundedCornerShape(20.dp))
-                                        .background(MaterialTheme.colorScheme.primaryContainer),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.Search,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(30.dp),
-                                    )
-                                }
-                                LText(
-                                    "Não encontrámos ferramentas",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                Icon(
+                                    Icons.Outlined.Search,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp),
                                 )
-                                LText(
-                                    "Experimenta outra pesquisa ou remove os filtros ativos.",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                )
-                                OutlinedButton(
-                                    onClick = {
-                                        toolQuery = ""
-                                        selectedCategory = null
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Icon(Icons.Outlined.Close, contentDescription = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    LText("Limpar filtros")
-                                }
+                            }
+                            LText(
+                                "Não encontrámos ferramentas",
+                                modifier = Modifier.fillMaxWidth(),
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                            LText(
+                                "Experimenta outra pesquisa ou remove os filtros ativos.",
+                                modifier = Modifier.fillMaxWidth(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                            OutlinedButton(
+                                onClick = {
+                                    toolQuery = ""
+                                    selectedCategory = null
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(Icons.Outlined.Close, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                LText("Limpar filtros")
                             }
                         }
                     }
                 } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(bottom = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        itemsIndexed(filteredTools, key = { _, card -> card.title }) { _, card ->
-                            // Category accents stay consistent when the user searches or filters.
-                            val accent = toolAccent(card.category)
-                            val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
-                            Card(
-                                onClick = {
-                                    when {
-                                        card.pdfTool != null -> selectedPdfTool = card.pdfTool
-                                        card.securityTool != null -> selectedSecurityTool = card.securityTool
-                                        card.action == Action.SCAN -> launchScanner()
-                                        card.action == Action.IMAGE_TO_PDF -> imagePicker.launch(arrayOf("image/*"))
-                                        card.action == Action.OCR -> ocrPicker.launch(arrayOf("image/*"))
-                                        card.action == Action.PDF_TEXT -> pdfTextPicker.launch(arrayOf("application/pdf"))
-                                        card.action == Action.PDF_INFO -> pdfInfoPicker.launch(arrayOf("application/pdf"))
-                                    }
-                                },
-                                enabled = enabled,
-                                modifier = Modifier.animateContentSize(),
-                                shape = RoundedCornerShape(22.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                            ) {
-                                Column {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(4.dp)
-                                            .background(
-                                                Brush.horizontalGradient(
-                                                    listOf(accent, accent.copy(alpha = 0.18f)),
-                                                ),
-                                            ),
-                                    )
+                    filteredTools.chunked(2).forEach { rowTools ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            rowTools.forEach { card ->
+                                val accent = toolAccent(card.category)
+                                val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
+                                Card(
+                                    onClick = {
+                                        when {
+                                            card.pdfTool != null -> selectedPdfTool = card.pdfTool
+                                            card.securityTool != null -> selectedSecurityTool = card.securityTool
+                                            card.action == Action.SCAN -> launchScanner()
+                                            card.action == Action.IMAGE_TO_PDF ->
+                                                requestDocumentSelection(Action.IMAGE_TO_PDF, DocumentPickerType.IMAGE, true)
+                                            card.action == Action.OCR ->
+                                                requestDocumentSelection(Action.OCR, DocumentPickerType.IMAGE, true)
+                                            card.action == Action.PDF_TEXT ->
+                                                requestDocumentSelection(Action.PDF_TEXT, DocumentPickerType.PDF, false)
+                                            card.action == Action.PDF_INFO ->
+                                                requestDocumentSelection(Action.PDF_INFO, DocumentPickerType.PDF, false)
+                                        }
+                                    },
+                                    enabled = enabled,
+                                    modifier = Modifier.weight(1f).heightIn(min = 166.dp),
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                ) {
                                     Column(
-                                        modifier = Modifier.padding(14.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(14.dp),
                                         verticalArrangement = Arrangement.spacedBy(10.dp),
                                     ) {
                                         Row(
@@ -630,33 +671,25 @@ fun ToolsScreen(
                                         ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(46.dp)
-                                                    .clip(RoundedCornerShape(15.dp))
+                                                    .size(44.dp)
+                                                    .clip(RoundedCornerShape(14.dp))
                                                     .background(accent.copy(alpha = 0.12f)),
                                                 contentAlignment = Alignment.Center,
                                             ) {
                                                 Icon(
                                                     card.icon,
                                                     contentDescription = null,
-                                                    tint = if (enabled) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(24.dp),
+                                                    tint = accent,
+                                                    modifier = Modifier.size(23.dp),
                                                 )
                                             }
                                             Spacer(Modifier.weight(1f))
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(28.dp)
-                                                    .clip(RoundedCornerShape(10.dp))
-                                                    .background(accent.copy(alpha = 0.08f)),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                Icon(
-                                                    Icons.Outlined.ArrowForward,
-                                                    contentDescription = null,
-                                                    tint = accent,
-                                                    modifier = Modifier.size(16.dp),
-                                                )
-                                            }
+                                            Icon(
+                                                Icons.Outlined.ArrowForward,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                                                modifier = Modifier.size(18.dp),
+                                            )
                                         }
                                         LText(
                                             card.title,
@@ -671,32 +704,20 @@ fun ToolsScreen(
                                             maxLines = 2,
                                             minLines = 2,
                                         )
-                                        Row(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(accent.copy(alpha = 0.09f))
-                                                .padding(horizontal = 8.dp, vertical = 5.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            LText(
-                                                card.category.label,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = accent,
-                                                maxLines = 1,
-                                            )
-                                        }
-                                        if (!enabled) {
-                                            LText(
-                                                "Em breve",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
+                                        Spacer(Modifier.height(1.dp))
+                                        LText(
+                                            card.category.label.uppercase(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = accent,
+                                            maxLines = 1,
+                                        )
                                     }
                                 }
                             }
+                            if (rowTools.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
+                    Spacer(Modifier.height(12.dp))
                 }
             }
             AnimatedVisibility(
@@ -1003,24 +1024,24 @@ private fun UtilityWorkspace(
 }
 
 private fun toolAccent(category: ToolCategory): Color = when (category) {
-    ToolCategory.MANAGE -> Color(0xFF356AE6)
-    ToolCategory.EDIT -> Color(0xFF7C4DFF)
-    ToolCategory.CONVERT -> Color(0xFF008C95)
-    ToolCategory.SECURITY -> Color(0xFFB45309)
-    ToolCategory.ANALYZE -> Color(0xFFDB4B73)
+    ToolCategory.MANAGE -> Color(0xFF244F91)
+    ToolCategory.EDIT -> Color(0xFF2C7378)
+    ToolCategory.CONVERT -> Color(0xFF416A86)
+    ToolCategory.SECURITY -> Color(0xFF9A633A)
+    ToolCategory.ANALYZE -> Color(0xFF536B8B)
 }
 
 private fun pdfToolAccent(tool: PdfTool): Color = when (tool) {
-    PdfTool.MERGE -> Color(0xFF356AE6)
-    PdfTool.SPLIT -> Color(0xFF7C4DFF)
-    PdfTool.COMPRESS -> Color(0xFF008C95)
-    PdfTool.REORDER -> Color(0xFFB45309)
-    PdfTool.ROTATE -> Color(0xFFDB4B73)
-    PdfTool.ROTATE_ONE -> Color(0xFFDB4B73)
-    PdfTool.CROP_ONE -> Color(0xFF7C4DFF)
-    PdfTool.EXPORT_PAGE_IMAGE -> Color(0xFF16856B)
-    PdfTool.PAGE_NUMBERS -> Color(0xFF387D4A)
-    PdfTool.WATERMARK -> Color(0xFF5964C8)
+    PdfTool.MERGE -> Color(0xFF244F91)
+    PdfTool.SPLIT -> Color(0xFF244F91)
+    PdfTool.COMPRESS -> Color(0xFF2C7378)
+    PdfTool.REORDER -> Color(0xFF2C7378)
+    PdfTool.ROTATE -> Color(0xFF416A86)
+    PdfTool.ROTATE_ONE -> Color(0xFF416A86)
+    PdfTool.CROP_ONE -> Color(0xFF416A86)
+    PdfTool.EXPORT_PAGE_IMAGE -> Color(0xFF536B8B)
+    PdfTool.PAGE_NUMBERS -> Color(0xFF536B8B)
+    PdfTool.WATERMARK -> Color(0xFF9A633A)
 }
 
 @Composable
@@ -1031,32 +1052,40 @@ private fun WorkspaceHero(
     accent: Color,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().animateContentSize(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.08f)),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(7.dp)
-                    .background(Brush.horizontalGradient(listOf(accent, accent.copy(alpha = 0.22f)))),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(accent.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(29.dp))
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    LText(title, style = MaterialTheme.typography.titleLarge)
-                    LText(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(27.dp),
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                LText(title, style = MaterialTheme.typography.titleLarge)
+                LText(
+                    subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -1144,16 +1173,16 @@ private fun SecurityWorkspace(
     tool: SecurityTool,
     onBack: () -> Unit,
     processing: Boolean,
+    availableDocuments: List<DocumentItem>,
+    hasStorageAccess: Boolean,
+    onRequestDocumentAccess: () -> Unit,
     onProcessPdf: (String, (Uri) -> Long) -> Unit,
 ) {
     val context = LocalContext.current
     val resolver = context.contentResolver
     var inputUri by remember { mutableStateOf<Uri?>(null) }
     var value by remember { mutableStateOf("") }
-
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        inputUri = uri
-    }
+    var showPdfPicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -1195,7 +1224,7 @@ private fun SecurityWorkspace(
             )
 
             OutlinedButton(
-                onClick = { picker.launch(arrayOf("application/pdf")) },
+                onClick = { showPdfPicker = true },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Outlined.Folder, contentDescription = null)
@@ -1267,6 +1296,22 @@ private fun SecurityWorkspace(
             )
         }
     }
+    
+    if (showPdfPicker) {
+        DocumentPickerDialog(
+            title = "Selecionar PDF",
+            type = DocumentPickerType.PDF,
+            multiple = false,
+            knownDocuments = availableDocuments,
+            hasStorageAccess = hasStorageAccess,
+            onRequestStorageAccess = onRequestDocumentAccess,
+            onDismiss = { showPdfPicker = false },
+            onConfirm = { documents ->
+                inputUri = documents.firstOrNull()?.let { Uri.parse(it.uri) }
+                showPdfPicker = false
+            },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1275,6 +1320,9 @@ private fun ToolWorkspace(
     tool: PdfTool,
     onBack: () -> Unit,
     processing: Boolean,
+    availableDocuments: List<DocumentItem>,
+    hasStorageAccess: Boolean,
+    onRequestDocumentAccess: () -> Unit,
     onProcessPdf: (String, (Uri) -> Long) -> Unit,
     onProcessPdfPage: (String, Int, (Uri) -> Long) -> Unit,
     onProcessImage: (String, (Uri) -> Long) -> Unit,
@@ -1292,38 +1340,34 @@ private fun ToolWorkspace(
     var cropMarginPercent by remember { mutableStateOf(5) }
     var watermarkText by remember { mutableStateOf("") }
     var detectedPageCount by remember { mutableStateOf<Int?>(null) }
+    var showPdfPicker by remember { mutableStateOf(false) }
+    var selectingMultiple by remember { mutableStateOf(false) }
 
-    val multiPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris ->
+    fun acceptPickedDocuments(documents: List<DocumentItem>) {
+        val uris = documents.map { Uri.parse(it.uri) }
+        if (uris.isEmpty()) return
         selectedUris = uris
-    }
-
-    val singlePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            selectedUris = listOf(uri)
-            detectedPageCount = null
-            pageNumber = "1"
-            scope.launch {
-                val pageCountResult = withContext(Dispatchers.IO) {
-                    runCatching {
-                        resolver.openInputStream(uri).use { input ->
-                            requireNotNull(input) { "Não foi possível abrir este PDF." }
-                            PDDocument.load(input).use { it.numberOfPages }
-                        }
+        detectedPageCount = null
+        pageNumber = "1"
+        if (uris.size != 1) return
+        val uri = uris.single()
+        scope.launch {
+            val pageCountResult = withContext(Dispatchers.IO) {
+                runCatching {
+                    resolver.openInputStream(uri).use { input ->
+                        requireNotNull(input) { "Não foi possível abrir este PDF." }
+                        PDDocument.load(input).use { it.numberOfPages }
                     }
                 }
-                pageCountResult.onSuccess { count ->
-                    detectedPageCount = count
-                    if (count > 0) {
-                        endPage = count.toString()
-                        orderText = (1..count).joinToString(",")
-                    }
-                }.onFailure {
-                    snackbar.showSnackbar("Não foi possível ler as páginas: " + (it.message ?: "erro desconhecido"))
+            }
+            pageCountResult.onSuccess { count ->
+                detectedPageCount = count
+                if (count > 0) {
+                    endPage = count.toString()
+                    orderText = (1..count).joinToString(",")
                 }
+            }.onFailure {
+                snackbar.showSnackbar("Não foi possível ler as páginas: " + (it.message ?: "erro desconhecido"))
             }
         }
     }
@@ -1394,7 +1438,7 @@ private fun ToolWorkspace(
 
             if (tool == PdfTool.MERGE) {
                 OutlinedButton(
-                    onClick = { multiPicker.launch(arrayOf("application/pdf")) },
+                    onClick = { selectingMultiple = true; showPdfPicker = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Outlined.Folder, contentDescription = null)
@@ -1403,7 +1447,7 @@ private fun ToolWorkspace(
                 }
             } else {
                 OutlinedButton(
-                    onClick = { singlePicker.launch(arrayOf("application/pdf")) },
+                    onClick = { selectingMultiple = false; showPdfPicker = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Outlined.Folder, contentDescription = null)
@@ -1756,5 +1800,21 @@ private fun ToolWorkspace(
 
             Spacer(Modifier.height(18.dp))
         }
+    }
+    
+    if (showPdfPicker) {
+        DocumentPickerDialog(
+            title = if (selectingMultiple) "Selecionar PDFs" else "Selecionar PDF",
+            type = DocumentPickerType.PDF,
+            multiple = selectingMultiple,
+            knownDocuments = availableDocuments,
+            hasStorageAccess = hasStorageAccess,
+            onRequestStorageAccess = onRequestDocumentAccess,
+            onDismiss = { showPdfPicker = false },
+            onConfirm = { documents ->
+                showPdfPicker = false
+                acceptPickedDocuments(documents)
+            },
+        )
     }
 }
