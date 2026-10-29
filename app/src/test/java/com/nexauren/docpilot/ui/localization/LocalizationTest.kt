@@ -68,6 +68,14 @@ class LocalizationTest {
     }
 
     @Test
+    fun localizes_tools_empty_state_and_filter_reset() {
+        assertEquals("No tools found", translateForLanguage("en", "Não encontrámos ferramentas"))
+        assertEquals("Aucun outil trouvé", translateForLanguage("fr", "Não encontrámos ferramentas"))
+        assertEquals("Prueba otra búsqueda o borra los filtros activos.", translateForLanguage("es", "Experimenta outra pesquisa ou remove os filtros ativos."))
+        assertEquals("Filter löschen", translateForLanguage("de", "Limpar filtros"))
+    }
+
+    @Test
     fun localizes_batch_ocr_tool() {
         assertEquals(
             "Extract text from multiple images",
