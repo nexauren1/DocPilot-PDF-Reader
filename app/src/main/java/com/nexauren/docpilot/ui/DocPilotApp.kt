@@ -11,6 +11,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -301,10 +303,18 @@ fun DocPilotApp(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 NavigationBar {
-                    listOf(Destination.HOME, Destination.LIBRARY, Destination.TOOLS).forEach { item ->
+                    listOf(
+                        Destination.HOME,
+                        Destination.LIBRARY,
+                        Destination.TOOLS,
+                        Destination.SETTINGS,
+                    ).forEach { item ->
                         NavigationBarItem(
                             selected = destination == item,
-                            onClick = { destination = item },
+                            onClick = {
+                                destination = item
+                                selectedDocument = null
+                            },
                             icon = { Icon(item.icon, contentDescription = item.label) },
                             label = { LText(item.label) },
                         )
@@ -317,8 +327,15 @@ fun DocPilotApp(
                 targetState = destination,
                 modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(paddingValues),
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(180)) togetherWith
-                        fadeOut(animationSpec = tween(120))
+                    val movingForward = targetState.ordinal >= initialState.ordinal
+                    (slideInHorizontally(
+                        animationSpec = tween(220),
+                        initialOffsetX = { width -> if (movingForward) width / 7 else -width / 7 },
+                    ) + fadeIn(animationSpec = tween(180))) togetherWith
+                        (slideOutHorizontally(
+                            animationSpec = tween(160),
+                            targetOffsetX = { width -> if (movingForward) -width / 9 else width / 9 },
+                        ) + fadeOut(animationSpec = tween(140)))
                 },
                 label = "DocPilot destination transition",
             ) { targetDestination ->
