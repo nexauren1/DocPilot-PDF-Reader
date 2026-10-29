@@ -49,7 +49,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -79,7 +78,6 @@ fun DocumentPickerDialog(
     onDismiss: () -> Unit,
     onConfirm: (List<DocumentItem>) -> Unit,
 ) {
-    val context = LocalContext.current
     val rootDirectory = remember(type) { Environment.getExternalStorageDirectory() }
     var currentDirectory by remember(type) { mutableStateOf(rootDirectory) }
     var query by remember(type) { mutableStateOf("") }
