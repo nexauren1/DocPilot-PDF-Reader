@@ -1,5 +1,6 @@
 package com.nexauren.docpilot.ui.screens
 
+import androidx.activity.compose.BackHandler
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
@@ -148,6 +149,8 @@ private data class SearchHighlight(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PdfReaderScreen(document: DocumentItem, onBack: () -> Unit) {
+    BackHandler { onBack() }
+
     val context = LocalContext.current
     val readerPreferences = remember {
         context.getSharedPreferences("docpilot_reader", android.content.Context.MODE_PRIVATE)
