@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,6 +58,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -628,93 +630,98 @@ fun ToolsScreen(
                         }
                     }
                 } else {
-                    filteredTools.chunked(2).forEach { rowTools ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.Top,
-                        ) {
-                            rowTools.forEach { card ->
-                                val accent = toolAccent(card.category)
-                                val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
-                                Card(
-                                    onClick = {
-                                        when {
-                                            card.pdfTool != null -> selectedPdfTool = card.pdfTool
-                                            card.securityTool != null -> selectedSecurityTool = card.securityTool
-                                            card.action == Action.SCAN -> launchScanner()
-                                            card.action == Action.IMAGE_TO_PDF ->
-                                                requestDocumentSelection(Action.IMAGE_TO_PDF, DocumentPickerType.IMAGE, true)
-                                            card.action == Action.OCR ->
-                                                requestDocumentSelection(Action.OCR, DocumentPickerType.IMAGE, true)
-                                            card.action == Action.PDF_TEXT ->
-                                                requestDocumentSelection(Action.PDF_TEXT, DocumentPickerType.PDF, false)
-                                            card.action == Action.PDF_INFO ->
-                                                requestDocumentSelection(Action.PDF_INFO, DocumentPickerType.PDF, false)
-                                        }
-                                    },
-                                    enabled = enabled,
-                                    modifier = Modifier.weight(1f).heightIn(min = 166.dp),
-                                    shape = RoundedCornerShape(20.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface,
-                                    ),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth().padding(14.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(44.dp)
-                                                    .clip(RoundedCornerShape(14.dp))
-                                                    .background(accent.copy(alpha = 0.12f)),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                Icon(
-                                                    card.icon,
-                                                    contentDescription = null,
-                                                    tint = accent,
-                                                    modifier = Modifier.size(23.dp),
-                                                )
+                    ToolCategory.values().toList().forEach { category ->
+                        val categoryTools = filteredTools.filter { it.category == category }
+                        if (categoryTools.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 8.dp, start = 2.dp, end = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                LText(category.label, style = MaterialTheme.typography.titleMedium)
+                                Spacer(Modifier.weight(1f))
+                                LText(
+                                    categoryTools.size.toString().padStart(2, '0'),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(MaterialTheme.colorScheme.surface),
+                            ) {
+                                categoryTools.forEachIndexed { index, card ->
+                                    val accent = toolAccent(card.category)
+                                    val enabled = card.pdfTool != null || card.securityTool != null || card.action != Action.NONE
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable(enabled = enabled) {
+                                                when {
+                                                    card.pdfTool != null -> selectedPdfTool = card.pdfTool
+                                                    card.securityTool != null -> selectedSecurityTool = card.securityTool
+                                                    card.action == Action.SCAN -> launchScanner()
+                                                    card.action == Action.IMAGE_TO_PDF ->
+                                                        requestDocumentSelection(Action.IMAGE_TO_PDF, DocumentPickerType.IMAGE, true)
+                                                    card.action == Action.OCR ->
+                                                        requestDocumentSelection(Action.OCR, DocumentPickerType.IMAGE, true)
+                                                    card.action == Action.PDF_TEXT ->
+                                                        requestDocumentSelection(Action.PDF_TEXT, DocumentPickerType.PDF, false)
+                                                    card.action == Action.PDF_INFO ->
+                                                        requestDocumentSelection(Action.PDF_INFO, DocumentPickerType.PDF, false)
+                                                }
                                             }
-                                            Spacer(Modifier.weight(1f))
+                                            .padding(horizontal = 14.dp, vertical = 13.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .clip(RoundedCornerShape(13.dp))
+                                                .background(accent.copy(alpha = 0.10f)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
                                             Icon(
-                                                Icons.Outlined.ArrowForward,
+                                                card.icon,
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                                                modifier = Modifier.size(18.dp),
+                                                tint = accent,
+                                                modifier = Modifier.size(22.dp),
                                             )
                                         }
-                                        LText(
-                                            card.title,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            maxLines = 2,
-                                            minLines = 2,
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                                        ) {
+                                            LText(
+                                                card.title,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                maxLines = 1,
+                                            )
+                                            LText(
+                                                card.subtitle,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 2,
+                                            )
+                                        }
+                                        Icon(
+                                            Icons.Outlined.ArrowForward,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                                            modifier = Modifier.size(18.dp),
                                         )
-                                        LText(
-                                            card.subtitle,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 2,
-                                            minLines = 2,
-                                        )
-                                        Spacer(Modifier.height(1.dp))
-                                        LText(
-                                            card.category.label.uppercase(),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = accent,
-                                            maxLines = 1,
+                                    }
+                                    if (index < categoryTools.lastIndex) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(start = 70.dp),
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
                                         )
                                     }
                                 }
                             }
-                            if (rowTools.size == 1) Spacer(Modifier.weight(1f))
+                            Spacer(Modifier.height(6.dp))
                         }
                     }
                     Spacer(Modifier.height(12.dp))
