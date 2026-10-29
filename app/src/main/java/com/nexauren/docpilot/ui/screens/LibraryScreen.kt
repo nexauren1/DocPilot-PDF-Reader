@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Menu
@@ -67,6 +68,7 @@ fun LibraryScreen(
     documents: List<DocumentItem>,
     onOpenDocument: (DocumentItem) -> Unit,
     onOpenMenu: () -> Unit,
+    onImportPdf: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val libraryPreferences = remember(context) {
@@ -97,6 +99,11 @@ fun LibraryScreen(
                 navigationIcon = {
                     IconButton(onClick = onOpenMenu) {
                         Icon(Icons.Outlined.Menu, contentDescription = "Abrir menu")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onImportPdf) {
+                        Icon(Icons.Outlined.Add, contentDescription = "Abrir PDF")
                     }
                 },
             )
