@@ -20,6 +20,42 @@ object DocumentAccess {
             ) == PackageManager.PERMISSION_GRANTED
         }
 
+
+    fun scanImages(context: Context): List<DocumentItem> {
+        if (!hasAccess(context)) return emptyList()
+        val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DISPLAY_NAME,
+        )
+        val found = mutableListOf<DocumentItem>()
+        try {
+            context.contentResolver.query(
+                collection,
+                projection,
+                null,
+                null,
+                MediaStore.Images.Media.DATE_MODIFIED + " DESC",
+            )?.use { rows ->
+                val idColumn = rows.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                val nameColumn = rows.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
+                while (rows.moveToNext()) {
+                    val id = rows.getLong(idColumn)
+                    val name = rows.getString(nameColumn) ?: "Imagem"
+                    found += DocumentItem(
+                        name = name,
+                        uri = android.content.ContentUris.withAppendedId(collection, id).toString(),
+                    )
+                }
+            }
+        } catch (_: SecurityException) {
+            return emptyList()
+        } catch (_: IllegalArgumentException) {
+            return emptyList()
+        }
+        return found.distinctBy { it.uri }
+    }
+
     fun scanPdfs(context: Context): List<DocumentItem> {
         if (!hasAccess(context)) return emptyList()
         val collection = MediaStore.Files.getContentUri("external")
