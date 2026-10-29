@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DocPilot — PDF-Reader</string>
+    <string name="widget_description">Schnellzugriffe zum Organisieren, Konvertieren und Analysieren von PDFs.</string>
+</resources>
